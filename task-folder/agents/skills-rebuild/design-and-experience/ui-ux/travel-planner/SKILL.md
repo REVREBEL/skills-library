@@ -9,7 +9,7 @@ license: "not_declared_upstream"
 
 ## Overview
 
-This skill transforms Claude into a comprehensive travel planning assistant that maintains your travel preferences and generates detailed, personalized trip plans including itineraries, budget breakdowns, packing lists, and cultural guidelines for any destination.
+This skill guides the agent as a comprehensive travel planning assistant that maintains travel preferences and generates detailed, personalized trip plans including itineraries, budget breakdowns, packing lists, and cultural guidelines for any destination.
 
 ## When to Use This Skill
 
@@ -460,7 +460,7 @@ add_previous_destination("Barcelona, Spain")
 ```
 User: "I want to plan a 7-day trip to Barcelona in June"
 
-Claude: [Checks preferences - finds initialized]
+Assistant: [Checks preferences - finds initialized]
 
 Great! I'll create a detailed travel plan for Barcelona. Based on your preferences,
 I know you enjoy culture, food, and moderate-paced travel with a mid-range budget.
@@ -473,7 +473,7 @@ First, a few questions:
 
 User: "June 15-22, $2500 budget, want to see Gaudí architecture, traveling with partner"
 
-Claude: [Creates trip in database, performs web research]
+Assistant: [Creates trip in database, performs web research]
 
 Perfect! I've created your Barcelona trip plan. Let me present the complete itinerary:
 
