@@ -18,9 +18,9 @@ license: "not_declared_upstream"
 - **Compliance check** - Ensure proper authentication
 
 
-## What Claude Does vs What You Decide
+## What the Agent Does vs What You Decide
 
-| Claude Does | You Decide |
+| What the Agent Does | You Decide |
 |-------------|------------|
 | Structures analysis frameworks | Metric definitions |
 | Identifies patterns in data | Business interpretation |
