@@ -10,7 +10,7 @@ import os
 import shutil
 import subprocess
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -132,7 +132,7 @@ def capture_dirty_target(
             "reason": "Target checkout is clean",
         }
 
-    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
     rand_suffix = uuid.uuid4().hex[:6]
     snapshot_id = f"{timestamp}-{rand_suffix}"
     branch_name = f"incoming/{snapshot_id}"
@@ -148,7 +148,7 @@ def capture_dirty_target(
         "snapshot_id": snapshot_id,
         "target_name": target.name,
         "target_path": str(target.path),
-        "captured_at": datetime.utcnow().isoformat() + "Z",
+        "captured_at": datetime.now(timezone.utc).isoformat(),
         "packages": list(dirty_state["packages"].keys()),
         "dirty_summary": {
             "untracked": dirty_state["untracked"],
@@ -229,19 +229,18 @@ def convert_incoming_to_intake(
     run_git(["fetch", remote, incoming_branch], cwd=repo_path, check=False)
     run_git(["fetch", remote, base_branch], cwd=repo_path, check=False)
 
-    # Checkout new intake branch starting from base_branch
-    run_git(["checkout", "-B", intake_branch, f"{remote}/{base_branch}"], cwd=repo_path, check=False)
+    # Check whether incoming branch and base branch are local or remote
+    check_local_inc = run_git(["rev-parse", "--verify", incoming_branch], cwd=repo_path, check=False)
+    incoming_ref = incoming_branch if check_local_inc.returncode == 0 else f"{remote}/{incoming_branch}"
 
-    # Determine files changed on the incoming branch compared to runtime
-    diff_proc = run_git(
-        ["diff", "--name-only", f"{remote}/{RUNTIME_BRANCH}...{remote}/{incoming_branch}"],
-        cwd=repo_path,
-        check=False,
-    )
-    changed_files = [f.strip() for f in diff_proc.stdout.splitlines() if f.strip()]
+    check_local_base = run_git(["rev-parse", "--verify", base_branch], cwd=repo_path, check=False)
+    base_ref = base_branch if check_local_base.returncode == 0 else f"{remote}/{base_branch}"
+
+    # Checkout new intake branch starting from base_ref
+    run_git(["checkout", "-B", intake_branch, base_ref], cwd=repo_path, check=True)
 
     # Extract metadata
-    meta_proc = run_git(["show", f"{remote}/{incoming_branch}:.incoming-metadata.json"], cwd=repo_path, check=False)
+    meta_proc = run_git(["show", f"{incoming_ref}:.incoming-metadata.json"], cwd=repo_path, check=False)
     metadata = {}
     if meta_proc.returncode == 0:
         try:
@@ -263,7 +262,7 @@ def convert_incoming_to_intake(
         # Checkout files from incoming branch into intake/<pkg>
         # Use git archive to export incoming pkg
         archive_proc = subprocess.Popen(
-            ["git", "archive", f"{remote}/{incoming_branch}", pkg],
+            ["git", "archive", incoming_ref, pkg],
             cwd=repo_path,
             stdout=subprocess.PIPE,
         )

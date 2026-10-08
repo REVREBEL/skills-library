@@ -132,6 +132,7 @@ def evaluate_candidate(
     intake_dir: str = INTAKE_DIR,
     library_dir: str = LIBRARY_DIR,
     manifest: Optional[RuntimeManifest] = None,
+    repo_root: Optional[str] = None,
 ) -> IntakeEvaluation:
     """Evaluates a candidate package against the canonical library."""
     candidate_path = os.path.join(intake_dir, candidate_name)
@@ -139,6 +140,8 @@ def evaluate_candidate(
         candidate_name=candidate_name,
         source_dir=candidate_path,
     )
+    if not repo_root:
+        repo_root = os.path.dirname(os.path.normpath(library_dir))
 
     if not os.path.exists(candidate_path):
         eval_result.is_valid_package = False

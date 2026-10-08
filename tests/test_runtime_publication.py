@@ -1,0 +1,494 @@
+"""
+Comprehensive Regression Test Suite for Runtime Git-Clone Publication Architecture.
+Tests all 14 requirements specified in docs/bugs/runtime-git-clone-publication.md.
+
+All tests operate in completely isolated temporary Git repositories and never touch
+the production environment or the user's ~/.agents or ~/.gemini directories.
+"""
+
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+import uuid
+from pathlib import Path
+from unittest.mock import patch
+
+TEST_DIR = Path(__file__).resolve().parent
+REPO_ROOT_DIR = TEST_DIR.parent
+TOOLS_DIR = REPO_ROOT_DIR / "tools"
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+
+from skill_library.config import (
+    CATEGORIES,
+    DEEP_CATEGORIES,
+    RUNTIME_BRANCH,
+    RuntimeTarget,
+    load_runtime_targets,
+)
+from skill_library.intake import evaluate_candidate
+from skill_library.intake_capture import (
+    capture_dirty_target,
+    convert_incoming_to_intake,
+    scan_target_dirty_state,
+)
+from skill_library.manifest import RuntimeManifest
+from skill_library.publisher import (
+    get_commit_tree_sha,
+    get_library_tree_sha,
+    publish_runtime_branch,
+)
+from skill_library.sync import (
+    detect_target_state,
+    sync_all_targets,
+    sync_target,
+)
+from skill_library.validator import validate_library_integrity
+
+
+def run_git(cmd, cwd, check=True):
+    return subprocess.run(
+        ["git"] + cmd,
+        cwd=str(cwd),
+        capture_output=True,
+        text=True,
+        check=check,
+    )
+
+
+class TestRuntimeGitClonePublication(unittest.TestCase):
+    """Isolated unit and integration test suite covering 14 core requirements."""
+
+    def setUp(self):
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.sandbox = Path(self.tmp_dir.name)
+
+        # Initialize mock main repository
+        self.repo_dir = self.sandbox / "origin-repo"
+        self.repo_dir.mkdir(parents=True, exist_ok=True)
+        run_git(["init", "-b", "main"], cwd=self.repo_dir)
+        run_git(["config", "user.name", "Test Runner"], cwd=self.repo_dir)
+        run_git(["config", "user.email", "test@example.com"], cwd=self.repo_dir)
+
+        # Setup standard library structure inside repo
+        self.lib_dir = self.repo_dir / "library"
+        self.cat1_dir = self.lib_dir / "quality-and-security" / "debugging"
+        self.cat1_dir.mkdir(parents=True, exist_ok=True)
+        self.cat2_dir = self.lib_dir / "workflow-and-automation" / "tool-integration"
+        self.cat2_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create routers for all categories and deep subcategories
+        root_links = []
+        for cat in CATEGORIES:
+            cat_r = self.lib_dir / cat / "SKILL.md"
+            cat_r.parent.mkdir(parents=True, exist_ok=True)
+            root_links.append(f"- [{cat}]({cat}/SKILL.md)")
+            if not cat_r.exists():
+                cat_r.write_text(f"# {cat} Router\n\n")
+
+        for cat, subcats in DEEP_CATEGORIES.items():
+            for sub in subcats:
+                sub_r = self.lib_dir / cat / sub / "SKILL.md"
+                sub_r.parent.mkdir(parents=True, exist_ok=True)
+                if not sub_r.exists():
+                    sub_r.write_text(f"# {sub} Router\n\n")
+
+        (self.lib_dir / "SKILL.md").write_text("# Root Router\n\n" + "\n".join(root_links) + "\n")
+        (self.lib_dir / "quality-and-security" / "SKILL.md").write_text(
+            "# Quality Router\n\n- [`bug-hunter`](debugging/bug-hunter/SKILL.md)\n"
+        )
+        (self.lib_dir / "workflow-and-automation" / "SKILL.md").write_text(
+            "# Workflow Router\n\n- [`task-runner`](tool-integration/task-runner/SKILL.md)\n"
+        )
+
+        # Skills
+        bug_hunter = self.cat1_dir / "bug-hunter"
+        bug_hunter.mkdir(parents=True, exist_ok=True)
+        (bug_hunter / "SKILL.md").write_text(
+            "---\nname: bug-hunter\ndescription: Hunt bugs. Use when hunting application defects.\n---\n# Bug Hunter\n"
+        )
+
+        task_runner = self.cat2_dir / "task-runner"
+        task_runner.mkdir(parents=True, exist_ok=True)
+        (task_runner / "SKILL.md").write_text(
+            "---\nname: task-runner\ndescription: Run tasks. Use when running workflow tasks.\n---\n# Task Runner\n"
+        )
+
+        # Non-canonical repo folders
+        (self.repo_dir / "docs").mkdir(parents=True, exist_ok=True)
+        (self.repo_dir / "docs" / "README.md").write_text("# Docs\n")
+        (self.repo_dir / "tools").mkdir(parents=True, exist_ok=True)
+        (self.repo_dir / "tools" / "script.py").write_text("# Tools\n")
+        (self.repo_dir / "config").mkdir(parents=True, exist_ok=True)
+        (self.repo_dir / "config" / "settings.json").write_text("{}\n")
+        (self.repo_dir / "intake").mkdir(parents=True, exist_ok=True)
+
+        # Manifest
+        self.audit_dir = self.repo_dir / "audit"
+        self.audit_dir.mkdir(parents=True, exist_ok=True)
+        self.manifest_path = self.audit_dir / "runtime-manifest.json"
+        self.manifest = RuntimeManifest(manifest_path=str(self.manifest_path))
+        self.manifest.add_skill(
+            runtime_name="bug-hunter",
+            canonical_name="bug-hunter",
+            canonical_path="library/quality-and-security/debugging/bug-hunter",
+            functional_parent="library/quality-and-security/SKILL.md",
+            source="test",
+            managed=True,
+        )
+        self.manifest.add_skill(
+            runtime_name="task-runner",
+            canonical_name="task-runner",
+            canonical_path="library/workflow-and-automation/tool-integration/task-runner",
+            functional_parent="library/workflow-and-automation/SKILL.md",
+            source="test",
+            managed=True,
+        )
+        self.manifest.save()
+
+        # Commit initial state on main
+        run_git(["add", "."], cwd=self.repo_dir)
+        run_git(["commit", "-m", "Initial commit on main"], cwd=self.repo_dir)
+
+    def tearDown(self):
+        self.tmp_dir.cleanup()
+
+    def test_01_publish_runtime_generates_root_tree_matching_library(self):
+        """Requirement 1: publish-runtime generates a root tree exactly matching main:library/."""
+        res = publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        self.assertEqual(res["status"], "created")
+
+        lib_tree = get_library_tree_sha(str(self.repo_dir), ref="HEAD")
+        runtime_commit = res["commit_sha"]
+        runtime_tree = get_commit_tree_sha(str(self.repo_dir), runtime_commit)
+
+        self.assertEqual(lib_tree, runtime_tree)
+        self.assertEqual(res["tree_sha"], lib_tree)
+
+    def test_02_non_canonical_paths_absent_from_runtime_branch(self):
+        """Requirement 2: non-canonical paths (docs/, tools/, intake/, config/) are absent from runtime branch."""
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        ls_proc = run_git(["ls-tree", "--name-only", "runtime"], cwd=self.repo_dir)
+        runtime_root_items = set(ls_proc.stdout.splitlines())
+
+        self.assertIn("quality-and-security", runtime_root_items)
+        self.assertIn("workflow-and-automation", runtime_root_items)
+        self.assertIn("SKILL.md", runtime_root_items)
+
+        # Strictly absent from runtime root
+        self.assertNotIn("docs", runtime_root_items)
+        self.assertNotIn("tools", runtime_root_items)
+        self.assertNotIn("intake", runtime_root_items)
+        self.assertNotIn("config", runtime_root_items)
+        self.assertNotIn("audit", runtime_root_items)
+        self.assertNotIn("library", runtime_root_items)
+
+    def test_03_unchanged_library_makes_publish_runtime_noop(self):
+        """Requirement 3: an unchanged library/ makes publish-runtime a no-op."""
+        res1 = publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        self.assertEqual(res1["status"], "created")
+
+        # Second call without changes
+        res2 = publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        self.assertEqual(res2["status"], "unchanged")
+        self.assertEqual(res1["commit_sha"], res2["commit_sha"])
+
+    def test_04_modified_skill_updates_runtime_commit_and_tree(self):
+        """Requirement 4: a modified skill updates the runtime branch commit and tree correctly."""
+        res1 = publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        initial_commit = res1["commit_sha"]
+
+        # Modify skill on main
+        skill_file = self.cat1_dir / "bug-hunter" / "SKILL.md"
+        skill_file.write_text(skill_file.read_text() + "\n## Added Section\n")
+        run_git(["add", "."], cwd=self.repo_dir)
+        run_git(["commit", "-m", "Update bug-hunter skill"], cwd=self.repo_dir)
+
+        # Publish updated runtime branch
+        res2 = publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        self.assertEqual(res2["status"], "updated")
+        self.assertNotEqual(initial_commit, res2["commit_sha"])
+
+        # Check commit history parentage
+        parent_proc = run_git(["rev-parse", "runtime^"], cwd=self.repo_dir)
+        self.assertEqual(parent_proc.stdout.strip(), initial_commit)
+
+    def test_05_target_configuration_loading_and_schema_validation(self):
+        """Requirement 5: target configuration loading and schema validation."""
+        cfg_file = self.sandbox / "runtime-targets.json"
+        cfg_data = {
+            "targets": [
+                {
+                    "name": "custom-global",
+                    "path": "~/test-agents/skills",
+                    "mode": "full",
+                    "accept_external_intake": True,
+                    "enabled": True,
+                },
+                {
+                    "name": "custom-subset",
+                    "path": "~/test-gemini/skills",
+                    "mode": "subset",
+                    "include": ["quality-and-security"],
+                    "accept_external_intake": False,
+                    "enabled": False,
+                },
+            ]
+        }
+        cfg_file.write_text(json.dumps(cfg_data, indent=2))
+
+        targets = load_runtime_targets(str(cfg_file))
+        self.assertEqual(len(targets), 2)
+        self.assertEqual(targets[0].name, "custom-global")
+        self.assertEqual(targets[0].mode, "full")
+        self.assertTrue(targets[0].accept_external_intake)
+        self.assertEqual(targets[1].name, "custom-subset")
+        self.assertEqual(targets[1].mode, "subset")
+        self.assertEqual(targets[1].include, ["quality-and-security"])
+        self.assertFalse(targets[1].enabled)
+
+    def test_06_full_target_synchronization_produces_physical_git_clone_on_runtime(self):
+        """Requirement 6: full target synchronization produces a physical Git clone on runtime."""
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+
+        target_path = self.sandbox / "target-full"
+        target = RuntimeTarget(name="test-full", path=str(target_path), mode="full", enabled=True)
+
+        report = sync_target(target, source_repo=str(self.repo_dir))
+        self.assertEqual(report.status, "created")
+        self.assertTrue(target_path.exists())
+        self.assertTrue((target_path / ".git").exists())
+
+        # Physical file presence and zero symlinks
+        skill_file = target_path / "quality-and-security" / "debugging" / "bug-hunter" / "SKILL.md"
+        self.assertTrue(skill_file.exists())
+        self.assertFalse(skill_file.is_symlink())
+
+        state = detect_target_state(target_path)
+        self.assertEqual(state["branch"], "runtime")
+        self.assertFalse(state["is_dirty"])
+
+    def test_07_subset_target_synchronization_configures_sparse_checkout(self):
+        """Requirement 7: subset target synchronization configures sparse-checkout and materializes only selected scopes."""
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+
+        target_path = self.sandbox / "target-subset"
+        target = RuntimeTarget(
+            name="test-subset",
+            path=str(target_path),
+            mode="subset",
+            include=["quality-and-security"],
+            enabled=True,
+        )
+
+        report = sync_target(target, source_repo=str(self.repo_dir))
+        self.assertEqual(report.status, "created")
+
+        # Included scope is materialized
+        self.assertTrue((target_path / "quality-and-security" / "debugging" / "bug-hunter" / "SKILL.md").exists())
+        # Excluded scope is NOT materialized
+        self.assertFalse((target_path / "workflow-and-automation").exists())
+
+        state = detect_target_state(target_path)
+        self.assertTrue(state["sparse_enabled"])
+        self.assertIn("quality-and-security", state["sparse_rules"])
+
+    def test_08_clean_target_fast_forwards_when_runtime_branch_updates(self):
+        """Requirement 8: a clean target fast-forwards when the runtime branch updates."""
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        target_path = self.sandbox / "target-ff"
+        target = RuntimeTarget(name="test-ff", path=str(target_path), mode="full", enabled=True)
+        sync_target(target, source_repo=str(self.repo_dir))
+
+        # Add commit to main and update runtime branch
+        new_skill = self.cat1_dir / "new-feature"
+        new_skill.mkdir(parents=True, exist_ok=True)
+        (new_skill / "SKILL.md").write_text("---\nname: new-feature\ndescription: New.\n---\n")
+        run_git(["add", "."], cwd=self.repo_dir)
+        run_git(["commit", "-m", "Add new-feature skill"], cwd=self.repo_dir)
+        res = publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        new_runtime_sha = res["commit_sha"]
+
+        # Sync target
+        rep = sync_target(target, source_repo=str(self.repo_dir))
+        self.assertEqual(rep.status, "updated")
+        self.assertEqual(rep.commit_sha, new_runtime_sha)
+        self.assertTrue((target_path / "quality-and-security" / "debugging" / "new-feature" / "SKILL.md").exists())
+
+    def test_09_dirty_target_is_never_overwritten_or_reset_during_sync(self):
+        """Requirement 9: a dirty target is never overwritten or reset during sync."""
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        target_path = self.sandbox / "target-dirty"
+        target = RuntimeTarget(name="test-dirty", path=str(target_path), mode="full", enabled=True)
+        sync_target(target, source_repo=str(self.repo_dir))
+
+        # Simulate external modification (e.g. skills.sh installing an untracked skill)
+        untracked_skill = target_path / "quality-and-security" / "debugging" / "skills-sh-installed"
+        untracked_skill.mkdir(parents=True, exist_ok=True)
+        untracked_file = untracked_skill / "SKILL.md"
+        untracked_file.write_text("---\nname: skills-sh-installed\ndescription: External.\n---\n")
+
+        # Sync target should detect dirty state and REFUSE destructive operation
+        rep = sync_target(target, source_repo=str(self.repo_dir))
+        self.assertEqual(rep.status, "dirty")
+        self.assertTrue(len(rep.dirty_files) > 0)
+        self.assertTrue(untracked_file.exists())
+        self.assertIn("Refusing destructive update", rep.message)
+
+    def test_10_local_intake_collector_groups_dirty_runtime_files_into_incoming_snapshot(self):
+        """Requirement 10: local intake collector groups dirty runtime files into incoming/* snapshot."""
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        target_path = self.sandbox / "target-collector"
+        target = RuntimeTarget(name="test-collector", path=str(target_path), mode="full", enabled=True)
+        sync_target(target, source_repo=str(self.repo_dir))
+
+        # Add dirty files
+        pkg1 = target_path / "custom-pkg-one"
+        pkg1.mkdir(parents=True, exist_ok=True)
+        (pkg1 / "SKILL.md").write_text("---\nname: custom-pkg-one\ndescription: Test.\n---\n")
+
+        dirty_state = scan_target_dirty_state(target_path)
+        self.assertTrue(dirty_state["is_dirty"])
+        self.assertIn("custom-pkg-one", dirty_state["packages"])
+
+        # Capture dirty state without remote push
+        cap = capture_dirty_target(target, push=False)
+        self.assertTrue(cap["captured"])
+        self.assertTrue(cap["branch"].startswith("incoming/"))
+        self.assertIn("custom-pkg-one", cap["packages"])
+
+    def test_11_local_intake_collector_does_not_clear_dirty_working_state_if_push_fails(self):
+        """Requirement 11: local intake collector does not clear dirty working state if snapshot push fails."""
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        target_path = self.sandbox / "target-push-fail"
+        target = RuntimeTarget(name="test-push-fail", path=str(target_path), mode="full", enabled=True)
+        sync_target(target, source_repo=str(self.repo_dir))
+
+        # Add dirty file
+        dirty_file = target_path / "unpushed-skill" / "SKILL.md"
+        dirty_file.parent.mkdir(parents=True, exist_ok=True)
+        dirty_file.write_text("---\nname: unpushed-skill\ndescription: Retained.\n---\n")
+
+        # Attempt capture with invalid remote to trigger push failure
+        cap = capture_dirty_target(target, remote="nonexistent-remote", push=True)
+        self.assertFalse(cap["captured"])
+        self.assertTrue(cap["retained"])
+        self.assertIn("Failed to push", cap["error"])
+
+        # The dirty files MUST be preserved and not wiped
+        self.assertTrue(dirty_file.exists())
+
+    def test_12_github_intake_workflow_conversion_produces_reviewed_intake_branch_from_main(self):
+        """Requirement 12: GitHub intake workflow conversion produces a reviewed intake/* branch from main."""
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        target_path = self.sandbox / "target-workflow"
+        target = RuntimeTarget(name="test-workflow", path=str(target_path), mode="full", enabled=True)
+        sync_target(target, source_repo=str(self.repo_dir))
+
+        # Add dirty skill and capture with push
+        incoming_skill = target_path / "external-tool"
+        incoming_skill.mkdir(parents=True, exist_ok=True)
+        (incoming_skill / "SKILL.md").write_text("---\nname: external-tool\ndescription: From skills.sh.\n---\n")
+
+        cap = capture_dirty_target(target, remote="origin", push=True)
+        self.assertTrue(cap["captured"])
+        incoming_branch = cap["branch"]
+
+        # Run conversion
+        res = convert_incoming_to_intake(
+            repo_path=str(self.repo_dir),
+            incoming_branch=incoming_branch,
+            base_branch="main",
+            remote="origin",
+        )
+        self.assertTrue(res["intake_branch"].startswith("intake/"))
+        self.assertIn("external-tool", res["packages_staged"])
+
+        # Verify staged package in intake/
+        staged_pkg = self.repo_dir / "intake" / "external-tool"
+        self.assertTrue((staged_pkg / "SKILL.md").exists())
+        self.assertTrue((staged_pkg / ".installer-metadata.json").exists())
+
+    def test_13_duplicate_candidates_with_synthetic_suffixes_rejected_or_routed_to_merge(self):
+        """Requirement 13: duplicate candidates with synthetic suffixes (_1, _v1) are rejected or routed to merge."""
+        # Candidate 1: synthetic version suffix `bug-hunter_v1`
+        c1_dir = self.repo_dir / "intake" / "bug-hunter_v1"
+        c1_dir.mkdir(parents=True, exist_ok=True)
+        (c1_dir / "SKILL.md").write_text(
+            "---\nname: bug-hunter_v1\ndescription: Autonomous system to identify and capture code bugs. Use when hunting application defects.\n---\n# Bug Hunter V1\n"
+        )
+
+        ev1 = evaluate_candidate(
+            candidate_name="bug-hunter_v1",
+            intake_dir=str(self.repo_dir / "intake"),
+            library_dir=str(self.lib_dir),
+            manifest=self.manifest,
+        )
+        self.assertTrue(ev1.approval_required)
+        self.assertTrue(ev1.name_collision)
+        self.assertIn(ev1.recommended_decision, ["REJECT", "MERGE"])
+
+        # Candidate 2: synthetic counter suffix `bug-hunter_1`
+        c2_dir = self.repo_dir / "intake" / "bug-hunter_1"
+        c2_dir.mkdir(parents=True, exist_ok=True)
+        (c2_dir / "SKILL.md").write_text(
+            "---\nname: bug-hunter_1\ndescription: Bug hunter variant. Use when hunting application defects.\n---\n# Bug Hunter 1\n"
+        )
+
+        ev2 = evaluate_candidate(
+            candidate_name="bug-hunter_1",
+            intake_dir=str(self.repo_dir / "intake"),
+            library_dir=str(self.lib_dir),
+            manifest=self.manifest,
+        )
+        self.assertTrue(ev2.approval_required)
+        self.assertTrue(ev2.name_collision)
+        self.assertIn(ev2.recommended_decision, ["REJECT", "MERGE"])
+
+    def test_14_living_library_validation_passes_without_symlinks(self):
+        """Requirement 14: living library validation passes against published runtime trees and targets without symlinks."""
+        # Publish runtime branch
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+
+        # Create target config
+        target_path = self.sandbox / "target-val"
+        target = RuntimeTarget(name="test-val", path=str(target_path), mode="full", enabled=True)
+        sync_target(target, source_repo=str(self.repo_dir))
+
+        cfg_file = self.repo_dir / "config" / "runtime-targets.json"
+        cfg_file.write_text(json.dumps({
+            "targets": [
+                {
+                    "name": "test-val",
+                    "path": str(target_path),
+                    "mode": "full",
+                    "accept_external_intake": True,
+                    "enabled": True,
+                }
+            ]
+        }, indent=2))
+
+        # Validate library integrity
+        res = validate_library_integrity(
+            library_dir=str(self.lib_dir),
+            manifest=self.manifest,
+            config_path=str(cfg_file),
+            verify_publication=True,
+            verify_targets=True,
+        )
+
+        self.assertTrue(res.is_valid, msg=res.summary())
+        self.assertTrue(res.canonical_reconciliation_passed)
+        self.assertTrue(res.runtime_publication_passed)
+        self.assertTrue(res.target_reconciliation_passed)
+        self.assertEqual(len(res.broken_router_links), 0)
+        self.assertEqual(len(res.publication_errors), 0)
+        self.assertEqual(len(res.target_errors), 0)
+
+
+if __name__ == "__main__":
+    unittest.main()
