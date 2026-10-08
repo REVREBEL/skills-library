@@ -824,6 +824,141 @@ description: Autonomous system to identify and capture code bugs. Use when hunti
         self.assertEqual(latest_change["validation_status"], "PASS")
         self.assertEqual(latest_change["pilot_status"], "FAIL")
 
+    def test_scenario_m_external_update_fails_pilot_restores_symlink(self):
+        """Scenario M (Regression Test): skills.sh external update fails pilot; restores prior canonical version, restores runtime symlink, and leaves update in intake."""
+        managed_name = "bug-hunter"
+        canonical_dir = os.path.join(self.library_dir, "quality-and-security", "debugging", managed_name)
+        runtime_item = os.path.join(self.runtime_dir, managed_name)
+
+        # 1. Start with managed symlink
+        self.assertTrue(os.path.islink(runtime_item))
+        with open(os.path.join(canonical_dir, "SKILL.md"), "r", encoding="utf-8") as f:
+            orig_skill_md_content = f.read()
+        router_path = self.qs_router
+        with open(router_path, "r", encoding="utf-8") as f:
+            router_before = f.read()
+        manifest_entry_before = copy.deepcopy(self.manifest.skills[managed_name])
+
+        # 2. skills.sh replaces symlink with physical updated directory
+        os.unlink(runtime_item)
+        os.makedirs(runtime_item, exist_ok=True)
+        with open(os.path.join(runtime_item, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write("""---
+name: bug-hunter
+description: Autonomous system to identify and capture code bugs. Use when hunting application defects.
+---
+# Bug Hunter v3 - External Update by skills.sh
+""")
+        os.makedirs(os.path.join(runtime_item, "scripts"), exist_ok=True)
+        with open(os.path.join(runtime_item, "scripts", "feature.py"), "w", encoding="utf-8") as f:
+            f.write("print('feature')\n")
+        with open(os.path.join(runtime_item, ".skills-installer-env.json"), "w", encoding="utf-8") as f:
+            json.dump({"installer": "skills.sh", "version": "1.0"}, f)
+
+        self.assertTrue(os.path.isdir(runtime_item))
+        self.assertFalse(os.path.islink(runtime_item))
+
+        # 3. Sync stages EXTERNAL_UPDATE to intake
+        sync_rep = reconcile_runtime_symlinks(
+            runtime_dir=self.runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+            dry_run=False,
+            stage_external=True,
+        )
+        self.assertTrue(any(managed_name in s and "EXTERNAL_UPDATE" in s for s in sync_rep.staged_to_intake))
+        cand_dir = os.path.join(self.intake_dir, managed_name)
+        self.assertTrue(os.path.exists(cand_dir))
+
+        # 4. Attempt apply update with simulated pilot failure
+        simulated_pilot_fail = PilotResult(
+            skill_name=managed_name,
+            parent_router=self.qs_router,
+            passed=False,
+            errors=["Simulated pilot failure in external update"],
+        )
+        with patch("skill_library.intake.run_targeted_pilot", return_value=simulated_pilot_fail):
+            with self.assertRaises(RuntimeError) as ctx:
+                apply_candidate(
+                    candidate_name=managed_name,
+                    approved=True,
+                    intake_dir=self.intake_dir,
+                    library_dir=self.library_dir,
+                    runtime_dir=self.runtime_dir,
+                    manifest=self.manifest,
+                    ledger=self.ledger,
+                )
+        self.assertIn("failed post-install checks", str(ctx.exception))
+        self.assertIn("rolled back", str(ctx.exception))
+
+        # 5. Assert previous canonical package is restored
+        with open(os.path.join(canonical_dir, "SKILL.md"), "r", encoding="utf-8") as f:
+            restored_skill_md = f.read()
+        self.assertEqual(restored_skill_md, orig_skill_md_content)
+        self.assertFalse(os.path.exists(os.path.join(canonical_dir, "scripts", "feature.py")))
+
+        # 6. Assert failed update remains in intake for review
+        self.assertTrue(os.path.exists(cand_dir))
+        self.assertTrue(os.path.exists(os.path.join(cand_dir, "scripts", "feature.py")))
+
+        # 7. Assert .agents/skills/<name> is restored as a symlink to previous canonical package
+        self.assertTrue(os.path.islink(runtime_item))
+        self.assertTrue(os.path.exists(runtime_item))
+        self.assertEqual(os.path.realpath(runtime_item), os.path.realpath(canonical_dir))
+
+        # 8. Assert manifest/router unchanged
+        with open(router_path, "r", encoding="utf-8") as f:
+            router_after = f.read()
+        self.assertEqual(router_before, router_after)
+        self.assertEqual(self.manifest.skills[managed_name], manifest_entry_before)
+
+        # 9. Assert ledger records ROLLBACK
+        latest_change = self.ledger.get_history(limit=1)[0]
+        self.assertEqual(latest_change["operation"], "UPDATE")
+        self.assertEqual(latest_change["decision"], "ROLLBACK")
+        self.assertEqual(latest_change["validation_status"], "PASS")
+        self.assertEqual(latest_change["pilot_status"], "FAIL")
+
+    def test_scenario_n_unexpected_exception_triggers_transactional_rollback(self):
+        """Scenario N (Regression Test): Unexpected exception during deployment triggers transactional rollback and re-raises."""
+        cand_name = "scenario-n-crash"
+        cand_dir = os.path.join(self.intake_dir, cand_name)
+        os.makedirs(cand_dir, exist_ok=True)
+        with open(os.path.join(cand_dir, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write("""---
+name: scenario-n-crash
+description: System to test crash rollback. Use when testing pipeline crash handling.
+---
+# Scenario N Crash
+""")
+
+        # Simulate unexpected crash during router update (Step D, after canonical copy in Step C)
+        with patch("skill_library.intake.add_link_to_router", side_effect=IOError("Simulated disk error during router update")):
+            with self.assertRaises(IOError):
+                apply_candidate(
+                    candidate_name=cand_name,
+                    category="workflow-and-automation",
+                    subcategory="tool-integration",
+                    approved=True,
+                    intake_dir=self.intake_dir,
+                    library_dir=self.library_dir,
+                    runtime_dir=self.runtime_dir,
+                    manifest=self.manifest,
+                    ledger=self.ledger,
+                )
+
+        # Assert canonical package was removed
+        expected_canonical = os.path.join(self.library_dir, "workflow-and-automation", "tool-integration", cand_name)
+        self.assertFalse(os.path.exists(expected_canonical))
+
+        # Assert candidate was restored to intake
+        self.assertTrue(os.path.exists(cand_dir))
+
+        # Assert ledger recorded rollback
+        latest_change = self.ledger.get_history(limit=1)[0]
+        self.assertEqual(latest_change["decision"], "ROLLBACK")
+
 
 if __name__ == "__main__":
     unittest.main()

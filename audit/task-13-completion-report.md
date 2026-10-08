@@ -22,8 +22,8 @@ All 11 review findings from the Task 13 evaluation have been systematically reso
 | **8** | Reconcile protected physical skill packages with single-source-of-truth architecture | **RESOLVED** | Relocated physical operational packages (`github-operations` and `skills-create-manage-update`) from `.agents/skills/` into `library/`. Created relative symlinks in `.agents/skills/`. `.agents/skills/` contains 100% relative symlinks and zero physical packages. |
 | **9** | Remove runtime dependency on `task-folder/agents/skills-rebuild`; delete rebuild workspace | **RESOLVED** | Preserved historical audit logs and scripts under `audit/rebuild-phase-1-12/`. Deleted legacy workspace via `git rm -rf task-folder/agents/skills-rebuild`. Zero residual references. |
 | **10** | Add regression tests for `skills.sh` install of brand-new skill and update to existing skill | **RESOLVED** | Added `test_scenario_g_skills_sh_brand_new_install` and `test_scenario_h_skills_sh_update_to_managed_skill` to test suite. Both pass cleanly. |
-| **11** | Rerun Task 13 validation and produce revised truthful completion report | **RESOLVED** | Validation executed cleanly (`exit 0`). All 12 test scenarios pass. Pristine production state confirmed. |
-| **12** | **Release Blocker**: Make `apply` transactional with full rollback on validation or pilot failure | **RESOLVED** | Staged candidate is pre-validated prior to any canonical mutation (aborts immediately with zero changes on failure). State is preserved for rollback: for NEW skills, failures remove canonical package, restore router text, remove manifest entry, remove runtime symlinks, restore candidate to intake, and record failure in ledger; for UPDATE skills, failures restore prior canonical package, manifest state, router content, runtime link, preserve update in intake, and record failure in ledger. Verified in Scenarios I, J, K, L. |
+| **11** | Rerun Task 13 validation and produce revised truthful completion report | **RESOLVED** | Validation executed cleanly (`exit 0`). All 14 test scenarios pass. Pristine production state confirmed. |
+| **12** | **Release Blocker**: Make `apply` transactional with full rollback on validation or pilot failure | **RESOLVED** | Staged candidate is pre-validated prior to any canonical mutation (aborts immediately with zero changes on failure). State is preserved for rollback: for NEW skills, failures remove canonical package, restore router text, remove manifest entry, remove runtime symlinks, restore candidate to intake, and record failure in ledger; for UPDATE skills, failures restore prior canonical package, manifest state, router content, reconstruct runtime symlinks pointing back to restored canonical package, preserve update in intake, and record failure in ledger. All mutations wrapped in transaction-wide exception handler. Verified in Scenarios I, J, K, L, M, N. |
 
 ---
 
@@ -53,7 +53,7 @@ Potential Secret Leaks: 0
 
 ## 3. Automated Test Suite Results
 
-All 12 scenarios run inside isolated temporary sandboxes:
+All 14 scenarios run inside isolated temporary sandboxes:
 
 ```text
 test_scenario_a_manual_intake_end_to_end ... ok
@@ -68,9 +68,11 @@ test_scenario_i_new_candidate_fails_pre_validation ... ok
 test_scenario_j_new_candidate_fails_pilot_rolls_back ... ok
 test_scenario_k_update_fails_pre_validation ... ok
 test_scenario_l_update_fails_pilot_restores_prior_canonical ... ok
+test_scenario_m_external_update_fails_pilot_restores_symlink ... ok
+test_scenario_n_unexpected_exception_triggers_transactional_rollback ... ok
 
 ----------------------------------------------------------------------
-Ran 12 tests in 0.281s
+Ran 14 tests in 0.303s
 
 OK
 ```
@@ -82,6 +84,8 @@ OK
 - **Scenario J (NEW Post-Install Pilot Rollback)**: Demonstrates that candidate passing pre-validation but failing targeted pilot is fully rolled back: canonical package deleted, router content restored, manifest entry removed, runtime symlink removed, candidate restored to intake, and failure recorded in ledger (`decision=ROLLBACK`, `val=PASS`, `pilot=FAIL`).
 - **Scenario K (UPDATE Pre-Validation Failure)**: Demonstrates that invalid proposed update is rejected before modifying existing canonical skill. Prior version remains completely untouched.
 - **Scenario L (UPDATE Pilot Rollback)**: Demonstrates that proposed update failing pilot restores prior canonical package files, prior manifest entry, prior router content, and prior runtime symlink, while leaving proposed update in intake for human review and recording failure in ledger (`decision=ROLLBACK`, `pilot=FAIL`).
+- **Scenario M (External UPDATE Pilot Rollback with Symlink Reconstruction)**: Simulates exact real-world `skills.sh` workflow where a managed symlink was replaced with an external physical directory, staged as `EXTERNAL_UPDATE`, and failed pilot on apply. Verifies prior canonical version is restored, update is preserved in `intake/`, `.agents/skills/<name>` is explicitly reconstructed as a valid symlink to the restored canonical package, router/manifest remain intact, and ledger logs `ROLLBACK`.
+- **Scenario N (Transaction-wide Exception Rollback)**: Verifies that unexpected filesystem/disk errors during deployment steps trigger complete transactional rollback, preserve candidate in intake, record failure in ledger, and re-raise.
 
 ---
 
