@@ -34,6 +34,14 @@ from .scanner import CandidatePackage, scan_candidate_directory
 from .validator import validate_single_skill
 
 
+def _safe_relpath(target: str, start: str) -> str:
+    """Computes relative path, falling back to absolute if on different drives/roots."""
+    try:
+        return os.path.relpath(target, start)
+    except ValueError:
+        return os.path.abspath(target)
+
+
 def tokenize(text: str) -> Set[str]:
     """Tokenize lowercase words for similarity calculation."""
     words = re.findall(r"\b[a-zA-Z0-9_\-]{3,}\b", text.lower())
@@ -543,7 +551,7 @@ def apply_candidate(
 
                 # 4. Explicitly restore runtime symlink to restored canonical package
                 try:
-                    rel_target_canonical = os.path.relpath(target_dir, runtime_dir)
+                    rel_target_canonical = _safe_relpath(target_dir, runtime_dir)
                     for p in {runtime_item_path, candidate_runtime_path}:
                         if os.path.lexists(p):
                             if os.path.islink(p) or os.path.isfile(p):
@@ -675,7 +683,7 @@ def apply_candidate(
             m.save()
 
             # Step F: Update Runtime Symlinks
-            rel_target = os.path.relpath(target_dir, runtime_dir)
+            rel_target = _safe_relpath(target_dir, runtime_dir)
             for p in {runtime_item_path, candidate_runtime_path}:
                 if os.path.isdir(p) and not os.path.islink(p):
                     shutil.rmtree(p)
@@ -742,6 +750,7 @@ def apply_candidate(
         "candidate_name": candidate_name,
         "canonical_name": final_name,
         "runtime_name": runtime_name,
+        "runtime_symlink": runtime_item_path,
         "operation": operation,
         "target_directory": target_dir,
         "router_updated": router_path,

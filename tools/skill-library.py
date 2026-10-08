@@ -5,13 +5,13 @@ The unified management interface for the Agent Skills Intake, Canonical Library,
 and Runtime Synchronization Pipeline.
 
 Commands:
-  scan      Non-destructively inspect intake/ and .agents/skills/
+  scan      Non-destructively inspect intake/ and global runtime (~/.agents/skills/)
   intake    Evaluate candidates, check overlap, and enforce human approval gates
   apply     Install an approved candidate into library/ and update router/manifest
-  sync      Reconcile .agents/skills/ symlinks with manifest, stage external installs
+  sync      Reconcile global runtime symlinks with manifest, stage external installs
   validate  Run full living library and runtime validation
   status    Print concise library status and health metrics
-  test      Run automated end-to-end test scenarios (A-F)
+  test      Run automated end-to-end test scenarios
 """
 
 import argparse
@@ -45,7 +45,7 @@ from skill_library.validator import validate_library
 
 
 def cmd_scan(args):
-    print("Scanning intake/ and .agents/skills/ ...")
+    print(f"Scanning intake/ and {RUNTIME_DIR} ...")
     res = run_full_scan()
 
     if args.json:
@@ -121,7 +121,8 @@ def cmd_apply(args):
         print(f"SUCCESS: {op_label} '{args.candidate}' -> {res['target_directory']}")
         print(f"Router updated: {res['router_updated']}")
         print("Manifest and change ledger updated.")
-        print(f"Runtime symlink established: .agents/skills/{res['runtime_name']}")
+        symlink_out = res.get("runtime_symlink", os.path.join(RUNTIME_DIR, res["runtime_name"]))
+        print(f"Runtime symlink established: {symlink_out}")
         return 0
     except PermissionError as pe:
         print(f"\n[HUMAN APPROVAL GATE BLOCKED]\n{pe}", file=sys.stderr)
@@ -138,7 +139,7 @@ def cmd_apply(args):
 
 
 def cmd_sync(args):
-    print("Reconciling .agents/skills/ runtime symlinks with canonical manifest...")
+    print(f"Reconciling {RUNTIME_DIR} runtime symlinks with canonical manifest...")
     manifest = RuntimeManifest()
     report = reconcile_runtime_symlinks(
         manifest=manifest,

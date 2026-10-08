@@ -135,3 +135,6 @@ dist
 .yarn/install-state.gz
 .pnp.*
 /library-rebuild-tasks/artifacts
+
+# Repo-local generated agents runtime (production runtime is ~/.agents/skills/)
+.agents/skills/

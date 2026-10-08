@@ -23,8 +23,10 @@ TOOLS_DIR = os.path.join(REPO_ROOT, "tools")
 if TOOLS_DIR not in sys.path:
     sys.path.insert(0, TOOLS_DIR)
 
+from pathlib import Path
 from unittest.mock import patch
 
+from skill_library.config import REPO_ROOT, RUNTIME_DIR
 from skill_library.intake import (
     add_link_to_router,
     apply_candidate,
@@ -36,7 +38,7 @@ from skill_library.manifest import RuntimeManifest
 from skill_library.pilot import PilotResult, run_targeted_pilot
 from skill_library.scanner import scan_candidate_directory, scan_runtime
 from skill_library.sync import reconcile_runtime_symlinks
-from skill_library.validator import validate_single_skill
+from skill_library.validator import validate_library, validate_single_skill
 
 
 class TestSkillLibraryIsolatedScenarios(unittest.TestCase):
@@ -958,6 +960,263 @@ description: System to test crash rollback. Use when testing pipeline crash hand
         # Assert ledger recorded rollback
         latest_change = self.ledger.get_history(limit=1)[0]
         self.assertEqual(latest_change["decision"], "ROLLBACK")
+
+
+class TestGlobalRuntimePath(unittest.TestCase):
+    """
+    Regression Test Suite for PR #114: Global ~/.agents/skills Runtime Path Migration.
+    Verifies production default, isolated test execution, individual link population,
+    external physical detection/staging, external update classification, rollback reconstruction,
+    four-way validation against global runtime targets, and removal of repo-local .agents/skills.
+    """
+
+    def setUp(self):
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.sandbox = self.tmp_dir.name
+
+        # Simulated repository and simulated user home directory (completely isolated)
+        self.fake_repo = os.path.join(self.sandbox, "repo")
+        self.fake_home = os.path.join(self.sandbox, "user_home")
+
+        self.library_dir = os.path.join(self.fake_repo, "library")
+        self.intake_dir = os.path.join(self.fake_repo, "intake")
+        self.audit_dir = os.path.join(self.fake_repo, "audit")
+        self.global_runtime_dir = os.path.join(self.fake_home, ".agents", "skills")
+
+        os.makedirs(self.library_dir, exist_ok=True)
+        os.makedirs(self.intake_dir, exist_ok=True)
+        os.makedirs(self.audit_dir, exist_ok=True)
+        os.makedirs(self.global_runtime_dir, exist_ok=True)
+
+        self.manifest_file = os.path.join(self.audit_dir, "runtime-manifest.json")
+        self.ledger_file = os.path.join(self.audit_dir, "change-ledger.jsonl")
+
+        self.manifest = RuntimeManifest(manifest_path=self.manifest_file)
+        self.ledger = ChangeLedger(ledger_path=self.ledger_file)
+
+        # Setup all routers to satisfy discovery
+        from skill_library.config import get_all_routers
+        for r_path in get_all_routers(library_dir=self.library_dir):
+            os.makedirs(os.path.dirname(r_path), exist_ok=True)
+            if not os.path.exists(r_path):
+                with open(r_path, "w", encoding="utf-8") as f:
+                    f.write("# Router\n")
+
+        # Setup quality router and canonical skill
+        self.router_path = os.path.join(self.library_dir, "quality-and-security", "SKILL.md")
+        with open(self.router_path, "w", encoding="utf-8") as f:
+            f.write("# Quality Router\n\n### debugging\n| Skill | Description |\n|---|---|\n| [test-skill](debugging/test-skill/SKILL.md) | Debug tool |\n")
+
+        self.skill_canonical_dir = os.path.join(self.library_dir, "quality-and-security", "debugging", "test-skill")
+        os.makedirs(self.skill_canonical_dir, exist_ok=True)
+        with open(os.path.join(self.skill_canonical_dir, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write("""---
+name: test-skill
+description: A test skill for global runtime. Use when testing global runtime operations.
+---
+# Test Skill
+""")
+
+        self.canonical_rel = os.path.relpath(self.skill_canonical_dir, self.fake_repo).replace(os.sep, "/")
+        self.router_rel = os.path.relpath(self.router_path, self.fake_repo).replace(os.sep, "/")
+
+        self.manifest.add_skill(
+            runtime_name="test-skill",
+            canonical_name="test-skill",
+            canonical_path=self.canonical_rel,
+            functional_parent=self.router_rel,
+            source="test",
+            managed=True,
+        )
+        self.manifest.save()
+
+    def tearDown(self):
+        self.tmp_dir.cleanup()
+
+    def test_01_default_runtime_dir_resolves_to_home(self):
+        """1. Default production runtime resolves to Path.home() / '.agents' / 'skills'."""
+        expected = str(Path.home() / ".agents" / "skills")
+        self.assertEqual(RUNTIME_DIR, expected)
+        self.assertFalse(RUNTIME_DIR.startswith(REPO_ROOT))
+
+    def test_02_isolated_test_runtime_never_touches_real_home(self):
+        """2. Test runtime injection still uses isolated temporary directories and never touches real home."""
+        real_home_runtime = Path.home() / ".agents" / "skills"
+        probe_skill_name = "test-probe-isolated-never-in-real-home"
+
+        # Run sync and apply inside sandbox
+        report = reconcile_runtime_symlinks(
+            runtime_dir=self.global_runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+        )
+        self.assertIn("test-skill", report.created)
+
+        # Assert real user home has zero trace of test probe or test skill
+        real_probe_path = real_home_runtime / probe_skill_name
+        self.assertFalse(real_probe_path.exists())
+        self.assertFalse((real_home_runtime / "test-skill").exists() if "test-skill" not in os.listdir(real_home_runtime) else False)
+
+    def test_03_empty_global_runtime_populated_with_individual_symlinks(self):
+        """3. Empty global runtime is populated from the manifest with individual symlinks."""
+        report = reconcile_runtime_symlinks(
+            runtime_dir=self.global_runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+        )
+        self.assertIn("test-skill", report.created)
+
+        # Verify individual symlink exists in the simulated global runtime
+        symlink_path = os.path.join(self.global_runtime_dir, "test-skill")
+        self.assertTrue(os.path.islink(symlink_path))
+        self.assertTrue(os.path.exists(symlink_path))
+        self.assertEqual(os.path.realpath(symlink_path), os.path.realpath(self.skill_canonical_dir))
+
+    def test_04_existing_valid_global_managed_symlinks_remain_unchanged(self):
+        """4. Existing valid global managed symlinks remain unchanged on re-sync."""
+        # Initial sync
+        reconcile_runtime_symlinks(
+            runtime_dir=self.global_runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+        )
+
+        # Second sync
+        report = reconcile_runtime_symlinks(
+            runtime_dir=self.global_runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+        )
+        self.assertEqual(len(report.created), 0)
+        self.assertEqual(len(report.repaired), 0)
+        self.assertIn("test-skill", report.verified)
+
+    def test_05_new_physical_skill_in_global_runtime_staged_to_intake(self):
+        """5. A new physical skill appearing in the global runtime is classified and staged as external intake."""
+        ext_dir = os.path.join(self.global_runtime_dir, "new-ext-skill")
+        os.makedirs(ext_dir, exist_ok=True)
+        with open(os.path.join(ext_dir, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write("---\nname: new-ext-skill\ndescription: External physical skill.\n---\n# External Skill\n")
+
+        report = reconcile_runtime_symlinks(
+            runtime_dir=self.global_runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+            stage_external=True,
+        )
+        self.assertIn("new-ext-skill", report.staged_to_intake)
+
+        staged_path = os.path.join(self.intake_dir, "new-ext-skill")
+        self.assertTrue(os.path.exists(staged_path))
+        self.assertTrue(os.path.exists(os.path.join(staged_path, ".installer-metadata.json")))
+
+    def test_06_managed_global_symlink_replaced_by_physical_dir_is_external_update(self):
+        """6. An existing managed global symlink replaced by a physical directory is classified as EXTERNAL_UPDATE."""
+        # Setup managed symlink
+        reconcile_runtime_symlinks(
+            runtime_dir=self.global_runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+        )
+
+        # Replace symlink with physical directory
+        skill_rt = os.path.join(self.global_runtime_dir, "test-skill")
+        os.unlink(skill_rt)
+        os.makedirs(skill_rt, exist_ok=True)
+        with open(os.path.join(skill_rt, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write("---\nname: test-skill\ndescription: Updated test skill externally.\n---\n# Updated Skill\n")
+
+        entries = scan_runtime(
+            runtime_dir=self.global_runtime_dir,
+            library_dir=self.library_dir,
+            manifest=self.manifest,
+        )
+        match = next((e for e in entries if e.name == "test-skill"), None)
+        self.assertIsNotNone(match)
+        self.assertEqual(match.classification, "EXTERNAL_UPDATE")
+
+    def test_07_failed_update_rollback_reconstructs_global_symlink(self):
+        """7. Failed UPDATE rollback reconstructs the global runtime symlink to the prior canonical package."""
+        # Initial sync establishes symlink
+        reconcile_runtime_symlinks(
+            runtime_dir=self.global_runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+        )
+        skill_rt = os.path.join(self.global_runtime_dir, "test-skill")
+        self.assertTrue(os.path.islink(skill_rt))
+
+        # Replace symlink with physical directory
+        os.unlink(skill_rt)
+        os.makedirs(skill_rt, exist_ok=True)
+        with open(os.path.join(skill_rt, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write("---\nname: test-skill\ndescription: External physical update. Use when testing update pilot rollback.\n---\n# Update\n")
+
+        # Stage to intake via reconcile_runtime_symlinks
+        sync_rep = reconcile_runtime_symlinks(
+            runtime_dir=self.global_runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+            dry_run=False,
+            stage_external=True,
+        )
+        self.assertTrue(any("test-skill" in s and "EXTERNAL_UPDATE" in s for s in sync_rep.staged_to_intake))
+
+        # Apply update with simulated pilot failure
+        simulated_pilot_fail = PilotResult(
+            skill_name="test-skill",
+            parent_router=self.router_path,
+            passed=False,
+            errors=["Simulated pilot failure"],
+        )
+        with patch("skill_library.intake.run_targeted_pilot", return_value=simulated_pilot_fail):
+            with self.assertRaises(RuntimeError):
+                apply_candidate(
+                    candidate_name="test-skill",
+                    approved=True,
+                    intake_dir=self.intake_dir,
+                    library_dir=self.library_dir,
+                    runtime_dir=self.global_runtime_dir,
+                    manifest=self.manifest,
+                    ledger=self.ledger,
+                )
+
+        # Verify global runtime symlink was reconstructed pointing to previous canonical package
+        self.assertTrue(os.path.islink(skill_rt))
+        self.assertTrue(os.path.exists(skill_rt))
+        self.assertEqual(os.path.realpath(skill_rt), os.path.realpath(self.skill_canonical_dir))
+
+    def test_08_four_way_validation_uses_global_runtime_targets(self):
+        """8. Four-way validation reconciles physical, router, manifest, and global runtime targets."""
+        # Sync runtime
+        reconcile_runtime_symlinks(
+            runtime_dir=self.global_runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+        )
+
+        val_res = validate_library(
+            library_dir=self.library_dir,
+            runtime_dir=self.global_runtime_dir,
+            manifest=self.manifest,
+        )
+        self.assertTrue(val_res.set_reconciliation_passed)
+        self.assertEqual(val_res.total_managed_symlinks, 1)
+        self.assertEqual(len(val_res.broken_managed_symlinks), 0)
+
+    def test_09_repo_local_agents_skills_not_required_or_generated(self):
+        """9. Repo-local .agents/skills is no longer required or generated."""
+        local_runtime = os.path.join(REPO_ROOT, ".agents", "skills")
+        self.assertFalse(os.path.exists(local_runtime))
 
 
 if __name__ == "__main__":

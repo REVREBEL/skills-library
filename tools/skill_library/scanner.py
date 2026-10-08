@@ -400,9 +400,14 @@ def scan_runtime(
     return results
 
 
-def run_full_scan() -> ScanResult:
-    """Executes a non-destructive scan of both intake/ and .agents/skills/."""
-    m = RuntimeManifest()
-    intake_c = scan_intake()
-    runtime_e = scan_runtime(manifest=m)
+def run_full_scan(
+    intake_dir: str = INTAKE_DIR,
+    runtime_dir: str = RUNTIME_DIR,
+    library_dir: str = LIBRARY_DIR,
+    manifest: Optional[RuntimeManifest] = None,
+) -> ScanResult:
+    """Executes a non-destructive scan of both intake/ and runtime discovery directory."""
+    m = manifest or RuntimeManifest()
+    intake_c = scan_intake(intake_dir=intake_dir)
+    runtime_e = scan_runtime(runtime_dir=runtime_dir, library_dir=library_dir, manifest=m)
     return ScanResult(intake_candidates=intake_c, runtime_entries=runtime_e)

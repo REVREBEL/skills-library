@@ -195,12 +195,14 @@ def validate_library(
     """
     result = ValidationResult()
     m = manifest or RuntimeManifest()
+    norm_lib = os.path.normpath(library_dir)
+    repo_root = os.path.dirname(norm_lib)
 
     # Step 1: Discover all 26 routers dynamically
     all_routers = get_all_routers(library_dir=library_dir)
     result.total_routers = len(all_routers)
     norm_routers = {os.path.normpath(r) for r in all_routers}
-    rel_routers = {os.path.relpath(r, REPO_ROOT).replace(os.sep, "/") for r in all_routers}
+    rel_routers = {os.path.relpath(r, repo_root).replace(os.sep, "/") for r in all_routers}
 
     for r in all_routers:
         if not os.path.exists(r):
@@ -229,10 +231,10 @@ def validate_library(
             abs_target = os.path.normpath(os.path.join(r_dir, target))
             if not os.path.exists(abs_target):
                 result.is_valid = False
-                result.broken_router_links.append(f"{os.path.relpath(r_path, REPO_ROOT)} -> {target}")
+                result.broken_router_links.append(f"{os.path.relpath(r_path, repo_root)} -> {target}")
             elif os.path.basename(abs_target) == "SKILL.md" and abs_target not in norm_routers:
                 skill_dir = os.path.dirname(abs_target)
-                rel_target_dir = os.path.relpath(skill_dir, REPO_ROOT).replace(os.sep, "/")
+                rel_target_dir = os.path.relpath(skill_dir, repo_root).replace(os.sep, "/")
                 router_indexed_set.add(rel_target_dir)
 
     result.total_canonical_skills = len(router_indexed_set)
@@ -245,7 +247,7 @@ def validate_library(
             s_abs = os.path.normpath(s_file)
             if s_abs not in norm_routers:
                 s_dir = os.path.dirname(s_abs)
-                rel_s_dir = os.path.relpath(s_dir, REPO_ROOT).replace(os.sep, "/")
+                rel_s_dir = os.path.relpath(s_dir, repo_root).replace(os.sep, "/")
                 physical_packages_set.add(rel_s_dir)
 
     # Step 4: Extract manifest packages
@@ -269,7 +271,7 @@ def validate_library(
                     result.is_valid = False
                     result.broken_managed_symlinks.append(f"{item} -> {raw_target}")
                 else:
-                    rel_t = os.path.relpath(abs_t, REPO_ROOT).replace(os.sep, "/")
+                    rel_t = os.path.relpath(abs_t, repo_root).replace(os.sep, "/")
                     if rel_t.startswith("library/"):
                         runtime_targets_set.add(rel_t)
             elif os.path.isdir(item_path):
@@ -312,7 +314,7 @@ def validate_library(
 
     # Step 7: Validate each canonical skill package
     for s_rel in sorted(list(router_indexed_set)):
-        s_abs = os.path.join(REPO_ROOT, s_rel)
+        s_abs = os.path.join(repo_root, s_rel)
         rep = validate_single_skill(s_abs)
         if not rep.is_valid:
             result.is_valid = False
