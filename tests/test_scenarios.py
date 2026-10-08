@@ -8,6 +8,7 @@ ALL tests execute in fully isolated temporary fixtures and NEVER mutate
 the production library, runtime links, manifest, routers, or ledger.
 """
 
+import copy
 import json
 import os
 import shutil
@@ -22,6 +23,8 @@ TOOLS_DIR = os.path.join(REPO_ROOT, "tools")
 if TOOLS_DIR not in sys.path:
     sys.path.insert(0, TOOLS_DIR)
 
+from unittest.mock import patch
+
 from skill_library.intake import (
     add_link_to_router,
     apply_candidate,
@@ -30,7 +33,7 @@ from skill_library.intake import (
 )
 from skill_library.ledger import ChangeLedger
 from skill_library.manifest import RuntimeManifest
-from skill_library.pilot import run_targeted_pilot
+from skill_library.pilot import PilotResult, run_targeted_pilot
 from skill_library.scanner import scan_candidate_directory, scan_runtime
 from skill_library.sync import reconcile_runtime_symlinks
 from skill_library.validator import validate_single_skill
@@ -566,6 +569,260 @@ Upgraded instructions for existing tool v2.
         self.assertEqual(latest_change["decision"], "UPDATE")
         self.assertEqual(latest_change["validation_status"], "PASS")
         self.assertEqual(latest_change["pilot_status"], "PASS")
+
+    def test_scenario_i_new_candidate_fails_pre_validation(self):
+        """Scenario I (Regression Test): NEW candidate fails package validation prior to install; produces zero canonical changes."""
+        cand_name = "scenario-i-invalid-candidate"
+        cand_dir = os.path.join(self.intake_dir, cand_name)
+        os.makedirs(cand_dir, exist_ok=True)
+
+        # 1. Author candidate with invalid frontmatter (missing name and invalid syntax)
+        with open(os.path.join(cand_dir, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write("Invalid SKILL file with no frontmatter\n")
+
+        with open(self.wa_router, "r", encoding="utf-8") as f:
+            router_before = f.read()
+        manifest_skills_before = set(self.manifest.skills.keys())
+
+        # 2. Attempt apply_candidate with approval; must abort before canonical modifications
+        with self.assertRaises(ValueError) as ctx:
+            apply_candidate(
+                candidate_name=cand_name,
+                category="workflow-and-automation",
+                subcategory="tool-integration",
+                approved=True,
+                intake_dir=self.intake_dir,
+                library_dir=self.library_dir,
+                runtime_dir=self.runtime_dir,
+                manifest=self.manifest,
+                ledger=self.ledger,
+            )
+        self.assertIn("failed prior to installation", str(ctx.exception))
+
+        # 3. Assert ZERO canonical changes occurred
+        expected_canonical = os.path.join(self.library_dir, "workflow-and-automation", "tool-integration", cand_name)
+        self.assertFalse(os.path.exists(expected_canonical))
+
+        # 4. Assert router was not modified
+        with open(self.wa_router, "r", encoding="utf-8") as f:
+            router_after = f.read()
+        self.assertEqual(router_before, router_after)
+
+        # 5. Assert manifest was not modified
+        self.assertEqual(set(self.manifest.skills.keys()), manifest_skills_before)
+
+        # 6. Assert runtime symlink was not created
+        runtime_item = os.path.join(self.runtime_dir, cand_name)
+        self.assertFalse(os.path.lexists(runtime_item))
+
+        # 7. Assert candidate remains in intake for correction
+        self.assertTrue(os.path.exists(cand_dir))
+
+        # 8. Assert ledger recorded the failed attempt truthfully
+        latest_change = self.ledger.get_history(limit=1)[0]
+        self.assertEqual(latest_change["original_name"], cand_name)
+        self.assertEqual(latest_change["decision"], "REJECT")
+        self.assertEqual(latest_change["validation_status"], "FAIL")
+        self.assertEqual(latest_change["pilot_status"], "NOT_RUN")
+
+    def test_scenario_j_new_candidate_fails_pilot_rolls_back(self):
+        """Scenario J (Regression Test): NEW candidate passes pre-validation but fails targeted pilot; rolls back all canonical/runtime changes."""
+        cand_name = "scenario-j-bad-pilot"
+        cand_dir = os.path.join(self.intake_dir, cand_name)
+        os.makedirs(os.path.join(cand_dir, "scripts"), exist_ok=True)
+
+        # 1. Author candidate with valid SKILL.md and scripts
+        with open(os.path.join(cand_dir, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write("""---
+name: scenario-j-bad-pilot
+description: System to test transaction rollback. Use when testing pipeline failure handling.
+---
+# Scenario J Bad Pilot
+""")
+        with open(os.path.join(cand_dir, "scripts", "run.py"), "w", encoding="utf-8") as f:
+            f.write("print('valid python')\n")
+
+        with open(self.wa_router, "r", encoding="utf-8") as f:
+            router_before = f.read()
+        manifest_skills_before = set(self.manifest.skills.keys())
+
+        # 2. Attempt apply_candidate with simulated pilot failure; must roll back completely
+        simulated_pilot_fail = PilotResult(
+            skill_name=cand_name,
+            parent_router=self.wa_router,
+            passed=False,
+            errors=["Simulated pilot failure: trigger contract ambiguity"],
+        )
+        with patch("skill_library.intake.run_targeted_pilot", return_value=simulated_pilot_fail):
+            with self.assertRaises(RuntimeError) as ctx:
+                apply_candidate(
+                    candidate_name=cand_name,
+                    category="workflow-and-automation",
+                    subcategory="tool-integration",
+                    approved=True,
+                    intake_dir=self.intake_dir,
+                    library_dir=self.library_dir,
+                    runtime_dir=self.runtime_dir,
+                    manifest=self.manifest,
+                    ledger=self.ledger,
+                )
+        self.assertIn("failed post-install checks", str(ctx.exception))
+        self.assertIn("rolled back", str(ctx.exception))
+
+        # 3. Assert canonical package was removed
+        expected_canonical = os.path.join(self.library_dir, "workflow-and-automation", "tool-integration", cand_name)
+        self.assertFalse(os.path.exists(expected_canonical))
+
+        # 4. Assert router was restored to its exact previous content
+        with open(self.wa_router, "r", encoding="utf-8") as f:
+            router_after = f.read()
+        self.assertEqual(router_before, router_after)
+
+        # 5. Assert manifest entry was removed
+        self.assertEqual(set(self.manifest.skills.keys()), manifest_skills_before)
+
+        # 6. Assert runtime symlink was removed
+        runtime_item = os.path.join(self.runtime_dir, cand_name)
+        self.assertFalse(os.path.lexists(runtime_item))
+
+        # 7. Assert candidate was restored to intake
+        self.assertTrue(os.path.exists(cand_dir))
+        self.assertTrue(os.path.exists(os.path.join(cand_dir, "scripts", "run.py")))
+
+        # 8. Assert ledger recorded the failure truthfully
+        latest_change = self.ledger.get_history(limit=1)[0]
+        self.assertEqual(latest_change["original_name"], cand_name)
+        self.assertEqual(latest_change["decision"], "ROLLBACK")
+        self.assertEqual(latest_change["validation_status"], "PASS")
+        self.assertEqual(latest_change["pilot_status"], "FAIL")
+
+    def test_scenario_k_update_fails_pre_validation(self):
+        """Scenario K (Regression Test): UPDATE candidate fails pre-validation; leaves prior canonical skill completely untouched."""
+        managed_name = "bug-hunter"
+        canonical_dir = os.path.join(self.library_dir, "quality-and-security", "debugging", managed_name)
+
+        with open(os.path.join(canonical_dir, "SKILL.md"), "r", encoding="utf-8") as f:
+            orig_skill_md_content = f.read()
+
+        # Stage invalid update into intake
+        cand_dir = os.path.join(self.intake_dir, managed_name)
+        os.makedirs(cand_dir, exist_ok=True)
+        with open(os.path.join(cand_dir, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write("Broken update with no frontmatter\n")
+
+        with open(os.path.join(cand_dir, ".installer-metadata.json"), "w", encoding="utf-8") as mf:
+            json.dump({
+                "type": "external_update",
+                "target_canonical_path": "library/quality-and-security/debugging/bug-hunter",
+                "timestamp": "2026-10-08T00:00:00Z"
+            }, mf)
+
+        # Must abort prior to installation
+        with self.assertRaises(ValueError) as ctx:
+            apply_candidate(
+                candidate_name=managed_name,
+                approved=True,
+                intake_dir=self.intake_dir,
+                library_dir=self.library_dir,
+                runtime_dir=self.runtime_dir,
+                manifest=self.manifest,
+                ledger=self.ledger,
+            )
+        self.assertIn("failed prior to installation", str(ctx.exception))
+
+        # Assert prior canonical version is completely untouched
+        with open(os.path.join(canonical_dir, "SKILL.md"), "r", encoding="utf-8") as f:
+            current_content = f.read()
+        self.assertEqual(current_content, orig_skill_md_content)
+
+        # Assert ledger recorded failure
+        latest_change = self.ledger.get_history(limit=1)[0]
+        self.assertEqual(latest_change["original_name"], managed_name)
+        self.assertEqual(latest_change["decision"], "REJECT")
+        self.assertEqual(latest_change["validation_status"], "FAIL")
+
+    def test_scenario_l_update_fails_pilot_restores_prior_canonical(self):
+        """Scenario L (Regression Test): UPDATE candidate fails pilot; completely restores prior canonical version and leaves update in intake."""
+        managed_name = "bug-hunter"
+        canonical_dir = os.path.join(self.library_dir, "quality-and-security", "debugging", managed_name)
+
+        # Record original canonical state
+        with open(os.path.join(canonical_dir, "SKILL.md"), "r", encoding="utf-8") as f:
+            orig_skill_md_content = f.read()
+        router_path = self.qs_router
+        with open(router_path, "r", encoding="utf-8") as f:
+            router_before = f.read()
+        manifest_entry_before = copy.deepcopy(self.manifest.skills[managed_name])
+
+        # Stage proposed update into intake with valid frontmatter but will fail pilot
+        cand_dir = os.path.join(self.intake_dir, managed_name)
+        os.makedirs(os.path.join(cand_dir, "scripts"), exist_ok=True)
+        with open(os.path.join(cand_dir, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write("""---
+name: bug-hunter
+description: Autonomous system to identify and capture code bugs. Use when hunting application defects.
+---
+# Bug Hunter v2.0 - Proposed Update
+""")
+        with open(os.path.join(cand_dir, "scripts", "new_feature.py"), "w", encoding="utf-8") as f:
+            f.write("print('new feature')\n")
+
+        with open(os.path.join(cand_dir, ".installer-metadata.json"), "w", encoding="utf-8") as mf:
+            json.dump({
+                "type": "external_update",
+                "target_canonical_path": "library/quality-and-security/debugging/bug-hunter",
+                "timestamp": "2026-10-08T00:00:00Z"
+            }, mf)
+
+        # Attempt apply; must fail pilot and restore prior canonical version
+        simulated_pilot_fail = PilotResult(
+            skill_name=managed_name,
+            parent_router=self.qs_router,
+            passed=False,
+            errors=["Simulated pilot failure: trigger contract conflict"],
+        )
+        with patch("skill_library.intake.run_targeted_pilot", return_value=simulated_pilot_fail):
+            with self.assertRaises(RuntimeError) as ctx:
+                apply_candidate(
+                    candidate_name=managed_name,
+                    approved=True,
+                    intake_dir=self.intake_dir,
+                    library_dir=self.library_dir,
+                    runtime_dir=self.runtime_dir,
+                    manifest=self.manifest,
+                    ledger=self.ledger,
+                )
+        self.assertIn("failed post-install checks", str(ctx.exception))
+
+        # Assert prior canonical version is completely restored
+        with open(os.path.join(canonical_dir, "SKILL.md"), "r", encoding="utf-8") as f:
+            restored_skill_md = f.read()
+        self.assertEqual(restored_skill_md, orig_skill_md_content)
+        self.assertFalse(os.path.exists(os.path.join(canonical_dir, "scripts", "new_feature.py")))
+
+        # Assert router is preserved
+        with open(router_path, "r", encoding="utf-8") as f:
+            router_after = f.read()
+        self.assertEqual(router_before, router_after)
+
+        # Assert manifest entry is preserved
+        self.assertEqual(self.manifest.skills[managed_name], manifest_entry_before)
+
+        # Assert runtime symlink still points to canonical bug-hunter
+        runtime_item = os.path.join(self.runtime_dir, managed_name)
+        self.assertTrue(os.path.islink(runtime_item))
+        self.assertEqual(os.path.realpath(runtime_item), os.path.realpath(canonical_dir))
+
+        # Assert proposed update is preserved in intake for review
+        self.assertTrue(os.path.exists(cand_dir))
+        self.assertTrue(os.path.exists(os.path.join(cand_dir, "scripts", "new_feature.py")))
+
+        # Assert ledger recorded the rollback truthfully
+        latest_change = self.ledger.get_history(limit=1)[0]
+        self.assertEqual(latest_change["operation"], "UPDATE")
+        self.assertEqual(latest_change["decision"], "ROLLBACK")
+        self.assertEqual(latest_change["validation_status"], "PASS")
+        self.assertEqual(latest_change["pilot_status"], "FAIL")
 
 
 if __name__ == "__main__":

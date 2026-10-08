@@ -3,10 +3,12 @@ Intake Evaluation, Normalization, Router Integration, and Lifecycle Application.
 Handles the complete path from external or downloaded skill to approved canonical library skill.
 """
 
+import copy
 import json
 import os
 import re
 import shutil
+import tempfile
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Set, Tuple
@@ -453,27 +455,82 @@ def apply_candidate(
                     break
 
     if not dry_run:
-        # 1. Normalize package
+        # Step A: Normalization & Pre-Install Validation
         normalize_package_content(src_dir)
+        pre_val = validate_single_skill(src_dir)
+        if not pre_val.is_valid:
+            lg = ledger or ChangeLedger()
+            lg.record_change(
+                operation=operation,
+                source="intake",
+                source_path=src_dir,
+                original_name=candidate_name,
+                canonical_name=final_name,
+                runtime_name=runtime_name,
+                decision="REJECT",
+                category=cat,
+                subcategory=subcat,
+                canonical_path="",
+                functional_parent="",
+                validation_status="FAIL",
+                pilot_status="NOT_RUN",
+            )
+            err_msg = "; ".join(pre_val.errors)
+            raise ValueError(f"Candidate package validation failed prior to installation: {err_msg}")
 
-        # 2. Deploy to canonical library
+        # Step B: Preserve State for Transactional Rollback
+        backup_candidate_dir = tempfile.mkdtemp(prefix="intake_backup_")
+        candidate_backup_path = os.path.join(backup_candidate_dir, candidate_name)
+        shutil.copytree(src_dir, candidate_backup_path)
+
+        backup_canonical_dir = None
+        canonical_backup_path = None
+        orig_manifest_entry = None
+        if is_update:
+            backup_canonical_dir = tempfile.mkdtemp(prefix="canonical_backup_")
+            canonical_backup_path = os.path.join(backup_canonical_dir, final_name)
+            if os.path.exists(target_dir):
+                shutil.copytree(target_dir, canonical_backup_path)
+            orig_manifest_entry = copy.deepcopy(m.skills.get(runtime_name))
+
+        orig_router_content = None
+        if os.path.exists(router_path):
+            with open(router_path, "r", encoding="utf-8") as rf:
+                orig_router_content = rf.read()
+
+        runtime_item_path = os.path.join(runtime_dir, runtime_name)
+        candidate_runtime_path = os.path.join(runtime_dir, candidate_name)
+        orig_runtime_states = {}
+        for p in {runtime_item_path, candidate_runtime_path}:
+            if os.path.islink(p):
+                orig_runtime_states[p] = ("symlink", os.readlink(p))
+            elif os.path.isdir(p):
+                orig_runtime_states[p] = ("dir", None)
+            else:
+                orig_runtime_states[p] = ("missing", None)
+
+        # Step C: Deploy to Canonical Library
         os.makedirs(os.path.dirname(target_dir), exist_ok=True)
         if is_update and os.path.exists(target_dir):
-            # Update files into existing canonical folder
+            for item in os.listdir(target_dir):
+                item_p = os.path.join(target_dir, item)
+                if os.path.isdir(item_p):
+                    shutil.rmtree(item_p)
+                else:
+                    os.unlink(item_p)
             for item in os.listdir(src_dir):
                 s_item = os.path.join(src_dir, item)
                 d_item = os.path.join(target_dir, item)
                 if os.path.isdir(s_item):
-                    if os.path.exists(d_item):
-                        shutil.rmtree(d_item)
                     shutil.copytree(s_item, d_item)
                 else:
                     shutil.copy2(s_item, d_item)
-            shutil.rmtree(src_dir)
         else:
-            shutil.move(src_dir, target_dir)
+            if os.path.exists(target_dir):
+                shutil.rmtree(target_dir)
+            shutil.copytree(src_dir, target_dir)
 
-        # 3. Update router if new skill
+        # Step D: Update Router if new skill
         if not is_update:
             add_link_to_router(
                 router_path=router_path,
@@ -483,7 +540,7 @@ def apply_candidate(
                 description=desc,
             )
 
-        # 4. Update manifest
+        # Step E: Update Manifest
         canonical_rel = os.path.relpath(target_dir, repo_root).replace(os.sep, "/")
         router_rel = os.path.relpath(router_path, repo_root).replace(os.sep, "/")
 
@@ -497,11 +554,8 @@ def apply_candidate(
         )
         m.save()
 
-        # 5. Automatically replace any physical runtime directory with canonical symlink (Finding 1 & 8)
-        runtime_item_path = os.path.join(runtime_dir, runtime_name)
-        candidate_runtime_path = os.path.join(runtime_dir, candidate_name)
+        # Step F: Update Runtime Symlinks
         rel_target = os.path.relpath(target_dir, runtime_dir)
-
         for p in {runtime_item_path, candidate_runtime_path}:
             if os.path.isdir(p) and not os.path.islink(p):
                 shutil.rmtree(p)
@@ -514,14 +568,115 @@ def apply_candidate(
                     os.unlink(p)
                     os.symlink(rel_target, p)
 
-        # 6. Execute real validation & targeted pilot checks (Finding 4)
+        # Step G: Execute Post-Install Validation & Targeted Pilot Checks
         val_res = validate_single_skill(target_dir)
         val_status = "PASS" if val_res.is_valid else "FAIL"
 
         pilot_res = run_targeted_pilot(target_dir, router_path)
         pilot_status = "PASS" if pilot_res.passed else "FAIL"
 
-        # 7. Append truthful record to Change Ledger
+        # Step H: Transactional Rollback if validation or pilot fails
+        if val_status != "PASS" or pilot_status != "PASS":
+            if is_update:
+                # 1. Restore canonical package
+                if os.path.exists(target_dir):
+                    shutil.rmtree(target_dir)
+                if canonical_backup_path and os.path.exists(canonical_backup_path):
+                    shutil.copytree(canonical_backup_path, target_dir)
+
+                # 2. Restore router content
+                if orig_router_content is not None and os.path.exists(router_path):
+                    with open(router_path, "w", encoding="utf-8") as rf:
+                        rf.write(orig_router_content)
+
+                # 3. Restore manifest entry
+                if orig_manifest_entry is not None:
+                    m.skills[runtime_name] = orig_manifest_entry
+                elif runtime_name in m.skills:
+                    m.remove_skill(runtime_name)
+                m.save()
+
+                # 4. Restore runtime symlink state
+                for p, (stype, sval) in orig_runtime_states.items():
+                    if os.path.lexists(p):
+                        if os.path.islink(p) or os.path.isfile(p):
+                            os.unlink(p)
+                        elif os.path.isdir(p):
+                            shutil.rmtree(p)
+                    if stype == "symlink" and sval is not None:
+                        os.symlink(sval, p)
+
+                # 5. Restore candidate in intake for review
+                if not os.path.exists(src_dir) and os.path.exists(candidate_backup_path):
+                    shutil.copytree(candidate_backup_path, src_dir)
+            else:
+                # NEW skill rollback
+                # 1. Remove canonical package
+                if os.path.exists(target_dir):
+                    shutil.rmtree(target_dir)
+
+                # 2. Restore router
+                if orig_router_content is not None and os.path.exists(router_path):
+                    with open(router_path, "w", encoding="utf-8") as rf:
+                        rf.write(orig_router_content)
+
+                # 3. Remove manifest entry
+                if runtime_name in m.skills:
+                    m.remove_skill(runtime_name)
+                    m.save()
+
+                # 4. Remove/revert runtime symlink
+                for p, (stype, sval) in orig_runtime_states.items():
+                    if os.path.lexists(p):
+                        if os.path.islink(p) or os.path.isfile(p):
+                            os.unlink(p)
+                        elif os.path.isdir(p):
+                            shutil.rmtree(p)
+                    if stype == "symlink" and sval is not None:
+                        os.symlink(sval, p)
+
+                # 5. Restore candidate in intake
+                if not os.path.exists(src_dir) and os.path.exists(candidate_backup_path):
+                    shutil.copytree(candidate_backup_path, src_dir)
+
+            # Record failure in Change Ledger
+            lg = ledger or ChangeLedger()
+            lg.record_change(
+                operation=operation,
+                source="intake",
+                source_path=src_dir,
+                original_name=candidate_name,
+                canonical_name=final_name,
+                runtime_name=runtime_name,
+                decision="ROLLBACK",
+                category=cat,
+                subcategory=subcat,
+                canonical_path=canonical_rel if is_update else "",
+                functional_parent=router_rel if is_update else "",
+                validation_status=val_status,
+                pilot_status=pilot_status,
+            )
+
+            # Cleanup temporary backups
+            shutil.rmtree(backup_candidate_dir, ignore_errors=True)
+            if backup_canonical_dir:
+                shutil.rmtree(backup_canonical_dir, ignore_errors=True)
+
+            reasons = []
+            if val_status != "PASS":
+                reasons.append(f"Validation failed ({'; '.join(val_res.errors)})")
+            if pilot_status != "PASS":
+                reasons.append(f"Pilot failed ({'; '.join(pilot_res.errors)})")
+
+            raise RuntimeError(
+                f"Candidate '{candidate_name}' failed post-install checks: {', '.join(reasons)}. "
+                f"All canonical and runtime changes rolled back successfully."
+            )
+
+        # Step I: Success! Clean candidate from intake and record in ledger
+        if os.path.exists(src_dir):
+            shutil.rmtree(src_dir)
+
         lg = ledger or ChangeLedger()
         lg.record_change(
             operation=operation,
@@ -538,6 +693,10 @@ def apply_candidate(
             validation_status=val_status,
             pilot_status=pilot_status,
         )
+
+        shutil.rmtree(backup_candidate_dir, ignore_errors=True)
+        if backup_canonical_dir:
+            shutil.rmtree(backup_canonical_dir, ignore_errors=True)
 
     return {
         "candidate_name": candidate_name,

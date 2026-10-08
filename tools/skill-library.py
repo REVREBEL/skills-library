@@ -126,8 +126,14 @@ def cmd_apply(args):
     except PermissionError as pe:
         print(f"\n[HUMAN APPROVAL GATE BLOCKED]\n{pe}", file=sys.stderr)
         return 1
+    except ValueError as ve:
+        print(f"\n[PRE-INSTALL VALIDATION FAILED - ZERO CHANGES]\n{ve}", file=sys.stderr)
+        return 1
+    except RuntimeError as re:
+        print(f"\n[POST-INSTALL CHECKS FAILED - TRANSACTION ROLLED BACK]\n{re}", file=sys.stderr)
+        return 1
     except Exception as e:
-        print(f"ERROR: Failed to apply candidate: {e}", file=sys.stderr)
+        print(f"\n[ERROR] Failed to apply candidate: {e}", file=sys.stderr)
         return 1
 
 
