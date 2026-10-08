@@ -1,3 +1,5 @@
+> **Superseded architecture:** The individual-symlink runtime publication model in this report is superseded by [Runtime Publication Architecture: Physical Git Clones, Configured Targets, and Intake Capture](./runtime-git-clone-publication.md). Preserve this file as the historical record of the original runtime-path correction, but do not use its symlink-specific implementation or acceptance criteria for new work.
+
 # Bug: Runtime Skills Path Targets Repo-Local `.agents/skills` Instead of Global `~/.agents/skills`
 
 ## Summary
