@@ -254,12 +254,21 @@ def evaluate_candidate(
 
     # 4. Compare against Canonical Library (Semantic Overlap & Name Collisions)
     candidate_tokens = tokenize(candidate_name + " " + pkg.description)
+    base_candidate_name = re.sub(r"[_vV\-](\d+|v\d+)$", "", candidate_name)
+    has_counter_suffix = (base_candidate_name != candidate_name)
 
     # Direct name collision check
     if candidate_name in m.skills:
         eval_result.name_collision = True
         eval_result.approval_required = True
         eval_result.approval_reasons.append(f"Name collision with existing runtime skill '{candidate_name}'")
+
+    if has_counter_suffix and base_candidate_name in m.skills:
+        eval_result.name_collision = True
+        eval_result.approval_required = True
+        eval_result.approval_reasons.append(
+            f"Candidate '{candidate_name}' uses synthetic counter/version suffix masking existing skill '{base_candidate_name}'"
+        )
 
     # Compare with existing skills
     competitor_scores = []
@@ -290,10 +299,11 @@ def evaluate_candidate(
     # Decision Matrix
     top_sim = competitor_scores[0]["similarity"] if competitor_scores else 0.0
 
-    if eval_result.name_collision and top_sim >= 0.75:
+    if eval_result.name_collision and (top_sim >= 0.50 or (has_counter_suffix and base_candidate_name in m.skills)):
         eval_result.recommended_decision = "REJECT"
         eval_result.approval_required = True
-        eval_result.approval_reasons.append(f"True duplicate of existing skill '{competitor_scores[0]['name']}'")
+        matched_target = base_candidate_name if (has_counter_suffix and base_candidate_name in m.skills) else (competitor_scores[0]['name'] if competitor_scores else candidate_name)
+        eval_result.approval_reasons.append(f"True duplicate of existing skill '{matched_target}'")
     elif top_sim >= 0.55:
         eval_result.recommended_decision = "MERGE"
         eval_result.approval_required = True
@@ -549,20 +559,7 @@ def apply_candidate(
                 except Exception:
                     pass
 
-                # 4. Explicitly restore runtime symlink to restored canonical package
-                try:
-                    rel_target_canonical = _safe_relpath(target_dir, runtime_dir)
-                    for p in {runtime_item_path, candidate_runtime_path}:
-                        if os.path.lexists(p):
-                            if os.path.islink(p) or os.path.isfile(p):
-                                os.unlink(p)
-                            elif os.path.isdir(p):
-                                shutil.rmtree(p)
-                    os.symlink(rel_target_canonical, runtime_item_path)
-                except Exception:
-                    pass
-
-                # 5. Restore candidate in intake for review
+                # 4. Restore candidate in intake for review
                 try:
                     if not os.path.exists(src_dir) and os.path.exists(candidate_backup_path):
                         shutil.copytree(candidate_backup_path, src_dir)
@@ -593,20 +590,7 @@ def apply_candidate(
                 except Exception:
                     pass
 
-                # 4. Remove/revert runtime symlink
-                try:
-                    for p, (stype, sval) in orig_runtime_states.items():
-                        if os.path.lexists(p):
-                            if os.path.islink(p) or os.path.isfile(p):
-                                os.unlink(p)
-                            elif os.path.isdir(p):
-                                shutil.rmtree(p)
-                        if stype == "symlink" and sval is not None:
-                            os.symlink(sval, p)
-                except Exception:
-                    pass
-
-                # 5. Restore candidate in intake
+                # 4. Restore candidate in intake
                 try:
                     if not os.path.exists(src_dir) and os.path.exists(candidate_backup_path):
                         shutil.copytree(candidate_backup_path, src_dir)
@@ -682,21 +666,7 @@ def apply_candidate(
             )
             m.save()
 
-            # Step F: Update Runtime Symlinks
-            rel_target = _safe_relpath(target_dir, runtime_dir)
-            for p in {runtime_item_path, candidate_runtime_path}:
-                if os.path.isdir(p) and not os.path.islink(p):
-                    shutil.rmtree(p)
-                    os.symlink(rel_target, p)
-                elif not os.path.lexists(p):
-                    os.symlink(rel_target, p)
-                elif os.path.islink(p):
-                    current = os.path.normpath(os.path.join(runtime_dir, os.readlink(p)))
-                    if current != os.path.normpath(target_dir):
-                        os.unlink(p)
-                        os.symlink(rel_target, p)
-
-            # Step G: Execute Post-Install Validation & Targeted Pilot Checks
+            # Step F: Execute Post-Install Validation & Targeted Pilot Checks
             val_res = validate_single_skill(target_dir)
             val_status = "PASS" if val_res.is_valid else "FAIL"
 

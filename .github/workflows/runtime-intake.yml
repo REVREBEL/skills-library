@@ -1,0 +1,52 @@
+name: Runtime Intake Pipeline
+
+on:
+  push:
+    branches:
+      - 'incoming/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  process-incoming:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Convert Incoming Snapshot to Intake Branch
+        id: convert
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          INCOMING_REF="${{ github.ref_name }}"
+          echo "Processing incoming branch: $INCOMING_REF"
+          python3 tools/skill-library.py convert-incoming --incoming-branch "$INCOMING_REF"
+          INTAKE_BRANCH="intake/${INCOMING_REF#incoming/}"
+          echo "intake_branch=$INTAKE_BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Push Intake Branch
+        run: |
+          INTAKE_BRANCH="${{ steps.convert.outputs.intake_branch }}"
+          git push origin "$INTAKE_BRANCH:$INTAKE_BRANCH"
+
+      - name: Open Intake Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          INTAKE_BRANCH="${{ steps.convert.outputs.intake_branch }}"
+          gh pr create \
+            --base main \
+            --head "$INTAKE_BRANCH" \
+            --title "Intake: Review incoming runtime skills [${{ github.ref_name }}]" \
+            --body "Automated intake PR generated from runtime snapshot branch \`${{ github.ref_name }}\`.\n\nPlease review compatibility, documentation standards, and semantic duplicates before merging."

@@ -5893,16 +5893,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "design-md_v1": {
-      "runtime_name": "design-md_v1",
-      "canonical_name": "design-md_v1",
-      "canonical_path": "library/design-and-experience/design-systems/design-md_v1",
-      "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "design-negotiation": {
       "runtime_name": "design-negotiation",
       "canonical_name": "design-negotiation",

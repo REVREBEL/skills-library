@@ -1,252 +1,309 @@
 """
-Runtime Symlink Reconciliation Module.
-Synchronizes .agents/skills/ with the canonical library and runtime manifest,
-creates portable relative symlinks, repairs broken links, discovers external physical installs,
-and guarantees idempotency and safety.
+Runtime Git Clone and Sparse-Checkout Synchronization Module.
+Synchronizes configured runtime targets with the published 'runtime' branch
+using physical Git clones and native sparse-checkouts, preserving dirty workstation
+state, capturing external installs, and providing non-destructive migrations.
 """
 
-import json
 import os
 import shutil
+import subprocess
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Any
 
 from .config import (
     INTAKE_DIR,
     LIBRARY_DIR,
-    PROTECTED_RUNTIME_ENTRIES,
     REPO_ROOT,
-    RUNTIME_DIR,
+    RUNTIME_BRANCH,
+    RuntimeTarget,
+    load_runtime_targets,
 )
-from .manifest import RuntimeManifest
-from .scanner import inspect_external_installer_environment
 
 
-def _safe_relpath(target: str, start: str) -> str:
-    """Computes relative path, falling back to absolute if on different drives/roots."""
-    try:
-        return os.path.relpath(target, start)
-    except ValueError:
-        return os.path.abspath(target)
+def run_git(cmd: List[str], cwd: str, check: bool = True) -> subprocess.CompletedProcess:
+    """Run a git command in cwd and return CompletedProcess."""
+    return subprocess.run(
+        ["git"] + cmd,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=check,
+    )
 
 
 @dataclass
-class SyncReport:
-    created: List[str] = field(default_factory=list)
-    verified: List[str] = field(default_factory=list)
-    repaired: List[str] = field(default_factory=list)
-    staged_to_intake: List[str] = field(default_factory=list)
-    external_links: List[str] = field(default_factory=list)
-    collisions: List[str] = field(default_factory=list)
-    protected_skipped: List[str] = field(default_factory=list)
+class TargetSyncReport:
+    name: str
+    path: str
+    status: str  # "created", "up_to_date", "updated", "dirty", "unmanaged", "migrated", "error"
+    mode: str = "full"
+    commit_sha: Optional[str] = None
+    dirty_files: List[str] = field(default_factory=list)
+    message: str = ""
     errors: List[str] = field(default_factory=list)
 
+
+@dataclass
+class MultiTargetSyncReport:
+    targets: List[TargetSyncReport] = field(default_factory=list)
+
     @property
-    def has_changes(self) -> bool:
-        return bool(self.created or self.repaired or self.staged_to_intake)
+    def has_errors(self) -> bool:
+        return any(bool(t.errors or t.status == "error") for t in self.targets)
+
+    @property
+    def has_dirty(self) -> bool:
+        return any(t.status == "dirty" for t in self.targets)
 
     def summary(self) -> str:
-        lines = [
-            "=== Runtime Symlink Synchronization Summary ===",
-            f"Verified Unchanged: {len(self.verified)}",
-            f"Created Symlinks: {len(self.created)}",
-            f"Repaired Symlinks: {len(self.repaired)}",
-            f"Staged to Intake: {len(self.staged_to_intake)}",
-            f"Protected System Skills Preserved: {len(self.protected_skipped)}",
-            f"External Unknown Symlinks: {len(self.external_links)}",
-            f"Collisions / Blockers: {len(self.collisions)}",
-        ]
-        if self.errors:
-            lines.append("Errors:")
-            for e in self.errors:
-                lines.append(f"  - {e}")
+        lines = ["=== Runtime Targets Synchronization Summary ==="]
+        for t in self.targets:
+            lines.append(f"Target '{t.name}' ({t.path}) [{t.mode}]: {t.status.upper()}")
+            if t.commit_sha:
+                lines.append(f"  Commit: {t.commit_sha[:10]}")
+            if t.message:
+                lines.append(f"  Info: {t.message}")
+            if t.dirty_files:
+                lines.append(f"  Dirty Files ({len(t.dirty_files)}):")
+                for df in t.dirty_files[:5]:
+                    lines.append(f"    {df}")
+                if len(t.dirty_files) > 5:
+                    lines.append(f"    ... and {len(t.dirty_files) - 5} more")
+            if t.errors:
+                lines.append("  Errors:")
+                for err in t.errors:
+                    lines.append(f"    - {err}")
         return "\n".join(lines)
 
 
-def reconcile_runtime_symlinks(
-    runtime_dir: str = RUNTIME_DIR,
+def detect_target_state(
+    target_path: Path,
+    expected_branch: str = RUNTIME_BRANCH,
+    expected_remote: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Inspects target directory to assess if absent, git checkout, dirty, or unmanaged."""
+    state: Dict[str, Any] = {
+        "exists": target_path.exists(),
+        "is_dir": target_path.is_dir(),
+        "is_git": False,
+        "branch": None,
+        "is_dirty": False,
+        "dirty_files": [],
+        "commit_sha": None,
+        "sparse_enabled": False,
+        "sparse_rules": [],
+        "has_legacy_symlinks": False,
+        "unmanaged_physical_files": [],
+    }
+
+    if not state["exists"]:
+        return state
+
+    git_dir = target_path / ".git"
+    if git_dir.exists() and (git_dir.is_dir() or git_dir.is_file()):
+        state["is_git"] = True
+        try:
+            branch_proc = run_git(["branch", "--show-current"], cwd=str(target_path), check=False)
+            state["branch"] = branch_proc.stdout.strip()
+
+            commit_proc = run_git(["rev-parse", "HEAD"], cwd=str(target_path), check=False)
+            if commit_proc.returncode == 0:
+                state["commit_sha"] = commit_proc.stdout.strip()
+
+            status_proc = run_git(["status", "--porcelain"], cwd=str(target_path), check=False)
+            dirty = [line.strip() for line in status_proc.stdout.splitlines() if line.strip()]
+            state["is_dirty"] = bool(dirty)
+            state["dirty_files"] = dirty
+
+            sparse_cfg = run_git(["config", "core.sparseCheckout"], cwd=str(target_path), check=False)
+            state["sparse_enabled"] = sparse_cfg.stdout.strip().lower() == "true"
+            if state["sparse_enabled"]:
+                sparse_list = run_git(["sparse-checkout", "list"], cwd=str(target_path), check=False)
+                state["sparse_rules"] = [r.strip() for r in sparse_list.stdout.splitlines() if r.strip()]
+        except Exception as e:
+            state["error"] = str(e)
+    else:
+        # Non-git directory: check for legacy symlinks and unmanaged physical files
+        try:
+            for item in target_path.iterdir():
+                if item.name in (".DS_Store", ".git"):
+                    continue
+                if item.is_symlink():
+                    state["has_legacy_symlinks"] = True
+                else:
+                    state["unmanaged_physical_files"].append(item.name)
+        except Exception as e:
+            state["error"] = str(e)
+
+    return state
+
+
+def migrate_legacy_symlink_target(
+    target_path: Path,
     library_dir: str = LIBRARY_DIR,
-    intake_dir: str = INTAKE_DIR,
-    manifest: Optional[RuntimeManifest] = None,
-    dry_run: bool = False,
-    stage_external: bool = True,
-) -> SyncReport:
+) -> Dict[str, Any]:
     """
-    Reconciles .agents/skills/ symlinks against the runtime manifest.
-    Ensures every canonical managed skill has a valid relative symlink.
+    Non-destructively removes managed legacy symlinks from a target directory,
+    ensuring unmanaged physical files are preserved.
     """
-    report = SyncReport()
-    m = manifest or RuntimeManifest()
-    os.makedirs(runtime_dir, exist_ok=True)
-    os.makedirs(intake_dir, exist_ok=True)
+    removed_symlinks = 0
+    preserved_unmanaged = []
 
-    norm_lib = os.path.normpath(library_dir)
-    repo_root = os.path.dirname(norm_lib)
+    if not target_path.exists():
+        return {"migrated": False, "reason": "does_not_exist"}
 
-    # Step 1: Scan existing entries in .agents/skills/
-    existing_entries = os.listdir(runtime_dir)
-
-    for entry in existing_entries:
-        if entry in PROTECTED_RUNTIME_ENTRIES:
-            report.protected_skipped.append(entry)
+    for item in list(target_path.iterdir()):
+        if item.name in (".DS_Store",):
+            try:
+                item.unlink()
+            except Exception:
+                pass
             continue
-
-        entry_path = os.path.join(runtime_dir, entry)
-
-        if os.path.islink(entry_path):
-            raw_target = os.readlink(entry_path)
-            abs_target = os.path.normpath(os.path.join(runtime_dir, raw_target))
-            target_exists = os.path.exists(abs_target)
-
-            if not target_exists:
-                # Broken symlink
-                if entry in m.skills:
-                    # Target is a managed skill whose link is broken or stale -> repair it
-                    canonical_rel = m.skills[entry]["canonical_path"]
-                    canonical_abs = os.path.normpath(os.path.join(repo_root, canonical_rel))
-                    if os.path.exists(canonical_abs):
-                        if not dry_run:
-                            os.unlink(entry_path)
-                            rel_link = _safe_relpath(canonical_abs, runtime_dir)
-                            os.symlink(rel_link, entry_path)
-                        report.repaired.append(f"{entry} -> {canonical_rel}")
-                    else:
-                        report.errors.append(f"Cannot repair {entry}: canonical target {canonical_rel} missing on disk")
-                else:
-                    report.errors.append(f"Broken unmanaged symlink: {entry} -> {raw_target}")
-            elif abs_target.startswith(norm_lib):
-                # Valid managed symlink
-                if entry in m.skills:
-                    report.verified.append(entry)
-                else:
-                    # Symlink points into library but not in manifest (orphan symlink)
-                    report.external_links.append(entry)
-            else:
-                # Symlink points outside library
-                report.external_links.append(entry)
-
-        elif os.path.isdir(entry_path):
-            # Physical directory in runtime folder (external install e.g. from skills.sh)
-            if entry in m.skills:
-                # Potential external UPDATE to an already managed skill
-                if stage_external:
-                    dest_intake = os.path.join(intake_dir, entry)
-                    if os.path.exists(dest_intake):
-                        report.collisions.append(f"Cannot stage update for {entry}: intake/{entry} already exists")
-                    else:
-                        canonical_rel = m.skills[entry]["canonical_path"]
-                        integration_info = inspect_external_installer_environment(entry_path)
-                        integration_info["type"] = "external_update"
-                        integration_info["target_canonical_path"] = canonical_rel
-                        integration_info["original_name"] = entry
-                        if not dry_run:
-                            shutil.copytree(entry_path, dest_intake)
-                            meta_path = os.path.join(dest_intake, ".installer-metadata.json")
-                            with open(meta_path, "w", encoding="utf-8") as mf:
-                                json.dump(integration_info, mf, indent=2)
-                        report.staged_to_intake.append(f"{entry} (EXTERNAL_UPDATE -> {canonical_rel})")
-                else:
-                    report.errors.append(f"External update physical directory found (unstaged): {entry}")
-            else:
-                if stage_external:
-                    # Stage brand-new external install into intake safely
-                    dest_intake = os.path.join(intake_dir, entry)
-                    if os.path.exists(dest_intake):
-                        report.collisions.append(f"Cannot stage {entry}: intake/{entry} already exists")
-                    else:
-                        integration_info = inspect_external_installer_environment(entry_path)
-                        integration_info["type"] = "external_physical"
-                        integration_info["original_name"] = entry
-                        if not dry_run:
-                            shutil.copytree(entry_path, dest_intake)
-                            meta_path = os.path.join(dest_intake, ".installer-metadata.json")
-                            with open(meta_path, "w", encoding="utf-8") as mf:
-                                json.dump(integration_info, mf, indent=2)
-                        report.staged_to_intake.append(entry)
-                else:
-                    report.errors.append(f"External physical directory found (unstaged): {entry}")
-
+        if item.is_symlink():
+            try:
+                item.unlink()
+                removed_symlinks += 1
+            except Exception:
+                pass
         else:
-            # Regular unmanaged file
-            report.collisions.append(f"Unmanaged regular file in runtime directory: {entry}")
+            preserved_unmanaged.append(str(item))
 
-    # Step 2: Ensure all managed skills in manifest have symlinks in runtime_dir
-    for runtime_name, s_info in m.skills.items():
-        symlink_path = os.path.join(runtime_dir, runtime_name)
-        canonical_rel = s_info["canonical_path"]
-        canonical_abs = os.path.normpath(os.path.join(repo_root, canonical_rel))
+    return {
+        "migrated": True,
+        "removed_symlinks": removed_symlinks,
+        "preserved_unmanaged": preserved_unmanaged,
+    }
 
-        if not os.path.exists(canonical_abs):
-            report.errors.append(f"Canonical skill path missing on disk: {canonical_rel}")
+
+def sync_target(
+    target: RuntimeTarget,
+    source_repo: str = REPO_ROOT,
+    runtime_branch: str = RUNTIME_BRANCH,
+    allow_intake_capture: bool = True,
+) -> TargetSyncReport:
+    """
+    Reconciles an individual runtime target to the published runtime branch.
+    Never overwrites a dirty target. Applies sparse-checkout rules for subset mode.
+    """
+    dest = target.resolved_path
+    report = TargetSyncReport(name=target.name, path=str(dest), status="up_to_date", mode=target.mode)
+
+    try:
+        state = detect_target_state(dest, expected_branch=runtime_branch)
+
+        # Step 1: Check for legacy symlink migration if not a git repo
+        if state["exists"] and not state["is_git"]:
+            if state["has_legacy_symlinks"] and not state["unmanaged_physical_files"]:
+                # Pure legacy symlink farm: clean it up so we can clone cleanly
+                migrate_res = migrate_legacy_symlink_target(dest)
+                report.message = f"Cleaned {migrate_res['removed_symlinks']} legacy symlinks."
+                # Refresh state
+                state = detect_target_state(dest, expected_branch=runtime_branch)
+            elif state["unmanaged_physical_files"]:
+                report.status = "unmanaged"
+                report.message = (
+                    f"Directory contains {len(state['unmanaged_physical_files'])} unmanaged non-symlink items. "
+                    "Refusing destructive initialization."
+                )
+                report.errors.append("Unmanaged files present in non-git destination.")
+                return report
+
+        # Step 2: Handle absent or empty destination -> Git Clone
+        if not state["exists"] or (dest.is_dir() and not list(dest.iterdir())):
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            if target.mode == "subset":
+                # Clone with --no-checkout then set sparse-checkout
+                run_git(
+                    ["clone", "--branch", runtime_branch, "--no-checkout", source_repo, str(dest)],
+                    cwd=str(dest.parent),
+                )
+                if target.include:
+                    run_git(
+                        ["sparse-checkout", "set"] + target.include,
+                        cwd=str(dest),
+                    )
+                run_git(["checkout", runtime_branch], cwd=str(dest))
+            else:
+                # Full clone
+                run_git(
+                    ["clone", "--branch", runtime_branch, source_repo, str(dest)],
+                    cwd=str(dest.parent),
+                )
+
+            commit_proc = run_git(["rev-parse", "HEAD"], cwd=str(dest))
+            report.status = "created"
+            report.commit_sha = commit_proc.stdout.strip()
+            report.message = f"Cloned {runtime_branch} branch ({target.mode} mode)."
+            return report
+
+        # Step 3: Destination is an existing Git clone
+        if state["is_git"]:
+            # Check dirty state first: NEVER overwrite dirty target
+            if state["is_dirty"]:
+                report.status = "dirty"
+                report.commit_sha = state["commit_sha"]
+                report.dirty_files = state["dirty_files"]
+                report.message = (
+                    f"Target has {len(state['dirty_files'])} uncommitted changes. "
+                    "Refusing destructive update; capture incoming changes first."
+                )
+                return report
+
+            # Check branch
+            if state["branch"] != runtime_branch:
+                # Attempt to checkout runtime branch
+                run_git(["checkout", runtime_branch], cwd=str(dest))
+
+            # Reconcile sparse-checkout rules
+            if target.mode == "subset":
+                run_git(["sparse-checkout", "set"] + (target.include or []), cwd=str(dest))
+            else:
+                if state["sparse_enabled"]:
+                    run_git(["sparse-checkout", "disable"], cwd=str(dest))
+
+            # Fetch and fast-forward
+            old_sha = state["commit_sha"]
+            fetch_res = run_git(["fetch", source_repo, runtime_branch], cwd=str(dest), check=False)
+            if fetch_res.returncode == 0:
+                ff_res = run_git(["merge", "--ff-only", "FETCH_HEAD"], cwd=str(dest), check=False)
+                new_sha = run_git(["rev-parse", "HEAD"], cwd=str(dest)).stdout.strip()
+                report.commit_sha = new_sha
+                if old_sha != new_sha:
+                    report.status = "updated"
+                    report.message = f"Fast-forwarded from {old_sha[:8] if old_sha else 'unknown'} to {new_sha[:8]}."
+                else:
+                    report.status = "up_to_date"
+                    report.message = "Already up to date."
+            else:
+                report.status = "error"
+                report.errors.append(f"Failed to fetch {runtime_branch} from {source_repo}: {fetch_res.stderr}")
+
+            return report
+
+        report.status = "error"
+        report.errors.append("Target directory is neither an empty directory nor a valid git checkout.")
+        return report
+
+    except Exception as e:
+        report.status = "error"
+        report.errors.append(str(e))
+        return report
+
+
+def sync_all_targets(
+    config_path: Optional[str] = None,
+    source_repo: str = REPO_ROOT,
+) -> MultiTargetSyncReport:
+    """Loads all runtime targets from configuration and synchronizes all enabled targets."""
+    targets = load_runtime_targets(config_path)
+    report = MultiTargetSyncReport()
+
+    for target in targets:
+        if not target.enabled:
             continue
-
-        rel_target = _safe_relpath(canonical_abs, runtime_dir)
-
-        if not os.path.lexists(symlink_path):
-            # Missing symlink -> create it
-            if not dry_run:
-                os.symlink(rel_target, symlink_path)
-            report.created.append(runtime_name)
-        elif os.path.islink(symlink_path):
-            current_target = os.readlink(symlink_path)
-            norm_current = os.path.normpath(os.path.join(runtime_dir, current_target))
-            if norm_current != canonical_abs:
-                # Misdirected symlink -> repair it
-                if not dry_run:
-                    os.unlink(symlink_path)
-                    os.symlink(rel_target, symlink_path)
-                report.repaired.append(f"{runtime_name} (redirected to {canonical_rel})")
-        elif os.path.isdir(symlink_path):
-            # Physical directory matching managed skill: replace with canonical symlink
-            # (only when canonical library already has authoritative copy)
-            if not dry_run:
-                shutil.rmtree(symlink_path)
-                os.symlink(rel_target, symlink_path)
-            report.repaired.append(f"{runtime_name} (replaced physical runtime directory with symlink)")
-
-    # Step 3: Ensure operational system packages and root router symlink exist in runtime
-    from .config import OPERATIONAL_SYSTEM_PACKAGES
-    for op_name in OPERATIONAL_SYSTEM_PACKAGES:
-        op_runtime = os.path.join(runtime_dir, op_name)
-        op_canonical = os.path.join(library_dir, op_name)
-        if os.path.exists(op_canonical):
-            rel_target = _safe_relpath(op_canonical, runtime_dir)
-            if not os.path.lexists(op_runtime):
-                if not dry_run:
-                    os.symlink(rel_target, op_runtime)
-                report.created.append(op_name)
-            elif os.path.islink(op_runtime):
-                curr = os.path.normpath(os.path.join(runtime_dir, os.readlink(op_runtime)))
-                if curr != os.path.normpath(op_canonical):
-                    if not dry_run:
-                        os.unlink(op_runtime)
-                        os.symlink(rel_target, op_runtime)
-                    report.repaired.append(op_name)
-            elif os.path.isdir(op_runtime):
-                if not dry_run:
-                    shutil.rmtree(op_runtime)
-                    os.symlink(rel_target, op_runtime)
-                report.repaired.append(f"{op_name} (replaced physical operational dir with symlink)")
-
-    rt_root = os.path.join(runtime_dir, "SKILL.md")
-    lib_root = os.path.join(library_dir, "SKILL.md")
-    if os.path.exists(lib_root):
-        rel_root = _safe_relpath(lib_root, runtime_dir)
-        if not os.path.lexists(rt_root):
-            if not dry_run:
-                os.symlink(rel_root, rt_root)
-            report.created.append("SKILL.md")
-        elif os.path.islink(rt_root):
-            curr = os.path.normpath(os.path.join(runtime_dir, os.readlink(rt_root)))
-            if curr != os.path.normpath(lib_root):
-                if not dry_run:
-                    os.unlink(rt_root)
-                    os.symlink(rel_root, rt_root)
-                report.repaired.append("SKILL.md")
-        elif os.path.isfile(rt_root):
-            if not dry_run:
-                os.unlink(rt_root)
-                os.symlink(rel_root, rt_root)
-            report.repaired.append("SKILL.md (replaced physical file with symlink)")
+        target_report = sync_target(target=target, source_repo=source_repo)
+        report.targets.append(target_report)
 
     return report
