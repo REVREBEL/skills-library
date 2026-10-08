@@ -1,8 +1,6 @@
 """
-Intake Evaluation and Installation Module.
-Evaluates staged candidates, detects duplicates and semantic overlap,
-enforces the human approval gate, normalizes packages, and installs approved skills
-into the canonical library hierarchy.
+Intake Evaluation, Normalization, Router Integration, and Lifecycle Application.
+Handles the complete path from external or downloaded skill to approved canonical library skill.
 """
 
 import json
@@ -10,46 +8,62 @@ import os
 import re
 import shutil
 from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Set, Tuple
 
 from .config import (
-    ALL_SUBCATEGORIES,
+    AUDIT_DIR,
     CATEGORIES,
     DEEP_CATEGORIES,
     FLAT_CATEGORIES,
     INTAKE_DIR,
     LIBRARY_DIR,
+    PROVIDER_COUPLING_PATTERNS,
     REPO_ROOT,
     RUNTIME_DIR,
+    SECRET_PATTERNS,
     TRIGGER_CONTRACT_PATTERN,
+    WORKSTATION_PATH_PATTERNS,
 )
 from .ledger import ChangeLedger
 from .manifest import RuntimeManifest
+from .pilot import run_targeted_pilot
 from .scanner import CandidatePackage, scan_candidate_directory
-from .validator import parse_frontmatter, validate_single_skill
+from .validator import validate_single_skill
 
 
 def tokenize(text: str) -> Set[str]:
-    """Extract lowercased alphanumeric tokens of length >= 3."""
-    return set(re.findall(r"[a-z0-9]{3,}", text.lower()))
-
-
-def compute_similarity(tokens1: Set[str], tokens2: Set[str]) -> float:
-    """Computes Jaccard similarity between two token sets."""
-    if not tokens1 or not tokens2:
-        return 0.0
-    intersection = tokens1.intersection(tokens2)
-    union = tokens1.union(tokens2)
-    return len(intersection) / len(union)
+    """Tokenize lowercase words for similarity calculation."""
+    words = re.findall(r"\b[a-zA-Z0-9_\-]{3,}\b", text.lower())
+    stop_words = {
+        "and", "the", "for", "with", "that", "this", "from", "when", "use",
+        "you", "are", "can", "all", "your", "into", "need", "skill", "agent",
+    }
+    return {w for w in words if w not in stop_words}
 
 
 def compute_dice_similarity(tokens1: Set[str], tokens2: Set[str]) -> float:
-    """Computes Dice / Sørensen similarity between two token sets."""
+    """Computes Dice similarity coefficient between two token sets."""
     if not tokens1 or not tokens2:
         return 0.0
-    intersection = tokens1.intersection(tokens2)
-    return (2.0 * len(intersection)) / (len(tokens1) + len(tokens2))
+    intersection = len(tokens1 & tokens2)
+    return (2.0 * intersection) / (len(tokens1) + len(tokens2))
 
+
+def parse_frontmatter(content: str) -> Optional[dict]:
+    """Extract frontmatter as dictionary."""
+    if not content.startswith("---"):
+        return None
+    end = content.find("\n---", 3)
+    if end == -1:
+        return None
+    fm_text = content[3:end].strip()
+    result = {}
+    for line in fm_text.splitlines():
+        if ":" in line and not line.strip().startswith("#"):
+            k, v = line.split(":", 1)
+            result[k.strip()] = v.strip().strip("\"'")
+    return result
 
 
 @dataclass
@@ -57,15 +71,17 @@ class IntakeEvaluation:
     candidate_name: str
     source_dir: str
     is_valid_package: bool = True
+    is_update: bool = False
     errors: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
-    recommended_decision: str = "NEW"  # NEW, MERGE, KEEP_SEPARATE, REPLACE, RENAME, QUARANTINE, REJECT, REVIEW_REQUIRED
+    recommended_decision: str = "NEW"  # NEW, UPDATE, MERGE, KEEP_SEPARATE, RENAME, QUARANTINE, REJECT, REVIEW_REQUIRED
     approval_required: bool = False
     approval_reasons: List[str] = field(default_factory=list)
     assigned_category: str = ""
     assigned_subcategory: str = ""
     target_router_path: str = ""
     target_canonical_path: str = ""
+    diff_summary: Dict[str, list] = field(default_factory=dict)
     semantic_competitors: List[Dict[str, any]] = field(default_factory=list)
     name_collision: bool = False
     provider_coupling_found: bool = False
@@ -76,7 +92,8 @@ class IntakeEvaluation:
     def summary(self) -> str:
         lines = [
             f"=== Intake Evaluation: {self.candidate_name} ===",
-            f"Recommended Decision: {self.recommended_decision}",
+            f"Decision: {self.recommended_decision}",
+            f"Is Update: {'YES' if self.is_update else 'NO'}",
             f"Approval Required: {'YES' if self.approval_required else 'NO'}",
             f"Assigned Category: {self.assigned_category}",
             f"Assigned Subcategory: {self.assigned_subcategory}",
@@ -87,6 +104,8 @@ class IntakeEvaluation:
             lines.append("Approval Gate Triggered By:")
             for r in self.approval_reasons:
                 lines.append(f"  - {r}")
+        if self.diff_summary:
+            lines.append(f"Diff Summary: {self.diff_summary}")
         if self.semantic_competitors:
             lines.append("Top Semantic Competitors in Canonical Library:")
             for c in self.semantic_competitors[:3]:
@@ -117,6 +136,22 @@ def evaluate_candidate(
         eval_result.recommended_decision = "REJECT"
         return eval_result
 
+    m = manifest or RuntimeManifest()
+
+    # Check for installer metadata indicating an EXTERNAL_UPDATE
+    meta_file = os.path.join(candidate_path, ".installer-metadata.json")
+    is_external_update = False
+    existing_canonical_path = ""
+    if os.path.exists(meta_file):
+        try:
+            with open(meta_file, "r", encoding="utf-8") as mf:
+                meta = json.load(mf)
+                if meta.get("type") == "external_update":
+                    is_external_update = True
+                    existing_canonical_path = meta.get("target_canonical_path", "")
+        except Exception:
+            pass
+
     # 1. Package Structure & Validation
     pkg = scan_candidate_directory(candidate_path, name=candidate_name)
     if not pkg.has_skill_md:
@@ -146,7 +181,58 @@ def evaluate_candidate(
         eval_result.approval_required = True
         eval_result.approval_reasons.append("Destructive commands present without verified human review")
 
-    # 3. Categorization
+    repo_root = os.path.dirname(os.path.normpath(library_dir))
+
+    # 3. Categorization or Update Routing
+    if is_external_update and existing_canonical_path:
+        eval_result.is_update = True
+        eval_result.target_canonical_path = existing_canonical_path
+        # Parse category/subcategory from existing path
+        parts = existing_canonical_path.strip("/").split("/")
+        if len(parts) >= 3:
+            eval_result.assigned_category = parts[1]
+            eval_result.assigned_subcategory = parts[2]
+        if eval_result.assigned_category in DEEP_CATEGORIES:
+            eval_result.target_router_path = f"library/{eval_result.assigned_category}/{eval_result.assigned_subcategory}/SKILL.md"
+        else:
+            eval_result.target_router_path = f"library/{eval_result.assigned_category}/SKILL.md"
+
+        # Compare diff against canonical
+        abs_canonical = os.path.normpath(os.path.join(repo_root, existing_canonical_path))
+        diff_summary = {"modified": [], "added": [], "removed": []}
+        if os.path.exists(abs_canonical):
+            cand_files = {
+                os.path.relpath(os.path.join(r, f), candidate_path): os.path.join(r, f)
+                for r, _, fs in os.walk(candidate_path) for f in fs if f != ".installer-metadata.json"
+            }
+            canon_files = {
+                os.path.relpath(os.path.join(r, f), abs_canonical): os.path.join(r, f)
+                for r, _, fs in os.walk(abs_canonical) for f in fs
+            }
+            for cf, cp in cand_files.items():
+                if cf not in canon_files:
+                    diff_summary["added"].append(cf)
+                else:
+                    try:
+                        with open(cp, "rb") as f1, open(canon_files[cf], "rb") as f2:
+                            if f1.read() != f2.read():
+                                diff_summary["modified"].append(cf)
+                    except Exception:
+                        pass
+            for cf in canon_files.keys():
+                if cf not in cand_files:
+                    diff_summary["removed"].append(cf)
+
+        eval_result.diff_summary = diff_summary
+        eval_result.recommended_decision = "UPDATE"
+        eval_result.approval_required = True
+        eval_result.approval_reasons.append(
+            f"External update to managed skill '{candidate_name}' ({len(diff_summary['modified'])} modified, "
+            f"{len(diff_summary['added'])} added, {len(diff_summary['removed'])} removed)"
+        )
+        return eval_result
+
+    # Brand new candidate categorization
     eval_result.assigned_category = pkg.suggested_category
     eval_result.assigned_subcategory = pkg.suggested_subcategory
     if pkg.suggested_category in DEEP_CATEGORIES:
@@ -157,7 +243,6 @@ def evaluate_candidate(
     eval_result.target_canonical_path = f"library/{pkg.suggested_category}/{pkg.suggested_subcategory}/{candidate_name}"
 
     # 4. Compare against Canonical Library (Semantic Overlap & Name Collisions)
-    m = manifest or RuntimeManifest()
     candidate_tokens = tokenize(candidate_name + " " + pkg.description)
 
     # Direct name collision check
@@ -170,7 +255,7 @@ def evaluate_candidate(
     competitor_scores = []
     for s_name, s_info in m.skills.items():
         cpath = s_info["canonical_path"]
-        abs_cpath = os.path.join(REPO_ROOT, cpath)
+        abs_cpath = os.path.normpath(os.path.join(repo_root, cpath))
         skill_md_path = os.path.join(abs_cpath, "SKILL.md")
         if os.path.exists(skill_md_path):
             try:
@@ -218,25 +303,29 @@ def evaluate_candidate(
     elif not eval_result.is_valid_package:
         eval_result.recommended_decision = "REVIEW_REQUIRED"
         eval_result.approval_required = True
-
     else:
         eval_result.recommended_decision = "NEW"
 
     return eval_result
 
 
-def normalize_package_content(skill_dir: str) -> None:
-    """Decouples provider-specific wording and ensures compliant frontmatter."""
-    skill_md = os.path.join(skill_dir, "SKILL.md")
+def normalize_package_content(candidate_dir: str) -> None:
+    """Removes provider coupling, normalizes trigger contract, and cleans metadata."""
+    skill_md = os.path.join(candidate_dir, "SKILL.md")
     if not os.path.exists(skill_md):
         return
 
     with open(skill_md, "r", encoding="utf-8", errors="replace") as f:
         content = f.read()
 
-    # Provider decoupling: replace "Claude" with "Agent"
-    content_clean = re.sub(r"\bClaude(?:'s)?\b", "Agent", content)
-    content_clean = re.sub(r"\bAnthropic\b", "AI Platform", content_clean)
+    content_clean = content
+    for pat in PROVIDER_COUPLING_PATTERNS:
+        content_clean = pat.sub("Agent", content_clean)
+
+    # Remove temporary installer metadata if present
+    meta_path = os.path.join(candidate_dir, ".installer-metadata.json")
+    if os.path.exists(meta_path):
+        os.remove(meta_path)
 
     with open(skill_md, "w", encoding="utf-8") as f:
         f.write(content_clean)
@@ -266,12 +355,9 @@ def add_link_to_router(
     # Check if table exists under subcategory
     subcat_header = f"### {subcategory}"
     if subcat_header.lower() in content.lower():
-        # Find position after header table
         pos = content.lower().find(subcat_header.lower())
-        # Find next table row or table separator after pos
         sep_pos = content.find("|---|", pos)
         if sep_pos != -1:
-            # Find end of separator line
             line_end = content.find("\n", sep_pos)
             new_content = content[: line_end + 1] + new_entry + content[line_end + 1 :]
             with open(router_path, "w", encoding="utf-8") as f:
@@ -289,34 +375,72 @@ def add_link_to_router(
 
 def apply_candidate(
     candidate_name: str,
-    category: str,
-    subcategory: str,
+    category: Optional[str] = None,
+    subcategory: Optional[str] = None,
     canonical_name: Optional[str] = None,
+    approved: bool = False,
     intake_dir: str = INTAKE_DIR,
     library_dir: str = LIBRARY_DIR,
+    runtime_dir: str = RUNTIME_DIR,
     manifest: Optional[RuntimeManifest] = None,
     ledger: Optional[ChangeLedger] = None,
     dry_run: bool = False,
 ) -> dict:
     """
     Installs an approved candidate from intake/ into library/, updates router,
-    manifest, and change ledger.
+    manifest, change ledger, and automatically replaces any physical runtime folder
+    with a canonical relative symlink.
     """
-    final_name = canonical_name or candidate_name
     src_dir = os.path.join(intake_dir, candidate_name)
-    target_dir = os.path.join(library_dir, category, subcategory, final_name)
-
     if not os.path.exists(src_dir):
         raise FileNotFoundError(f"Candidate source not found: {src_dir}")
 
-    if os.path.exists(target_dir):
-        raise FileExistsError(f"Target destination already exists: {target_dir}")
+    m = manifest or RuntimeManifest()
+    eval_res = evaluate_candidate(candidate_name, intake_dir=intake_dir, library_dir=library_dir, manifest=m)
 
-    # Determine router
-    if category in DEEP_CATEGORIES:
-        router_path = os.path.join(library_dir, category, subcategory, "SKILL.md")
+    # Enforce Human Approval Gate (Finding 3)
+    if eval_res.approval_required and not approved:
+        reasons = "\n  - ".join(eval_res.approval_reasons)
+        raise PermissionError(
+            f"Cannot apply candidate '{candidate_name}': Human Approval Gate required.\n"
+            f"Reasons:\n  - {reasons}\n"
+            "Pass --approve to confirm human authorization."
+        )
+
+    repo_root = os.path.dirname(os.path.normpath(library_dir))
+
+    # Determine operation mode: UPDATE or NEW
+    is_update = eval_res.is_update or eval_res.recommended_decision == "UPDATE"
+
+    if is_update:
+        target_canonical_rel = eval_res.target_canonical_path
+        target_dir = os.path.normpath(os.path.join(repo_root, target_canonical_rel))
+        final_name = os.path.basename(target_dir)
+        cat = eval_res.assigned_category
+        subcat = eval_res.assigned_subcategory
+        router_path = os.path.normpath(os.path.join(repo_root, eval_res.target_router_path))
+        operation = "UPDATE"
+        decision = "UPDATE"
+        runtime_name = candidate_name
     else:
-        router_path = os.path.join(library_dir, category, "SKILL.md")
+        final_name = canonical_name or candidate_name
+        cat = category or eval_res.assigned_category or "workflow-and-automation"
+        subcat = subcategory or eval_res.assigned_subcategory or "tool-integration"
+        target_dir = os.path.join(library_dir, cat, subcat, final_name)
+        if os.path.exists(target_dir):
+            raise FileExistsError(f"Target destination already exists: {target_dir}")
+
+        if cat in DEEP_CATEGORIES:
+            router_path = os.path.join(library_dir, cat, subcat, "SKILL.md")
+        else:
+            router_path = os.path.join(library_dir, cat, "SKILL.md")
+        operation = "ADD"
+        decision = "NEW"
+        runtime_name = final_name
+        if runtime_name in m.skills:
+            runtime_name = f"{cat}-{final_name}"
+            if runtime_name in m.skills:
+                runtime_name = f"{cat}-{subcat}-{final_name}"
 
     # Read description from candidate
     desc = "Specialized agent capability."
@@ -332,30 +456,36 @@ def apply_candidate(
         # 1. Normalize package
         normalize_package_content(src_dir)
 
-        # 2. Move to canonical library
+        # 2. Deploy to canonical library
         os.makedirs(os.path.dirname(target_dir), exist_ok=True)
-        shutil.move(src_dir, target_dir)
+        if is_update and os.path.exists(target_dir):
+            # Update files into existing canonical folder
+            for item in os.listdir(src_dir):
+                s_item = os.path.join(src_dir, item)
+                d_item = os.path.join(target_dir, item)
+                if os.path.isdir(s_item):
+                    if os.path.exists(d_item):
+                        shutil.rmtree(d_item)
+                    shutil.copytree(s_item, d_item)
+                else:
+                    shutil.copy2(s_item, d_item)
+            shutil.rmtree(src_dir)
+        else:
+            shutil.move(src_dir, target_dir)
 
-        # 3. Update router
-        add_link_to_router(
-            router_path=router_path,
-            skill_name=final_name,
-            skill_dir_path=target_dir,
-            subcategory=subcategory,
-            description=desc,
-        )
+        # 3. Update router if new skill
+        if not is_update:
+            add_link_to_router(
+                router_path=router_path,
+                skill_name=final_name,
+                skill_dir_path=target_dir,
+                subcategory=subcat,
+                description=desc,
+            )
 
         # 4. Update manifest
-        m = manifest or RuntimeManifest()
-        # Determine runtime name (handle collisions)
-        runtime_name = final_name
-        if runtime_name in m.skills:
-            runtime_name = f"{category}-{final_name}"
-            if runtime_name in m.skills:
-                runtime_name = f"{category}-{subcategory}-{final_name}"
-
-        canonical_rel = os.path.relpath(target_dir, REPO_ROOT).replace(os.sep, "/")
-        router_rel = os.path.relpath(router_path, REPO_ROOT).replace(os.sep, "/")
+        canonical_rel = os.path.relpath(target_dir, repo_root).replace(os.sep, "/")
+        router_rel = os.path.relpath(router_path, repo_root).replace(os.sep, "/")
 
         m.add_skill(
             runtime_name=runtime_name,
@@ -367,27 +497,54 @@ def apply_candidate(
         )
         m.save()
 
-        # 5. Append to Change Ledger
+        # 5. Automatically replace any physical runtime directory with canonical symlink (Finding 1 & 8)
+        runtime_item_path = os.path.join(runtime_dir, runtime_name)
+        candidate_runtime_path = os.path.join(runtime_dir, candidate_name)
+        rel_target = os.path.relpath(target_dir, runtime_dir)
+
+        for p in {runtime_item_path, candidate_runtime_path}:
+            if os.path.isdir(p) and not os.path.islink(p):
+                shutil.rmtree(p)
+                os.symlink(rel_target, p)
+            elif not os.path.lexists(p):
+                os.symlink(rel_target, p)
+            elif os.path.islink(p):
+                current = os.path.normpath(os.path.join(runtime_dir, os.readlink(p)))
+                if current != os.path.normpath(target_dir):
+                    os.unlink(p)
+                    os.symlink(rel_target, p)
+
+        # 6. Execute real validation & targeted pilot checks (Finding 4)
+        val_res = validate_single_skill(target_dir)
+        val_status = "PASS" if val_res.is_valid else "FAIL"
+
+        pilot_res = run_targeted_pilot(target_dir, router_path)
+        pilot_status = "PASS" if pilot_res.passed else "FAIL"
+
+        # 7. Append truthful record to Change Ledger
         lg = ledger or ChangeLedger()
         lg.record_change(
-            operation="ADD",
+            operation=operation,
             source="intake",
             source_path=src_dir,
             original_name=candidate_name,
             canonical_name=final_name,
             runtime_name=runtime_name,
-            decision="NEW",
-            category=category,
-            subcategory=subcategory,
+            decision=decision,
+            category=cat,
+            subcategory=subcat,
             canonical_path=canonical_rel,
             functional_parent=router_rel,
-            validation_status="PASS",
-            pilot_status="PASS",
+            validation_status=val_status,
+            pilot_status=pilot_status,
         )
 
     return {
         "candidate_name": candidate_name,
         "canonical_name": final_name,
+        "runtime_name": runtime_name,
+        "operation": operation,
         "target_directory": target_dir,
         "router_updated": router_path,
+        "is_update": is_update,
     }

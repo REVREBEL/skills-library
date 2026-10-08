@@ -103,7 +103,7 @@ def cmd_intake(args):
 
 
 def cmd_apply(args):
-    print(f"Applying approved candidate '{args.candidate}' to canonical library...")
+    print(f"Applying candidate '{args.candidate}'...")
     try:
         manifest = RuntimeManifest()
         ledger = ChangeLedger()
@@ -112,15 +112,20 @@ def cmd_apply(args):
             category=args.category,
             subcategory=args.subcategory,
             canonical_name=args.canonical_name,
+            approved=args.approve,
             manifest=manifest,
             ledger=ledger,
             dry_run=args.dry_run,
         )
-        print(f"SUCCESS: Installed '{args.candidate}' -> {res['target_directory']}")
-        print(f"Updated router: {res['router_updated']}")
+        op_label = "Updated existing canonical skill" if res.get("is_update") else "Installed new skill"
+        print(f"SUCCESS: {op_label} '{args.candidate}' -> {res['target_directory']}")
+        print(f"Router updated: {res['router_updated']}")
         print("Manifest and change ledger updated.")
-        print("Run 'python3 tools/skill-library.py sync' to establish runtime symlinks.")
+        print(f"Runtime symlink established: .agents/skills/{res['runtime_name']}")
         return 0
+    except PermissionError as pe:
+        print(f"\n[HUMAN APPROVAL GATE BLOCKED]\n{pe}", file=sys.stderr)
+        return 1
     except Exception as e:
         print(f"ERROR: Failed to apply candidate: {e}", file=sys.stderr)
         return 1
@@ -196,9 +201,10 @@ def main():
     # apply
     p_apply = subparsers.add_parser("apply", help="Install approved candidate into library/")
     p_apply.add_argument("--candidate", required=True, help="Candidate name in intake/")
-    p_apply.add_argument("--category", required=True, choices=CATEGORIES, help="Target category")
-    p_apply.add_argument("--subcategory", required=True, help="Target subcategory")
+    p_apply.add_argument("--category", choices=CATEGORIES, help="Target category (required for new skills)")
+    p_apply.add_argument("--subcategory", help="Target subcategory (required for new skills)")
     p_apply.add_argument("--canonical-name", help="Optional override for canonical package name")
+    p_apply.add_argument("--approve", action="store_true", help="Authorize application through the Human Approval Gate")
     p_apply.add_argument("--dry-run", action="store_true", help="Simulate without modifying files")
 
     # sync

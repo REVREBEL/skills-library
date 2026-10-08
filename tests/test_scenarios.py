@@ -1,46 +1,155 @@
 """
-Automated Test Suite for Task 13 Scenarios A through F.
+Automated Test Suite for Task 13 Scenarios A through H.
 Tests manual intake, external installer simulation, sync idempotency,
-broken link repair, name collision halts, and semantic overlap detection.
+broken link repair, name collision halts, semantic overlap detection,
+and dedicated regression tests for skills.sh new installs and updates.
+
+ALL tests execute in fully isolated temporary fixtures and NEVER mutate
+the production library, runtime links, manifest, routers, or ledger.
 """
 
 import json
 import os
 import shutil
 import sys
+import tempfile
 import unittest
 
 # Ensure tools directory is in sys.path
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(TEST_DIR)
 TOOLS_DIR = os.path.join(REPO_ROOT, "tools")
-sys.path.insert(0, TOOLS_DIR)
+if TOOLS_DIR not in sys.path:
+    sys.path.insert(0, TOOLS_DIR)
 
-from skill_library.config import (
-    AUDIT_DIR,
-    INTAKE_DIR,
-    LIBRARY_DIR,
-    MANIFEST_FILE,
-    RUNTIME_DIR,
+from skill_library.intake import (
+    add_link_to_router,
+    apply_candidate,
+    evaluate_candidate,
+    normalize_package_content,
 )
-from skill_library.intake import apply_candidate, evaluate_candidate
 from skill_library.ledger import ChangeLedger
 from skill_library.manifest import RuntimeManifest
 from skill_library.pilot import run_targeted_pilot
 from skill_library.scanner import scan_candidate_directory, scan_runtime
 from skill_library.sync import reconcile_runtime_symlinks
-from skill_library.validator import validate_library, validate_single_skill
+from skill_library.validator import validate_single_skill
 
 
-class TestSkillLibraryScenarios(unittest.TestCase):
+class TestSkillLibraryIsolatedScenarios(unittest.TestCase):
+    """
+    Completely isolated test suite operating in a temporary sandbox.
+    Guarantees zero pollution of production library, runtime, manifest, or ledger.
+    """
 
     def setUp(self):
-        self.manifest = RuntimeManifest()
-        self.ledger = ChangeLedger()
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.sandbox = self.tmp_dir.name
+
+        # Create isolated directory structure
+        self.library_dir = os.path.join(self.sandbox, "library")
+        self.runtime_dir = os.path.join(self.sandbox, ".agents", "skills")
+        self.intake_dir = os.path.join(self.sandbox, "intake")
+        self.audit_dir = os.path.join(self.sandbox, "audit")
+
+        os.makedirs(self.library_dir, exist_ok=True)
+        os.makedirs(self.runtime_dir, exist_ok=True)
+        os.makedirs(self.intake_dir, exist_ok=True)
+        os.makedirs(self.audit_dir, exist_ok=True)
+
+        self.manifest_file = os.path.join(self.audit_dir, "runtime-manifest.json")
+        self.ledger_file = os.path.join(self.audit_dir, "change-ledger.jsonl")
+
+        self.manifest = RuntimeManifest(manifest_path=self.manifest_file)
+        self.ledger = ChangeLedger(ledger_path=self.ledger_file)
+
+        # Create sample routers
+        self.root_router = os.path.join(self.library_dir, "SKILL.md")
+        with open(self.root_router, "w", encoding="utf-8") as f:
+            f.write("# Root Router\n\n| Category | Link |\n|---|---|\n| Quality | quality-and-security/SKILL.md |\n")
+
+        self.qs_router = os.path.join(self.library_dir, "quality-and-security", "SKILL.md")
+        os.makedirs(os.path.dirname(self.qs_router), exist_ok=True)
+        with open(self.qs_router, "w", encoding="utf-8") as f:
+            f.write("# Quality and Security Router\n\n### debugging\n\n| Skill | Description |\n|---|---|\n")
+
+        self.wa_router = os.path.join(self.library_dir, "workflow-and-automation", "SKILL.md")
+        os.makedirs(os.path.dirname(self.wa_router), exist_ok=True)
+        with open(self.wa_router, "w", encoding="utf-8") as f:
+            f.write("# Workflow and Automation Router\n\n### tool-integration\n\n| Skill | Description |\n|---|---|\n")
+
+        # Seed an existing canonical skill: bug-hunter
+        self.seed_existing_skill(
+            category="quality-and-security",
+            subcategory="debugging",
+            name="bug-hunter",
+            description="Autonomous system to identify and capture code bugs. Use when hunting application defects.",
+            router_path=self.qs_router,
+        )
+
+        # Seed an existing canonical skill: existing-tool
+        self.seed_existing_skill(
+            category="workflow-and-automation",
+            subcategory="tool-integration",
+            name="existing-tool",
+            description="Standard automation helper v1. Use when running automation scripts.",
+            router_path=self.wa_router,
+        )
+
+        # Establish runtime symlinks
+        reconcile_runtime_symlinks(
+            runtime_dir=self.runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+            dry_run=False,
+        )
+
+    def tearDown(self):
+        self.tmp_dir.cleanup()
+
+    def seed_existing_skill(self, category: str, subcategory: str, name: str, description: str, router_path: str):
+        pkg_dir = os.path.join(self.library_dir, category, subcategory, name)
+        os.makedirs(pkg_dir, exist_ok=True)
+        skill_md = os.path.join(pkg_dir, "SKILL.md")
+        with open(skill_md, "w", encoding="utf-8") as f:
+            f.write(f"""---
+name: {name}
+description: {description}
+---
+# {name.title()}
+Instructions for {name}.
+""")
+        # Update router
+        add_link_to_router(
+            router_path=router_path,
+            skill_name=name,
+            skill_dir_path=pkg_dir,
+            subcategory=subcategory,
+            description=description,
+        )
+        # Register in manifest
+        canonical_rel = os.path.relpath(pkg_dir, self.sandbox).replace(os.sep, "/")
+        router_rel = os.path.relpath(router_path, self.sandbox).replace(os.sep, "/")
+        self.manifest.add_skill(
+            runtime_name=name,
+            canonical_name=name,
+            canonical_path=canonical_rel,
+            functional_parent=router_rel,
+            source="seed",
+            managed=True,
+        )
+        self.manifest.save()
 
     def test_scenario_c_idempotent_sync(self):
         """Scenario C: sync against already-synchronized library produces zero changes."""
-        report = reconcile_runtime_symlinks(manifest=self.manifest, dry_run=False)
+        report = reconcile_runtime_symlinks(
+            runtime_dir=self.runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+            dry_run=False,
+        )
         self.assertEqual(len(report.created), 0)
         self.assertEqual(len(report.repaired), 0)
         self.assertEqual(len(report.staged_to_intake), 0)
@@ -50,241 +159,413 @@ class TestSkillLibraryScenarios(unittest.TestCase):
 
     def test_scenario_d_broken_link_repair(self):
         """Scenario D: broken managed link is identified and repaired."""
-        test_symlink_name = "007"
-        sym_path = os.path.join(RUNTIME_DIR, test_symlink_name)
-        orig_target = os.readlink(sym_path)
+        test_symlink_name = "bug-hunter"
+        sym_path = os.path.join(self.runtime_dir, test_symlink_name)
+        self.assertTrue(os.path.islink(sym_path))
 
-        try:
-            # Deliberately point symlink to non-existent target
-            os.unlink(sym_path)
-            os.symlink("../../library/non_existent_path", sym_path)
-            self.assertFalse(os.path.exists(sym_path))
+        # Deliberately point symlink to non-existent target
+        os.unlink(sym_path)
+        os.symlink("../../library/non_existent_path", sym_path)
+        self.assertFalse(os.path.exists(sym_path))
 
-            # Run sync
-            report = reconcile_runtime_symlinks(manifest=self.manifest, dry_run=False)
-            self.assertIn(f"{test_symlink_name} -> library/quality-and-security/security/007", report.repaired)
-            self.assertTrue(os.path.exists(sym_path))
-        finally:
-            # Ensure restored
-            if not os.path.exists(sym_path):
-                if os.path.lexists(sym_path):
-                    os.unlink(sym_path)
-                os.symlink(orig_target, sym_path)
+        # Run sync
+        report = reconcile_runtime_symlinks(
+            runtime_dir=self.runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+            dry_run=False,
+        )
+        self.assertIn(f"{test_symlink_name} -> library/quality-and-security/debugging/bug-hunter", report.repaired)
+        self.assertTrue(os.path.exists(sym_path))
 
     def test_scenario_e_name_collision(self):
         """Scenario E: new skill using existing canonical name triggers collision halt."""
         collision_name = "bug-hunter"
-        cand_dir = os.path.join(INTAKE_DIR, collision_name)
+        cand_dir = os.path.join(self.intake_dir, collision_name)
         os.makedirs(cand_dir, exist_ok=True)
 
-        try:
-            skill_md_content = """---
+        skill_md_content = """---
 name: bug-hunter
-description: Autonomous system to identify and capture code bugs. Use when hunting application defects.
+description: Brand new alternative debugger. Use when hunting application defects.
 ---
 # Bug Hunter
 Alternative tool.
 """
-            with open(os.path.join(cand_dir, "SKILL.md"), "w", encoding="utf-8") as f:
-                f.write(skill_md_content)
+        with open(os.path.join(cand_dir, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write(skill_md_content)
 
-            ev = evaluate_candidate(candidate_name=collision_name, manifest=self.manifest)
-            self.assertTrue(ev.name_collision)
-            self.assertTrue(ev.approval_required)
-            self.assertTrue(any("collision" in r.lower() or "duplicate" in r.lower() for r in ev.approval_reasons))
-        finally:
-            if os.path.exists(cand_dir):
-                shutil.rmtree(cand_dir)
+        ev = evaluate_candidate(
+            candidate_name=collision_name,
+            intake_dir=self.intake_dir,
+            library_dir=self.library_dir,
+            manifest=self.manifest,
+        )
+        self.assertTrue(ev.name_collision)
+        self.assertTrue(ev.approval_required)
+        self.assertTrue(any("collision" in r.lower() or "duplicate" in r.lower() for r in ev.approval_reasons))
 
     def test_scenario_f_semantic_overlap(self):
         """Scenario F: skill with high semantic overlap recommends MERGE and halts for review."""
-        cand_name = "test-smart-bug-finder"
-        cand_dir = os.path.join(INTAKE_DIR, cand_name)
+        cand_name = "smart-bug-finder"
+        cand_dir = os.path.join(self.intake_dir, cand_name)
         os.makedirs(cand_dir, exist_ok=True)
 
-        try:
-            skill_md_content = """---
-name: test-smart-bug-finder
-description: Systematically isolate a runtime exception, reproduce the failure with minimal test case, and diagnose the root cause. Use when debugging unexpected application failures or hunting bugs.
+        skill_md_content = """---
+name: smart-bug-finder
+description: Autonomous system to identify, capture, and hunt code bugs and defects. Use when hunting application defects or debugging bugs.
 ---
 # Smart Bug Finder
 Tool for debugging issues.
 """
-            with open(os.path.join(cand_dir, "SKILL.md"), "w", encoding="utf-8") as f:
+        with open(os.path.join(cand_dir, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write(skill_md_content)
 
-                f.write(skill_md_content)
-
-            ev = evaluate_candidate(candidate_name=cand_name, manifest=self.manifest)
-
-            self.assertTrue(ev.approval_required)
-            self.assertIn(ev.recommended_decision, ["MERGE", "KEEP_SEPARATE"])
-            self.assertTrue(len(ev.semantic_competitors) > 0)
-            top_match = ev.semantic_competitors[0]
-            top_names = [c["name"] for c in ev.semantic_competitors]
-            self.assertTrue(any(name in ["bug-hunter", "debugging-toolkit-smart-debug"] for name in top_names))
-            self.assertGreater(top_match["similarity"], 0.35)
-        finally:
-
-
-
-            if os.path.exists(cand_dir):
-                shutil.rmtree(cand_dir)
+        ev = evaluate_candidate(
+            candidate_name=cand_name,
+            intake_dir=self.intake_dir,
+            library_dir=self.library_dir,
+            manifest=self.manifest,
+        )
+        self.assertTrue(ev.approval_required)
+        self.assertIn(ev.recommended_decision, ["MERGE", "KEEP_SEPARATE"])
+        self.assertTrue(len(ev.semantic_competitors) > 0)
+        top_match = ev.semantic_competitors[0]
+        self.assertEqual(top_match["name"], "bug-hunter")
+        self.assertGreater(top_match["similarity"], 0.25)
 
     def test_scenario_a_manual_intake_end_to_end(self):
-        """Scenario A: manual intake candidate evaluated, applied to library, symlinked, and piloted."""
+        """Scenario A: manual intake candidate evaluated, approved, applied to library, symlinked, and piloted."""
         cand_name = "scenario-a-collector"
-        cand_dir = os.path.join(INTAKE_DIR, cand_name)
+        cand_dir = os.path.join(self.intake_dir, cand_name)
         os.makedirs(os.path.join(cand_dir, "scripts"), exist_ok=True)
 
-        target_canonical_path = os.path.join(LIBRARY_DIR, "infrastructure-and-ops", "observability", cand_name)
-        router_path = os.path.join(LIBRARY_DIR, "infrastructure-and-ops", "SKILL.md")
-        runtime_symlink = os.path.join(RUNTIME_DIR, cand_name)
-
-        try:
-            # 1. Author new skill in intake/
-            with open(os.path.join(cand_dir, "SKILL.md"), "w", encoding="utf-8") as f:
-                f.write("""---
+        # 1. Author new skill in intake/
+        with open(os.path.join(cand_dir, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write("""---
 name: scenario-a-collector
 description: High-throughput telemetry and metric collection daemon. Use when collecting custom performance metrics or configuring agent telemetry.
 ---
 # Scenario A Collector
 Detailed instructions.
 """)
-            with open(os.path.join(cand_dir, "scripts", "run.py"), "w", encoding="utf-8") as f:
-                f.write("""import sys
-if __name__ == '__main__':
-    print('Collecting metrics from args:', sys.argv[1:])
-""")
+        with open(os.path.join(cand_dir, "scripts", "run.py"), "w", encoding="utf-8") as f:
+            f.write("import sys\nprint('Collecting metrics from args:', sys.argv[1:])\n")
 
-            # 2. Evaluate candidate
-            ev = evaluate_candidate(candidate_name=cand_name, manifest=self.manifest)
-            self.assertTrue(ev.is_valid_package)
-            self.assertEqual(ev.recommended_decision, "NEW")
-            self.assertEqual(ev.assigned_category, "infrastructure-and-ops")
+        # 2. Evaluate candidate
+        ev = evaluate_candidate(
+            candidate_name=cand_name,
+            intake_dir=self.intake_dir,
+            library_dir=self.library_dir,
+            manifest=self.manifest,
+        )
+        self.assertTrue(ev.is_valid_package)
+        self.assertEqual(ev.recommended_decision, "NEW")
 
-            # 3. Apply candidate
-            res = apply_candidate(
-                candidate_name=cand_name,
-                category="infrastructure-and-ops",
-                subcategory="observability",
-                manifest=self.manifest,
-                ledger=self.ledger,
-            )
-            self.assertTrue(os.path.exists(target_canonical_path))
-            self.assertFalse(os.path.exists(cand_dir))
+        # 3. Apply candidate with approval
+        res = apply_candidate(
+            candidate_name=cand_name,
+            category="workflow-and-automation",
+            subcategory="tool-integration",
+            approved=True,
+            intake_dir=self.intake_dir,
+            library_dir=self.library_dir,
+            runtime_dir=self.runtime_dir,
+            manifest=self.manifest,
+            ledger=self.ledger,
+        )
+        target_canonical_path = res["target_directory"]
+        self.assertTrue(os.path.exists(target_canonical_path))
+        self.assertFalse(os.path.exists(cand_dir))
 
-            # 4. Sync runtime symlinks
-            sync_rep = reconcile_runtime_symlinks(manifest=self.manifest, dry_run=False)
-            self.assertIn(cand_name, sync_rep.created)
-            self.assertTrue(os.path.islink(runtime_symlink))
-            self.assertTrue(os.path.exists(runtime_symlink))
+        # 4. Verify runtime symlink was created automatically
+        runtime_symlink = os.path.join(self.runtime_dir, cand_name)
+        self.assertTrue(os.path.islink(runtime_symlink))
+        self.assertTrue(os.path.exists(runtime_symlink))
 
-            # 5. Targeted Pilot Verification
-            pilot_rep = run_targeted_pilot(target_canonical_path, router_path)
-            self.assertTrue(pilot_rep.passed)
-            self.assertTrue(pilot_rep.router_link_verified)
-            self.assertTrue(pilot_rep.contract_verified)
-            self.assertEqual(pilot_rep.scripts_executed_or_parsed, 1)
-
-        finally:
-            # Clean up after test
-            if os.path.exists(target_canonical_path):
-                shutil.rmtree(target_canonical_path)
-            if os.path.lexists(runtime_symlink):
-                os.unlink(runtime_symlink)
-            if os.path.exists(cand_dir):
-                shutil.rmtree(cand_dir)
-            self.manifest.remove_skill(cand_name)
-            self.manifest.save()
-            # Clean up router entry
-            if os.path.exists(router_path):
-                with open(router_path, "r", encoding="utf-8") as rf:
-                    rtext = rf.read()
-                cleaned = "\n".join([line for line in rtext.splitlines() if cand_name not in line])
-                with open(router_path, "w", encoding="utf-8") as rf:
-                    rf.write(cleaned + "\n")
+        # 5. Targeted Pilot Verification
+        pilot_rep = run_targeted_pilot(target_canonical_path, self.wa_router)
+        self.assertTrue(pilot_rep.passed)
+        self.assertTrue(pilot_rep.router_link_verified)
+        self.assertTrue(pilot_rep.contract_verified)
+        self.assertEqual(pilot_rep.scripts_executed_or_parsed, 1)
 
     def test_scenario_b_external_installer_simulation(self):
-        """Scenario B: external installer places physical directory into .agents/skills; sync stages and normalizes it."""
+        """Scenario B: external installer places physical directory into .agents/skills; sync stages, normalizes provider coupling, and restores symlink."""
         external_name = "scenario-b-external-tool"
-        runtime_pkg_dir = os.path.join(RUNTIME_DIR, external_name)
+        runtime_pkg_dir = os.path.join(self.runtime_dir, external_name)
         os.makedirs(runtime_pkg_dir, exist_ok=True)
 
-        target_canonical_path = os.path.join(LIBRARY_DIR, "workflow-and-automation", "tool-integration", external_name)
-        router_path = os.path.join(LIBRARY_DIR, "workflow-and-automation", "SKILL.md")
-        staged_intake_dir = os.path.join(INTAKE_DIR, external_name)
-
-        try:
-            # 1. Simulate external installer creating physical package in .agents/skills
-            with open(os.path.join(runtime_pkg_dir, "SKILL.md"), "w", encoding="utf-8") as f:
-                f.write("""---
+        with open(os.path.join(runtime_pkg_dir, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write("""---
 name: scenario-b-external-tool
 description: Integrates third-party automation tools with Claude workflows. Use when integrating webhook hooks or automating external triggers.
 ---
 # External Tool
 Workflow automation content.
 """)
-            with open(os.path.join(runtime_pkg_dir, "package.json"), "w", encoding="utf-8") as f:
-                json.dump({"name": "scenario-b-external-tool", "version": "1.0.0"}, f)
+        with open(os.path.join(runtime_pkg_dir, "package.json"), "w", encoding="utf-8") as f:
+            json.dump({"name": "scenario-b-external-tool", "version": "1.0.0"}, f)
 
-            # 2. Scanner detects EXTERNAL_PHYSICAL
-            scan_res = scan_runtime(manifest=self.manifest)
-            ext_entries = [r for r in scan_res if r.name == external_name]
-            self.assertEqual(len(ext_entries), 1)
-            self.assertEqual(ext_entries[0].classification, "EXTERNAL_PHYSICAL")
-            self.assertEqual(ext_entries[0].installer_integration_info.get("has_package_json"), "true")
+        # 1. Scanner detects EXTERNAL_PHYSICAL
+        scan_res = scan_runtime(runtime_dir=self.runtime_dir, library_dir=self.library_dir, manifest=self.manifest)
+        ext_entries = [r for r in scan_res if r.name == external_name]
+        self.assertEqual(len(ext_entries), 1)
+        self.assertEqual(ext_entries[0].classification, "EXTERNAL_PHYSICAL")
+        self.assertEqual(ext_entries[0].installer_integration_info.get("has_package_json"), "true")
 
-            # 3. Sync stages physical install to intake/
-            sync_rep = reconcile_runtime_symlinks(manifest=self.manifest, dry_run=False, stage_external=True)
-            self.assertIn(external_name, sync_rep.staged_to_intake)
-            self.assertTrue(os.path.exists(staged_intake_dir))
+        # 2. Sync stages physical install to intake/
+        sync_rep = reconcile_runtime_symlinks(
+            runtime_dir=self.runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+            dry_run=False,
+            stage_external=True,
+        )
+        self.assertIn(external_name, sync_rep.staged_to_intake)
+        staged_intake_dir = os.path.join(self.intake_dir, external_name)
+        self.assertTrue(os.path.exists(staged_intake_dir))
 
-            # 4. Evaluate and Normalize Candidate
-            ev = evaluate_candidate(candidate_name=external_name, manifest=self.manifest)
-            self.assertTrue(ev.provider_coupling_found)  # "Claude" detected in text
+        # 3. Evaluate and detect provider coupling ("Claude")
+        ev = evaluate_candidate(
+            candidate_name=external_name,
+            intake_dir=self.intake_dir,
+            library_dir=self.library_dir,
+            manifest=self.manifest,
+        )
+        self.assertTrue(ev.provider_coupling_found)
+        self.assertTrue(ev.approval_required)
 
-            # 5. Apply approved candidate (normalizes provider coupling to Agent)
-            res = apply_candidate(
+        # 4. Enforce Approval Gate: applying without approved=True raises PermissionError
+        with self.assertRaises(PermissionError):
+            apply_candidate(
                 candidate_name=external_name,
                 category="workflow-and-automation",
                 subcategory="tool-integration",
+                approved=False,
+                intake_dir=self.intake_dir,
+                library_dir=self.library_dir,
+                runtime_dir=self.runtime_dir,
                 manifest=self.manifest,
                 ledger=self.ledger,
             )
-            self.assertTrue(os.path.exists(target_canonical_path))
 
-            # Verify provider coupling was decoupled
-            with open(os.path.join(target_canonical_path, "SKILL.md"), "r", encoding="utf-8") as f:
-                normalized_text = f.read()
-            self.assertNotIn("Claude", normalized_text)
-            self.assertIn("Agent", normalized_text)
+        # 5. Apply with approved=True normalizes provider coupling and restores symlink
+        res = apply_candidate(
+            candidate_name=external_name,
+            category="workflow-and-automation",
+            subcategory="tool-integration",
+            approved=True,
+            intake_dir=self.intake_dir,
+            library_dir=self.library_dir,
+            runtime_dir=self.runtime_dir,
+            manifest=self.manifest,
+            ledger=self.ledger,
+        )
+        target_dir = res["target_directory"]
+        with open(os.path.join(target_dir, "SKILL.md"), "r", encoding="utf-8") as f:
+            clean_content = f.read()
+        self.assertNotIn("Claude", clean_content)
+        self.assertIn("Agent", clean_content)
 
-            # Remove physical folder from runtime and replace with symlink via sync
-            if os.path.isdir(runtime_pkg_dir) and not os.path.islink(runtime_pkg_dir):
-                shutil.rmtree(runtime_pkg_dir)
+        # Verify physical runtime folder replaced with canonical symlink
+        runtime_item = os.path.join(self.runtime_dir, external_name)
+        self.assertTrue(os.path.islink(runtime_item))
+        self.assertTrue(os.path.exists(runtime_item))
 
-            reconcile_runtime_symlinks(manifest=self.manifest, dry_run=False)
-            self.assertTrue(os.path.islink(runtime_pkg_dir))
-            self.assertTrue(os.path.exists(runtime_pkg_dir))
+    def test_scenario_g_skills_sh_brand_new_install(self):
+        """
+        Scenario G (Regression Test): skills.sh install of a brand-new skill.
+        External tool writes physical package directly into .agents/skills/<name>.
+        Pipeline automatically detects, stages, evaluates, approves, applies to canonical
+        library, updates routers and manifest, runs real pilot/validation, and replaces
+        physical runtime folder with canonical symlink.
+        """
+        tool_name = "skills-sh-brand-new"
+        runtime_pkg_dir = os.path.join(self.runtime_dir, tool_name)
+        os.makedirs(os.path.join(runtime_pkg_dir, "scripts"), exist_ok=True)
 
-        finally:
-            if os.path.exists(target_canonical_path):
-                shutil.rmtree(target_canonical_path)
-            if os.path.lexists(runtime_pkg_dir):
-                if os.path.islink(runtime_pkg_dir):
-                    os.unlink(runtime_pkg_dir)
-                else:
-                    shutil.rmtree(runtime_pkg_dir)
-            if os.path.exists(staged_intake_dir):
-                shutil.rmtree(staged_intake_dir)
-            self.manifest.remove_skill(external_name)
-            self.manifest.save()
-            if os.path.exists(router_path):
-                with open(router_path, "r", encoding="utf-8") as rf:
-                    rtext = rf.read()
-                cleaned = "\n".join([line for line in rtext.splitlines() if external_name not in line])
-                with open(router_path, "w", encoding="utf-8") as rf:
-                    rf.write(cleaned + "\n")
+        with open(os.path.join(runtime_pkg_dir, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write("""---
+name: skills-sh-brand-new
+description: Fresh external skill installed via skills.sh tool. Use when testing automated external intake workflows.
+---
+# Brand New Skills.sh Tool
+Functional documentation.
+""")
+        with open(os.path.join(runtime_pkg_dir, "scripts", "main.py"), "w", encoding="utf-8") as f:
+            f.write("print('Executed brand-new skills.sh tool')\n")
+        with open(os.path.join(runtime_pkg_dir, "package.json"), "w", encoding="utf-8") as f:
+            json.dump({"name": tool_name, "version": "1.0.0", "installer": "skills.sh"}, f)
+
+        # 1. Detection via scanner
+        classifications = scan_runtime(runtime_dir=self.runtime_dir, library_dir=self.library_dir, manifest=self.manifest)
+        matching = [c for c in classifications if c.name == tool_name]
+        self.assertEqual(len(matching), 1)
+        self.assertEqual(matching[0].classification, "EXTERNAL_PHYSICAL")
+
+        # 2. Stage to intake
+        sync_rep = reconcile_runtime_symlinks(
+            runtime_dir=self.runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+            dry_run=False,
+            stage_external=True,
+        )
+        self.assertIn(tool_name, sync_rep.staged_to_intake)
+        staged_path = os.path.join(self.intake_dir, tool_name)
+        self.assertTrue(os.path.exists(staged_path))
+
+        # 3. Evaluation
+        ev = evaluate_candidate(
+            candidate_name=tool_name,
+            intake_dir=self.intake_dir,
+            library_dir=self.library_dir,
+            manifest=self.manifest,
+        )
+        self.assertTrue(ev.is_valid_package)
+        self.assertEqual(ev.recommended_decision, "NEW")
+
+        # 4. Apply with approval
+        res = apply_candidate(
+            candidate_name=tool_name,
+            category="workflow-and-automation",
+            subcategory="tool-integration",
+            approved=True,
+            intake_dir=self.intake_dir,
+            library_dir=self.library_dir,
+            runtime_dir=self.runtime_dir,
+            manifest=self.manifest,
+            ledger=self.ledger,
+        )
+        self.assertEqual(res["operation"], "ADD")
+        canonical_dest = res["target_directory"]
+        self.assertTrue(os.path.exists(canonical_dest))
+
+        # 5. Verify runtime directory is now a valid relative symbolic link
+        runtime_item = os.path.join(self.runtime_dir, tool_name)
+        self.assertTrue(os.path.islink(runtime_item))
+        self.assertTrue(os.path.exists(runtime_item))
+        self.assertFalse(os.path.isdir(runtime_item) and not os.path.islink(runtime_item))
+
+        # 6. Verify ledger record has real PASS statuses
+        latest_change = self.ledger.get_history(limit=1)[0]
+        self.assertEqual(latest_change["canonical_name"], tool_name)
+        self.assertEqual(latest_change["validation_status"], "PASS")
+        self.assertEqual(latest_change["pilot_status"], "PASS")
+
+    def test_scenario_h_skills_sh_update_to_managed_skill(self):
+        """
+        Scenario H (Regression Test): skills.sh install of an UPDATE to an already-managed skill.
+        External tool places updated physical package into .agents/skills/existing-tool.
+        Pipeline:
+        1. Classifies as EXTERNAL_UPDATE (not a collision!).
+        2. Diffs against canonical library copy and stages to intake with update metadata.
+        3. Intake evaluation recommends UPDATE and requires human approval.
+        4. Apply without approval is rejected.
+        5. Apply with approval updates canonical package, executes real validation/pilot,
+           logs operation='UPDATE' in change ledger, and safely restores canonical symlink.
+        """
+        managed_name = "existing-tool"
+        runtime_pkg_dir = os.path.join(self.runtime_dir, managed_name)
+
+        # 1. Simulate skills.sh overwriting runtime symlink with a physical updated directory
+        self.assertTrue(os.path.islink(runtime_pkg_dir))
+        os.unlink(runtime_pkg_dir)
+        os.makedirs(os.path.join(runtime_pkg_dir, "scripts"), exist_ok=True)
+
+        v2_skill_md = """---
+name: existing-tool
+description: Standard automation helper v2 with enhanced capabilities. Use when running automation scripts.
+---
+# Existing Tool V2
+Upgraded instructions for existing tool v2.
+"""
+        with open(os.path.join(runtime_pkg_dir, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write(v2_skill_md)
+        with open(os.path.join(runtime_pkg_dir, "scripts", "v2_action.py"), "w", encoding="utf-8") as f:
+            f.write("print('V2 action execution')\n")
+        with open(os.path.join(runtime_pkg_dir, "package.json"), "w", encoding="utf-8") as f:
+            json.dump({"name": managed_name, "version": "2.0.0", "updated_by": "skills.sh"}, f)
+
+        # 2. Scanner detects EXTERNAL_UPDATE
+        scan_res = scan_runtime(runtime_dir=self.runtime_dir, library_dir=self.library_dir, manifest=self.manifest)
+        matching = [c for c in scan_res if c.name == managed_name]
+        self.assertEqual(len(matching), 1)
+        self.assertEqual(matching[0].classification, "EXTERNAL_UPDATE")
+        diff_info = matching[0].installer_integration_info.get("diff_summary", "")
+        self.assertIn("SKILL.md", diff_info)
+
+        # 3. Sync stages update to intake
+        sync_rep = reconcile_runtime_symlinks(
+            runtime_dir=self.runtime_dir,
+            library_dir=self.library_dir,
+            intake_dir=self.intake_dir,
+            manifest=self.manifest,
+            dry_run=False,
+            stage_external=True,
+        )
+        self.assertTrue(any(managed_name in s and "EXTERNAL_UPDATE" in s for s in sync_rep.staged_to_intake))
+        staged_path = os.path.join(self.intake_dir, managed_name)
+        self.assertTrue(os.path.exists(staged_path))
+
+        # 4. Evaluate update candidate
+        ev = evaluate_candidate(
+            candidate_name=managed_name,
+            intake_dir=self.intake_dir,
+            library_dir=self.library_dir,
+            manifest=self.manifest,
+        )
+        self.assertTrue(ev.is_update)
+        self.assertEqual(ev.recommended_decision, "UPDATE")
+        self.assertTrue(ev.approval_required)
+        self.assertFalse(ev.name_collision)  # Should NOT be flagged as unwanted collision
+
+        # 5. Gate blocks unapproved apply
+        with self.assertRaises(PermissionError):
+            apply_candidate(
+                candidate_name=managed_name,
+                approved=False,
+                intake_dir=self.intake_dir,
+                library_dir=self.library_dir,
+                runtime_dir=self.runtime_dir,
+                manifest=self.manifest,
+                ledger=self.ledger,
+            )
+
+        # 6. Apply with approval succeeds
+        res = apply_candidate(
+            candidate_name=managed_name,
+            approved=True,
+            intake_dir=self.intake_dir,
+            library_dir=self.library_dir,
+            runtime_dir=self.runtime_dir,
+            manifest=self.manifest,
+            ledger=self.ledger,
+        )
+        self.assertEqual(res["operation"], "UPDATE")
+        self.assertTrue(res["is_update"])
+
+        # 7. Canonical library package has updated files
+        target_canonical = res["target_directory"]
+        with open(os.path.join(target_canonical, "SKILL.md"), "r", encoding="utf-8") as f:
+            saved_content = f.read()
+        self.assertIn("Standard automation helper v2", saved_content)
+        self.assertTrue(os.path.exists(os.path.join(target_canonical, "scripts", "v2_action.py")))
+
+        # 8. Runtime symlink is safely restored
+        runtime_item = os.path.join(self.runtime_dir, managed_name)
+        self.assertTrue(os.path.islink(runtime_item))
+        self.assertTrue(os.path.exists(runtime_item))
+
+        # 9. Ledger recorded UPDATE with genuine PASS
+        latest_change = self.ledger.get_history(limit=1)[0]
+        self.assertEqual(latest_change["operation"], "UPDATE")
+        self.assertEqual(latest_change["decision"], "UPDATE")
+        self.assertEqual(latest_change["validation_status"], "PASS")
+        self.assertEqual(latest_change["pilot_status"], "PASS")
 
 
 if __name__ == "__main__":

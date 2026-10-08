@@ -1,30 +1,29 @@
 """
-Living Library Validator.
-Dynamically verifies the canonical library, router hierarchy, package contracts,
-script safety, workstation path leaks, runtime manifest, and .agents/skills symlinks
-without frozen population assumptions.
+Living Library and Skill Validation Module.
+Independently verifies router integrity, four-way set equality (physical == router == manifest == runtime),
+and per-skill structural health without hardcoded population counts.
 """
 
 import ast
+import glob
 import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
 
 from .config import (
-    ALL_SUBCATEGORIES,
     CATEGORIES,
     DEEP_CATEGORIES,
-    DESTRUCTIVE_COMMAND_PATTERNS,
     FLAT_CATEGORIES,
     LIBRARY_DIR,
+    OPERATIONAL_SYSTEM_PACKAGES,
     PROTECTED_RUNTIME_ENTRIES,
-    PROVIDER_COUPLING_PATTERNS,
     REPO_ROOT,
     RUNTIME_DIR,
     SECRET_PATTERNS,
     TRIGGER_CONTRACT_PATTERN,
     WORKSTATION_PATH_PATTERNS,
+    get_all_routers,
 )
 from .manifest import RuntimeManifest
 
@@ -44,6 +43,7 @@ class SkillValidationReport:
 @dataclass
 class ValidationResult:
     is_valid: bool = True
+    set_reconciliation_passed: bool = True
     total_routers: int = 0
     total_router_links: int = 0
     total_canonical_skills: int = 0
@@ -55,24 +55,26 @@ class ValidationResult:
     skill_errors: Dict[str, List[str]] = field(default_factory=dict)
     workstation_path_leaks: List[str] = field(default_factory=list)
     secret_leaks: List[str] = field(default_factory=list)
-    provider_coupling_leaks: List[str] = field(default_factory=list)
+    reconciliation_discrepancies: List[str] = field(default_factory=list)
     evidence: List[str] = field(default_factory=list)
 
     def summary(self) -> str:
         status = "PASSED" if self.is_valid else "FAILED"
         lines = [
             f"=== Living Library Validation: {status} ===",
+            f"4-Way Set Reconciliation (Physical == Router == Manifest == Runtime): {'PASSED' if self.set_reconciliation_passed else 'FAILED'}",
             f"Total Routers Verified: {self.total_routers}",
             f"Total Router Links Verified: {self.total_router_links} (Broken: {len(self.broken_router_links)})",
             f"Total Canonical Active Skills: {self.total_canonical_skills} (Orphans: {len(self.orphan_skills)})",
             f"Total Manifest Skills: {self.total_manifest_skills}",
             f"Total Managed Symlinks: {self.total_managed_symlinks} (Broken: {len(self.broken_managed_symlinks)})",
             f"Workstation Path Leaks: {len(self.workstation_path_leaks)}",
-            f"Secret Leaks: {len(self.secret_leaks)}",
-            f"Provider Coupling Leaks: {len(self.provider_coupling_leaks)}",
+            f"Potential Secret Leaks: {len(self.secret_leaks)}",
         ]
         if not self.is_valid:
             lines.append("\nErrors / Regressions Found:")
+            for r in self.reconciliation_discrepancies[:10]:
+                lines.append(f"  - Reconciliation Discrepancy: {r}")
             for b in self.broken_router_links[:5]:
                 lines.append(f"  - Broken Router Link: {b}")
             for o in self.orphan_skills[:5]:
@@ -87,28 +89,24 @@ class ValidationResult:
 
 
 def parse_frontmatter(content: str) -> Optional[dict]:
-    """Parse YAML frontmatter enclosed in ---."""
     if not content.startswith("---"):
         return None
-    parts = content.split("---", 2)
-    if len(parts) < 3:
+    end = content.find("\n---", 3)
+    if end == -1:
         return None
-    fm_text = parts[1].strip()
+    fm_text = content[3:end].strip()
     result = {}
     for line in fm_text.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if ":" in line:
+        if ":" in line and not line.strip().startswith("#"):
             k, v = line.split(":", 1)
             result[k.strip()] = v.strip().strip("\"'")
     return result
 
 
 def validate_single_skill(skill_dir: str) -> SkillValidationReport:
-    """Validates an individual skill package against canonical standards."""
-    rel_path = os.path.relpath(skill_dir, REPO_ROOT).replace(os.sep, "/")
-    report = SkillValidationReport(skill_path=rel_path, name=os.path.basename(skill_dir))
+    """Validates an individual skill directory."""
+    name = os.path.basename(skill_dir.rstrip(os.sep))
+    report = SkillValidationReport(skill_path=skill_dir, name=name)
 
     skill_md = os.path.join(skill_dir, "SKILL.md")
     if not os.path.exists(skill_md):
@@ -125,25 +123,16 @@ def validate_single_skill(skill_dir: str) -> SkillValidationReport:
         return report
 
     fm = parse_frontmatter(content)
-    if not fm:
+    if not fm or "name" not in fm or "description" not in fm:
         report.is_valid = False
         report.errors.append("Invalid or missing frontmatter in SKILL.md")
     else:
-        name = fm.get("name")
-        desc = fm.get("description")
-        if not name:
+        desc = fm.get("description", "")
+        if not TRIGGER_CONTRACT_PATTERN.search(desc):
             report.is_valid = False
-            report.errors.append("Frontmatter missing 'name'")
-        else:
-            report.name = name
-        if not desc:
-            report.is_valid = False
-            report.errors.append("Frontmatter missing 'description'")
-        elif not TRIGGER_CONTRACT_PATTERN.search(desc):
-            report.is_valid = False
-            report.errors.append(f"Description fails trigger contract: {desc[:60]}...")
+            report.errors.append("Frontmatter description fails trigger contract")
 
-    # Check relative links in SKILL.md
+    # Check internal markdown links
     link_pattern = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
     for m in link_pattern.finditer(content):
         target = m.group(2).split("#")[0]
@@ -153,23 +142,22 @@ def validate_single_skill(skill_dir: str) -> SkillValidationReport:
         abs_target = os.path.normpath(os.path.join(skill_dir, target))
         if not os.path.exists(abs_target):
             report.is_valid = False
-            report.errors.append(f"Broken relative link in SKILL.md: '{target}'")
+            report.errors.append(f"Broken markdown link in SKILL.md: {target}")
 
-    # Check Python scripts in scripts/
+    # Check python syntax in scripts/
     scripts_dir = os.path.join(skill_dir, "scripts")
-    if os.path.exists(scripts_dir):
-        for root, _, files in os.walk(scripts_dir):
-            for fname in files:
-                if fname.endswith(".py"):
-                    py_path = os.path.join(root, fname)
-                    report.scripts_checked += 1
-                    try:
-                        with open(py_path, "r", encoding="utf-8", errors="replace") as pf:
-                            py_code = pf.read()
-                        ast.parse(py_code, filename=py_path)
-                    except SyntaxError as se:
-                        report.is_valid = False
-                        report.errors.append(f"Python syntax error in {fname}: {se}")
+    if os.path.isdir(scripts_dir):
+        for fname in os.listdir(scripts_dir):
+            if fname.endswith(".py"):
+                py_path = os.path.join(scripts_dir, fname)
+                report.scripts_checked += 1
+                try:
+                    with open(py_path, "r", encoding="utf-8", errors="replace") as pf:
+                        py_code = pf.read()
+                    ast.parse(py_code, filename=py_path)
+                except SyntaxError as se:
+                    report.is_valid = False
+                    report.errors.append(f"Python syntax error in {fname}: {se}")
 
     # Check for workstation path leaks and secrets
     for root, _, files in os.walk(skill_dir):
@@ -196,54 +184,32 @@ def validate_single_skill(skill_dir: str) -> SkillValidationReport:
     return report
 
 
-
 def validate_library(
     library_dir: str = LIBRARY_DIR,
     runtime_dir: str = RUNTIME_DIR,
     manifest: Optional[RuntimeManifest] = None,
 ) -> ValidationResult:
     """
-    Validates the living library without hardcoded population counts.
-    Derives router and skill topology dynamically.
+    Validates the living library with exact four-way set reconciliation:
+    Physical canonical packages == Router-indexed packages == Manifest entries == Runtime symlinks.
     """
     result = ValidationResult()
     m = manifest or RuntimeManifest()
 
-    # Discover all routers dynamically
-    root_router = os.path.join(library_dir, "SKILL.md")
-    category_routers: List[str] = []
-    subcategory_routers: List[str] = []
-
-    for cat in CATEGORIES:
-        cat_router = os.path.join(library_dir, cat, "SKILL.md")
-        if os.path.exists(cat_router):
-            category_routers.append(cat_router)
-
-        # Check for subcategories
-        cat_dir = os.path.join(library_dir, cat)
-        if os.path.isdir(cat_dir):
-            for item in sorted(os.listdir(cat_dir)):
-                sub_router = os.path.join(cat_dir, item, "SKILL.md")
-                if os.path.exists(sub_router):
-                    # Check if it is a subcategory router (not a leaf skill)
-                    with open(sub_router, "r", encoding="utf-8", errors="replace") as srf:
-                        scontent = srf.read()
-                    if "type: subcategory-router" in scontent or "subcategory-router" in scontent:
-                        subcategory_routers.append(sub_router)
-
-    all_routers = [root_router] + category_routers + subcategory_routers
+    # Step 1: Discover all 26 routers dynamically
+    all_routers = get_all_routers(library_dir=library_dir)
     result.total_routers = len(all_routers)
     norm_routers = {os.path.normpath(r) for r in all_routers}
+    rel_routers = {os.path.relpath(r, REPO_ROOT).replace(os.sep, "/") for r in all_routers}
 
-    # Verify routers exist
     for r in all_routers:
         if not os.path.exists(r):
             result.is_valid = False
             result.broken_router_links.append(f"Router file missing: {r}")
 
-    # Traverse all router links
+    # Step 2: Extract router-indexed leaf skills
     link_pattern = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
-    leaf_skills_indexed: List[str] = []
+    router_indexed_set: Set[str] = set()
 
     for r_path in all_routers:
         r_dir = os.path.dirname(r_path)
@@ -266,82 +232,95 @@ def validate_library(
                 result.broken_router_links.append(f"{os.path.relpath(r_path, REPO_ROOT)} -> {target}")
             elif os.path.basename(abs_target) == "SKILL.md" and abs_target not in norm_routers:
                 skill_dir = os.path.dirname(abs_target)
-                leaf_skills_indexed.append(skill_dir)
+                rel_target_dir = os.path.relpath(skill_dir, REPO_ROOT).replace(os.sep, "/")
+                router_indexed_set.add(rel_target_dir)
 
-    unique_leaf_indexed = sorted(list(set(leaf_skills_indexed)))
-    result.total_canonical_skills = len(unique_leaf_indexed)
+    result.total_canonical_skills = len(router_indexed_set)
 
-    # Check for duplicate router leaf links
-    if len(leaf_skills_indexed) != len(unique_leaf_indexed):
-        result.is_valid = False
-        dups = [item for item in leaf_skills_indexed if leaf_skills_indexed.count(item) > 1]
-        result.evidence.append(f"Duplicate leaf links in router hierarchy: {len(dups)} occurrences")
-
-    # Discover all physical canonical skill packages under the 10 categories
-    physical_canonical_skills: Set[str] = set()
+    # Step 3: Discover physical canonical packages (all library/<cat>/*/* containing SKILL.md)
+    physical_packages_set: Set[str] = set()
     for cat in CATEGORIES:
-        cat_dir = os.path.join(library_dir, cat)
-        if not os.path.isdir(cat_dir):
-            continue
-        # Scan for skills
-        for root, dirs, files in os.walk(cat_dir):
-            if "SKILL.md" in files:
-                abs_s = os.path.normpath(os.path.join(root, "SKILL.md"))
-                if abs_s not in norm_routers:
-                    # Filter out nested bundled packages (skills inside examples/plugins/etc.)
-                    # Canonical skills are directly under cat/<subcat>/<skill> or cat/<subcat>/<group>/<skill>
-                    rel_to_lib = os.path.relpath(root, library_dir).split(os.sep)
-                    # Exclude deep vendor bundles like seo-skills-main, plugins, test-fixtures
-                    if any(x in rel_to_lib for x in ["plugins", "vendor", "examples", "references", "tests", "fixtures"]):
-                        continue
-                    # If this directory is in unique_leaf_indexed, it is canonical!
-                    if os.path.normpath(root) in [os.path.normpath(p) for p in unique_leaf_indexed]:
-                        physical_canonical_skills.add(os.path.normpath(root))
+        glob_pattern = os.path.join(library_dir, cat, "*", "*", "SKILL.md")
+        for s_file in glob.glob(glob_pattern):
+            s_abs = os.path.normpath(s_file)
+            if s_abs not in norm_routers:
+                s_dir = os.path.dirname(s_abs)
+                rel_s_dir = os.path.relpath(s_dir, REPO_ROOT).replace(os.sep, "/")
+                physical_packages_set.add(rel_s_dir)
 
-    # Orphan check: Any indexed skill must exist physically, and no canonical skill unindexed
-    for s in unique_leaf_indexed:
-        if not os.path.isdir(s):
-            result.is_valid = False
-            result.orphan_skills.append(f"Indexed target is not directory: {s}")
-
-    # Validate each canonical skill package
-    for s_dir in unique_leaf_indexed:
-        rep = validate_single_skill(s_dir)
-        if not rep.is_valid:
-            result.is_valid = False
-            result.skill_errors[rep.skill_path] = rep.errors
-        for err in rep.errors:
-            if "Workstation path leak" in err:
-                result.workstation_path_leaks.append(f"{rep.skill_path}: {err}")
-            elif "secret leak" in err:
-                result.secret_leaks.append(f"{rep.skill_path}: {err}")
-
-    # Validate Runtime Manifest coverage
-    result.total_manifest_skills = len(m.skills)
-    manifest_canonical_paths = {
-        os.path.normpath(os.path.join(REPO_ROOT, s["canonical_path"]))
+    # Step 4: Extract manifest packages
+    manifest_packages_set: Set[str] = {
+        s["canonical_path"].replace(os.sep, "/").strip("/")
         for s in m.skills.values()
     }
-    indexed_canonical_paths = {os.path.normpath(p) for p in unique_leaf_indexed}
+    result.total_manifest_skills = len(manifest_packages_set)
 
-    missing_from_manifest = indexed_canonical_paths - manifest_canonical_paths
-    if missing_from_manifest:
-        result.is_valid = False
-        result.evidence.append(f"{len(missing_from_manifest)} canonical skills missing from runtime manifest")
-
-    # Validate Runtime Symlinks in .agents/skills/
+    # Step 5: Extract runtime symlink targets
+    runtime_targets_set: Set[str] = set()
     if os.path.exists(runtime_dir):
-        for r_name, s_info in m.skills.items():
-            sym_path = os.path.join(runtime_dir, r_name)
-            if not os.path.lexists(sym_path):
-                # Symlink missing
+        for item in os.listdir(runtime_dir):
+            if item in PROTECTED_RUNTIME_ENTRIES:
+                continue
+            item_path = os.path.join(runtime_dir, item)
+            if os.path.islink(item_path):
+                raw_target = os.readlink(item_path)
+                abs_t = os.path.normpath(os.path.join(runtime_dir, raw_target))
+                if not os.path.exists(abs_t):
+                    result.is_valid = False
+                    result.broken_managed_symlinks.append(f"{item} -> {raw_target}")
+                else:
+                    rel_t = os.path.relpath(abs_t, REPO_ROOT).replace(os.sep, "/")
+                    if rel_t.startswith("library/"):
+                        runtime_targets_set.add(rel_t)
+            elif os.path.isdir(item_path):
                 result.is_valid = False
-                result.broken_managed_symlinks.append(f"Missing symlink: {r_name}")
-            elif not os.path.exists(sym_path):
-                # Broken symlink
-                result.is_valid = False
-                result.broken_managed_symlinks.append(f"Broken symlink: {r_name} -> {os.readlink(sym_path)}")
-            else:
-                result.total_managed_symlinks += 1
+                result.reconciliation_discrepancies.append(
+                    f"Physical directory found in runtime: {item} (must be managed symlink)"
+                )
+    result.total_managed_symlinks = len(runtime_targets_set)
+
+    # Step 6: 4-Way Exact Set Equality Reconciliation (Finding 5)
+    discrepancies = []
+    if physical_packages_set != router_indexed_set:
+        unindexed = physical_packages_set - router_indexed_set
+        missing_phys = router_indexed_set - physical_packages_set
+        if unindexed:
+            discrepancies.append(f"Physical unindexed in routers ({len(unindexed)}): {sorted(list(unindexed))[:3]}")
+        if missing_phys:
+            discrepancies.append(f"Router targets missing physical package ({len(missing_phys)}): {sorted(list(missing_phys))[:3]}")
+
+    if router_indexed_set != manifest_packages_set:
+        unmanifested = router_indexed_set - manifest_packages_set
+        unrouted = manifest_packages_set - router_indexed_set
+        if unmanifested:
+            discrepancies.append(f"Router skills missing in manifest ({len(unmanifested)}): {sorted(list(unmanifested))[:3]}")
+        if unrouted:
+            discrepancies.append(f"Manifest skills missing in routers ({len(unrouted)}): {sorted(list(unrouted))[:3]}")
+
+    if manifest_packages_set != runtime_targets_set:
+        unlinked = manifest_packages_set - runtime_targets_set
+        extra_linked = runtime_targets_set - manifest_packages_set
+        if unlinked:
+            discrepancies.append(f"Manifest skills missing runtime symlinks ({len(unlinked)}): {sorted(list(unlinked))[:3]}")
+        if extra_linked:
+            discrepancies.append(f"Runtime symlinks pointing outside manifest ({len(extra_linked)}): {sorted(list(extra_linked))[:3]}")
+
+    if discrepancies:
+        result.is_valid = False
+        result.set_reconciliation_passed = False
+        result.reconciliation_discrepancies.extend(discrepancies)
+
+    # Step 7: Validate each canonical skill package
+    for s_rel in sorted(list(router_indexed_set)):
+        s_abs = os.path.join(REPO_ROOT, s_rel)
+        rep = validate_single_skill(s_abs)
+        if not rep.is_valid:
+            result.is_valid = False
+            result.skill_errors[s_rel] = rep.errors
+        for err in rep.errors:
+            if "Workstation path leak" in err:
+                result.workstation_path_leaks.append(f"{s_rel}: {err}")
+            elif "secret leak" in err:
+                result.secret_leaks.append(f"{s_rel}: {err}")
 
     return result

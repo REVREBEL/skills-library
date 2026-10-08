@@ -5,6 +5,7 @@ Configuration and constants for the reusable Agent Skills library pipeline.
 import os
 import re
 from pathlib import Path
+from typing import List
 
 # Repository Root (determined dynamically relative to this module)
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -112,7 +113,13 @@ FLAT_CATEGORIES = {
 # All 44 Subcategories mapped by category
 ALL_SUBCATEGORIES = {**DEEP_CATEGORIES, **FLAT_CATEGORIES}
 
-# Protected Runtime Entries in .agents/skills (never overwrite or unmanage)
+# Operational System Packages (canonical in library/, symlinked into runtime)
+OPERATIONAL_SYSTEM_PACKAGES = {
+    "github-operations",
+    "skills-create-manage-update",
+}
+
+# Protected Runtime Entries in .agents/skills (never overwrite with regular skill sync)
 PROTECTED_RUNTIME_ENTRIES = {
     "SKILL.md",
     "github-operations",
@@ -157,3 +164,14 @@ SECRET_PATTERNS = [
     re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
 ]
 
+
+def get_all_routers(library_dir: str = LIBRARY_DIR) -> List[str]:
+    """Return all 26 router file paths in the canonical library."""
+    root_router = os.path.join(library_dir, "SKILL.md")
+    cat_routers = [os.path.join(library_dir, c, "SKILL.md") for c in CATEGORIES]
+    subcat_routers = [
+        os.path.join(library_dir, c, sc, "SKILL.md")
+        for c, scs in DEEP_CATEGORIES.items()
+        for sc in scs
+    ]
+    return [root_router] + cat_routers + subcat_routers

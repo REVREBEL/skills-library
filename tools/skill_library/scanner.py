@@ -283,6 +283,7 @@ def scan_runtime(
 
     m = manifest or RuntimeManifest()
     norm_lib_dir = os.path.normpath(library_dir)
+    repo_root = os.path.dirname(norm_lib_dir)
 
     for item in sorted(os.listdir(runtime_dir)):
         item_path = os.path.join(runtime_dir, item)
@@ -312,7 +313,7 @@ def scan_runtime(
                 ))
             elif abs_target.startswith(norm_lib_dir):
                 # Points inside library
-                rel_canonical = os.path.relpath(abs_target, REPO_ROOT).replace(os.sep, "/")
+                rel_canonical = os.path.relpath(abs_target, repo_root).replace(os.sep, "/")
                 results.append(RuntimeEntryClassification(
                     name=item,
                     path=item_path,
@@ -334,16 +335,50 @@ def scan_runtime(
             # Physical directory created directly under .agents/skills/
             integration_info = inspect_external_installer_environment(item_path)
 
-            # Check if this name collides with an existing managed canonical name
-            is_collision = item in m.skills
+            # Check if this corresponds to an existing managed canonical skill
+            if item in m.skills:
+                canonical_info = m.skills[item]
+                canonical_path = canonical_info.get("canonical_path", "")
+                abs_canonical = os.path.normpath(os.path.join(repo_root, canonical_path))
 
-            if is_collision:
+                # Compare physical runtime contents against canonical library package
+                diff_summary = {"modified": [], "added": [], "removed": []}
+                if os.path.exists(abs_canonical):
+                    runtime_files = {}
+                    canonical_files = {}
+                    for r, _, fs in os.walk(item_path):
+                        for f in fs:
+                            rf = os.path.relpath(os.path.join(r, f), item_path)
+                            runtime_files[rf] = os.path.join(r, f)
+                    for r, _, fs in os.walk(abs_canonical):
+                        for f in fs:
+                            cf = os.path.relpath(os.path.join(r, f), abs_canonical)
+                            canonical_files[cf] = os.path.join(r, f)
+
+                    for rf, rfp in runtime_files.items():
+                        if rf not in canonical_files:
+                            diff_summary["added"].append(rf)
+                        else:
+                            try:
+                                with open(rfp, "rb") as f1, open(canonical_files[rf], "rb") as f2:
+                                    if f1.read() != f2.read():
+                                        diff_summary["modified"].append(rf)
+                            except Exception:
+                                pass
+                    for cf in canonical_files.keys():
+                        if cf not in runtime_files:
+                            diff_summary["removed"].append(cf)
+
+                integration_info["update_target_canonical"] = canonical_path
+                integration_info["diff_summary"] = str(diff_summary)
+
                 results.append(RuntimeEntryClassification(
                     name=item,
                     path=item_path,
-                    classification="COLLISION",
+                    classification="EXTERNAL_UPDATE",
+                    resolved_canonical_path=canonical_path,
                     installer_integration_info=integration_info,
-                    action="STOP FOR REVIEW (Name collides with canonical skill)",
+                    action="STAGE FOR UPDATE REVIEW -> compare diff -> evaluate candidate -> approve -> apply update",
                 ))
             else:
                 results.append(RuntimeEntryClassification(

@@ -89,3 +89,12 @@ class ChangeLedger:
                     except json.JSONDecodeError:
                         pass
         return records
+
+    def get_history(self, limit: Optional[int] = None) -> List[dict]:
+        """Return change records in reverse chronological order."""
+        changes = self.list_changes()
+        changes.reverse()
+        if limit:
+            return changes[:limit]
+        return changes
+

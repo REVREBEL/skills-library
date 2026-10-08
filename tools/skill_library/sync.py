@@ -73,6 +73,7 @@ def reconcile_runtime_symlinks(
     os.makedirs(intake_dir, exist_ok=True)
 
     norm_lib = os.path.normpath(library_dir)
+    repo_root = os.path.dirname(norm_lib)
 
     # Step 1: Scan existing entries in .agents/skills/
     existing_entries = os.listdir(runtime_dir)
@@ -94,7 +95,7 @@ def reconcile_runtime_symlinks(
                 if entry in m.skills:
                     # Target is a managed skill whose link is broken or stale -> repair it
                     canonical_rel = m.skills[entry]["canonical_path"]
-                    canonical_abs = os.path.normpath(os.path.join(REPO_ROOT, canonical_rel))
+                    canonical_abs = os.path.normpath(os.path.join(repo_root, canonical_rel))
                     if os.path.exists(canonical_abs):
                         if not dry_run:
                             os.unlink(entry_path)
@@ -119,19 +120,37 @@ def reconcile_runtime_symlinks(
         elif os.path.isdir(entry_path):
             # Physical directory in runtime folder (external install e.g. from skills.sh)
             if entry in m.skills:
-                # Collision: a physical directory with the same name as a managed skill
-                report.collisions.append(f"Physical directory collides with managed skill: {entry}")
+                # Potential external UPDATE to an already managed skill
+                if stage_external:
+                    dest_intake = os.path.join(intake_dir, entry)
+                    if os.path.exists(dest_intake):
+                        report.collisions.append(f"Cannot stage update for {entry}: intake/{entry} already exists")
+                    else:
+                        canonical_rel = m.skills[entry]["canonical_path"]
+                        integration_info = inspect_external_installer_environment(entry_path)
+                        integration_info["type"] = "external_update"
+                        integration_info["target_canonical_path"] = canonical_rel
+                        integration_info["original_name"] = entry
+                        if not dry_run:
+                            shutil.copytree(entry_path, dest_intake)
+                            meta_path = os.path.join(dest_intake, ".installer-metadata.json")
+                            with open(meta_path, "w", encoding="utf-8") as mf:
+                                json.dump(integration_info, mf, indent=2)
+                        report.staged_to_intake.append(f"{entry} (EXTERNAL_UPDATE -> {canonical_rel})")
+                else:
+                    report.errors.append(f"External update physical directory found (unstaged): {entry}")
             else:
                 if stage_external:
-                    # Stage into intake safely
+                    # Stage brand-new external install into intake safely
                     dest_intake = os.path.join(intake_dir, entry)
                     if os.path.exists(dest_intake):
                         report.collisions.append(f"Cannot stage {entry}: intake/{entry} already exists")
                     else:
                         integration_info = inspect_external_installer_environment(entry_path)
+                        integration_info["type"] = "external_physical"
+                        integration_info["original_name"] = entry
                         if not dry_run:
                             shutil.copytree(entry_path, dest_intake)
-                            # Save installer metadata
                             meta_path = os.path.join(dest_intake, ".installer-metadata.json")
                             with open(meta_path, "w", encoding="utf-8") as mf:
                                 json.dump(integration_info, mf, indent=2)
@@ -147,7 +166,7 @@ def reconcile_runtime_symlinks(
     for runtime_name, s_info in m.skills.items():
         symlink_path = os.path.join(runtime_dir, runtime_name)
         canonical_rel = s_info["canonical_path"]
-        canonical_abs = os.path.normpath(os.path.join(REPO_ROOT, canonical_rel))
+        canonical_abs = os.path.normpath(os.path.join(repo_root, canonical_rel))
 
         if not os.path.exists(canonical_abs):
             report.errors.append(f"Canonical skill path missing on disk: {canonical_rel}")
@@ -169,5 +188,57 @@ def reconcile_runtime_symlinks(
                     os.unlink(symlink_path)
                     os.symlink(rel_target, symlink_path)
                 report.repaired.append(f"{runtime_name} (redirected to {canonical_rel})")
+        elif os.path.isdir(symlink_path):
+            # Physical directory matching managed skill: replace with canonical symlink
+            # (only when canonical library already has authoritative copy)
+            if not dry_run:
+                shutil.rmtree(symlink_path)
+                os.symlink(rel_target, symlink_path)
+            report.repaired.append(f"{runtime_name} (replaced physical runtime directory with symlink)")
+
+    # Step 3: Ensure operational system packages and root router symlink exist in runtime
+    from .config import OPERATIONAL_SYSTEM_PACKAGES
+    for op_name in OPERATIONAL_SYSTEM_PACKAGES:
+        op_runtime = os.path.join(runtime_dir, op_name)
+        op_canonical = os.path.join(library_dir, op_name)
+        if os.path.exists(op_canonical):
+            rel_target = os.path.relpath(op_canonical, runtime_dir)
+            if not os.path.lexists(op_runtime):
+                if not dry_run:
+                    os.symlink(rel_target, op_runtime)
+                report.created.append(op_name)
+            elif os.path.islink(op_runtime):
+                curr = os.path.normpath(os.path.join(runtime_dir, os.readlink(op_runtime)))
+                if curr != os.path.normpath(op_canonical):
+                    if not dry_run:
+                        os.unlink(op_runtime)
+                        os.symlink(rel_target, op_runtime)
+                    report.repaired.append(op_name)
+            elif os.path.isdir(op_runtime):
+                if not dry_run:
+                    shutil.rmtree(op_runtime)
+                    os.symlink(rel_target, op_runtime)
+                report.repaired.append(f"{op_name} (replaced physical operational dir with symlink)")
+
+    rt_root = os.path.join(runtime_dir, "SKILL.md")
+    lib_root = os.path.join(library_dir, "SKILL.md")
+    if os.path.exists(lib_root):
+        rel_root = os.path.relpath(lib_root, runtime_dir)
+        if not os.path.lexists(rt_root):
+            if not dry_run:
+                os.symlink(rel_root, rt_root)
+            report.created.append("SKILL.md")
+        elif os.path.islink(rt_root):
+            curr = os.path.normpath(os.path.join(runtime_dir, os.readlink(rt_root)))
+            if curr != os.path.normpath(lib_root):
+                if not dry_run:
+                    os.unlink(rt_root)
+                    os.symlink(rel_root, rt_root)
+                report.repaired.append("SKILL.md")
+        elif os.path.isfile(rt_root):
+            if not dry_run:
+                os.unlink(rt_root)
+                os.symlink(rel_root, rt_root)
+            report.repaired.append("SKILL.md (replaced physical file with symlink)")
 
     return report
