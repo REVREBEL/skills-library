@@ -1,0 +1,17 @@
+node_modules
+.DS_Store
+.env
+.env.*
+!.env.example
+!.env.testdata
+dist
+build
+coverage
+*.log
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+__pycache__/
+geo-test-run/

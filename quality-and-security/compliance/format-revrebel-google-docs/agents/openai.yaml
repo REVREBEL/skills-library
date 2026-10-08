@@ -1,0 +1,4 @@
+interface:
+  display_name: "Format REVREBEL Google Docs"
+  short_description: "Apply the live REVREBEL document standard"
+  default_prompt: "Use $format-revrebel-google-docs to format this Google Doc the REVREBEL way."

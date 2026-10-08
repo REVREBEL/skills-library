@@ -1,0 +1,13 @@
+interface:
+  display_name: Gary Writing Style
+  short_description: "Draft clear, warm, practical business writing in Gary\u2019\
+    s voice."
+  default_prompt: Draft this in my established writing style while preserving the
+    substance and level of detail.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true
