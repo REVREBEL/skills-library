@@ -15,6 +15,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+import uuid
 
 # Ensure tools directory is in sys.path
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -1042,21 +1043,45 @@ description: A test skill for global runtime. Use when testing global runtime op
     def test_02_isolated_test_runtime_never_touches_real_home(self):
         """2. Test runtime injection still uses isolated temporary directories and never touches real home."""
         real_home_runtime = Path.home() / ".agents" / "skills"
-        probe_skill_name = "test-probe-isolated-never-in-real-home"
 
-        # Run sync and apply inside sandbox
+        # Snapshot real home runtime directory before operation
+        real_home_before = set(os.listdir(real_home_runtime)) if real_home_runtime.exists() else None
+
+        # Create a unique sentinel skill in the isolated test library and manifest
+        sentinel_name = f"test-isolation-sentinel-{uuid.uuid4().hex[:8]}"
+        sentinel_dir = os.path.join(self.library_dir, "quality-and-security", "debugging", sentinel_name)
+        os.makedirs(sentinel_dir, exist_ok=True)
+        with open(os.path.join(sentinel_dir, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write(f"---\nname: {sentinel_name}\ndescription: Sentinel test skill. Use when testing isolation.\n---\n# Sentinel\n")
+
+        sentinel_rel = os.path.relpath(sentinel_dir, self.fake_repo).replace(os.sep, "/")
+        self.manifest.add_skill(
+            runtime_name=sentinel_name,
+            canonical_name=sentinel_name,
+            canonical_path=sentinel_rel,
+            functional_parent=self.router_rel,
+            source="test",
+            managed=True,
+        )
+        self.manifest.save()
+
+        # Run sync inside sandbox with injected runtime_dir
         report = reconcile_runtime_symlinks(
             runtime_dir=self.global_runtime_dir,
             library_dir=self.library_dir,
             intake_dir=self.intake_dir,
             manifest=self.manifest,
         )
-        self.assertIn("test-skill", report.created)
+        self.assertIn(sentinel_name, report.created)
+        self.assertTrue((Path(self.global_runtime_dir) / sentinel_name).is_symlink())
 
-        # Assert real user home has zero trace of test probe or test skill
-        real_probe_path = real_home_runtime / probe_skill_name
-        self.assertFalse(real_probe_path.exists())
-        self.assertFalse((real_home_runtime / "test-skill").exists() if "test-skill" not in os.listdir(real_home_runtime) else False)
+        # Assert unique sentinel was NEVER created in real home directory
+        self.assertFalse((real_home_runtime / sentinel_name).exists())
+
+        # Assert real home directory contents remain 100% unchanged
+        if real_home_before is not None:
+            real_home_after = set(os.listdir(real_home_runtime))
+            self.assertEqual(real_home_before, real_home_after)
 
     def test_03_empty_global_runtime_populated_with_individual_symlinks(self):
         """3. Empty global runtime is populated from the manifest with individual symlinks."""
