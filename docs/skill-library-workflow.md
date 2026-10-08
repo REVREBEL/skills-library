@@ -19,11 +19,11 @@ External Install / User Staged Candidate
                   ↓
             symbolic link
                   ↓
-           .agents/skills/
+          ~/.agents/skills/ (global discovery runtime)
 ```
 
 ### Canonical Source of Truth (`library/`)
-- All approved, production-grade agent skills reside exclusively under `library/`.
+- All approved, production-grade agent skills reside exclusively under `library/` within this repository.
 - No duplicate physical copies of active skills exist in the repository.
 - Structured across **10 top-level functional categories**:
   - **Deep Categories** (with subcategory router hierarchies):
@@ -39,13 +39,14 @@ External Install / User Staged Candidate
     - `quality-and-security/` (4 subcategories: compliance, debugging, security, testing)
     - `workflow-and-automation` (4 subcategories: git-and-vcs, task-orchestration, tool-integration, web-scraping)
 
-### Runtime Discovery Layer (`.agents/skills/`)
-- `.agents/skills/` is the active discovery endpoint used by agents, tools, and IDE extensions.
-- Every canonical skill in `library/` is exposed in `.agents/skills/` as a **relative symbolic link** (e.g., `.agents/skills/bug-hunter -> ../../library/quality-and-security/debugging/bug-hunter`).
+### Global Runtime Discovery Layer (`~/.agents/skills/`)
+- `~/.agents/skills/` is the global active discovery endpoint used by agents, tools, CLIs, and IDE extensions on macOS.
+- Every canonical skill in `library/` is exposed in `~/.agents/skills/` as an **individual relative symbolic link** (e.g., `~/.agents/skills/bug-hunter -> ../../github-revrebel/skills-library/library/quality-and-security/debugging/bug-hunter`).
+- Repo-local `.agents/skills` is deprecated, removed from git tracking, and added to `.gitignore`.
 - **Protected Entries**:
-  - `.agents/skills/SKILL.md` (root agent task discovery router)
-  - `.agents/skills/github-operations` (canonical git/PR workflow skills)
-  - `.agents/skills/skills-create-manage-update` (canonical skill authoring/audit skills)
+  - `~/.agents/skills/SKILL.md` (root agent task discovery router)
+  - `~/.agents/skills/github-operations` (canonical git/PR workflow skills)
+  - `~/.agents/skills/skills-create-manage-update` (canonical skill authoring/audit skills)
   These entries are protected and will never be overwritten, unmanaged, or modified by sync.
 
 ### Runtime Manifest (`audit/runtime-manifest.json`)
@@ -68,7 +69,7 @@ Staged in intake/ -> Scanned -> Evaluated -> Human Approval Gate -> Installed to
 
 ### Entry Channels
 1. **Manual Staging**: An engineer or author places a skill package into `intake/<candidate-name>`.
-2. **External Installers (`skills.sh`, etc.)**: When an external tool creates a physical directory in `.agents/skills/`, running `python3 tools/skill-library.py sync` automatically detects the unmanaged folder, copies it safely into `intake/<candidate-name>`, preserves installer metadata (`.installer-metadata.json`), and queues it for intake.
+2. **External Installers (`skills.sh`, etc.)**: When an external tool creates a physical directory in `~/.agents/skills/`, running `python3 tools/skill-library.py sync` automatically detects the unmanaged folder, copies it safely into `intake/<candidate-name>`, preserves installer metadata (`.installer-metadata.json`), and queues it for intake.
 
 ### Evaluation Criteria
 When running `python3 tools/skill-library.py intake`, candidates undergo automated evaluation:
@@ -110,7 +111,7 @@ The gate outputs:
 All operations are executed via `tools/skill-library.py`:
 
 ### `scan`
-Non-destructively inspects `intake/` and `.agents/skills/`.
+Non-destructively inspects `intake/` and `~/.agents/skills/`.
 ```bash
 python3 tools/skill-library.py scan
 python3 tools/skill-library.py scan --json
@@ -134,7 +135,7 @@ python3 tools/skill-library.py apply \
 ```
 
 ### `sync`
-Reconciles runtime symlinks in `.agents/skills/` against `audit/runtime-manifest.json`.
+Reconciles runtime symlinks in `~/.agents/skills/` against `audit/runtime-manifest.json`.
 - Creates missing symlinks.
 - Verifies and repairs broken symlinks.
 - Stages external physical folders into `intake/`.
@@ -209,7 +210,7 @@ python3 tools/skill-library.py test
 
 ## 6. Recovery & Troubleshooting Procedures
 
-### Broken Symlinks in `.agents/skills/`
+### Broken Symlinks in `~/.agents/skills/`
 - **Symptom**: `python3 tools/skill-library.py status` reports `Broken links > 0`.
 - **Cause**: A canonical folder was moved or renamed without running `apply`/`sync`.
 - **Resolution**:
@@ -218,14 +219,14 @@ python3 tools/skill-library.py test
   ```
   `sync` automatically redirects managed symlinks back to their canonical targets as defined in `audit/runtime-manifest.json`.
 
-### Physical Directory Installed into `.agents/skills/` by External Tool
+### Physical Directory Installed into `~/.agents/skills/` by External Tool
 - **Symptom**: `python3 tools/skill-library.py status` reports `New external installs > 0`.
-- **Cause**: An installer like `skills.sh` created a physical directory directly in `.agents/skills/`.
+- **Cause**: An installer like `skills.sh` created a physical directory directly in `~/.agents/skills/`.
 - **Resolution**:
   1. Run `python3 tools/skill-library.py sync`. This safely copies the package into `intake/<name>` with its `.installer-metadata.json`.
   2. Run `python3 tools/skill-library.py intake` to review and normalize the candidate.
   3. Run `python3 tools/skill-library.py apply` to install it into `library/`.
-  4. Delete the original physical folder in `.agents/skills/` and run `python3 tools/skill-library.py sync` to establish the canonical relative symlink.
+  4. The apply process replaces the external directory with the canonical relative symlink.
 
 ### Runtime Name Collision
 - **Symptom**: `python3 tools/skill-library.py intake` outputs `[HUMAN APPROVAL GATE]` with `Name collision with existing runtime skill`.

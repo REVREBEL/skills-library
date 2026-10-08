@@ -15,7 +15,7 @@ REPO_ROOT = os.path.dirname(TOOLS_DIR)
 # Core Directories
 LIBRARY_DIR = os.path.join(REPO_ROOT, "library")
 INTAKE_DIR = os.path.join(REPO_ROOT, "intake")
-RUNTIME_DIR = os.path.join(REPO_ROOT, ".agents", "skills")
+RUNTIME_DIR = str(Path.home() / ".agents" / "skills")
 AUDIT_DIR = os.path.join(REPO_ROOT, "audit")
 DOCS_DIR = os.path.join(REPO_ROOT, "docs")
 
@@ -119,7 +119,7 @@ OPERATIONAL_SYSTEM_PACKAGES = {
     "skills-create-manage-update",
 }
 
-# Protected Runtime Entries in .agents/skills (never overwrite with regular skill sync)
+# Protected Runtime Entries in ~/.agents/skills (never overwrite with regular skill sync)
 PROTECTED_RUNTIME_ENTRIES = {
     "SKILL.md",
     "github-operations",

@@ -22,6 +22,14 @@ from .manifest import RuntimeManifest
 from .scanner import inspect_external_installer_environment
 
 
+def _safe_relpath(target: str, start: str) -> str:
+    """Computes relative path, falling back to absolute if on different drives/roots."""
+    try:
+        return os.path.relpath(target, start)
+    except ValueError:
+        return os.path.abspath(target)
+
+
 @dataclass
 class SyncReport:
     created: List[str] = field(default_factory=list)
@@ -99,7 +107,7 @@ def reconcile_runtime_symlinks(
                     if os.path.exists(canonical_abs):
                         if not dry_run:
                             os.unlink(entry_path)
-                            rel_link = os.path.relpath(canonical_abs, runtime_dir)
+                            rel_link = _safe_relpath(canonical_abs, runtime_dir)
                             os.symlink(rel_link, entry_path)
                         report.repaired.append(f"{entry} -> {canonical_rel}")
                     else:
@@ -172,7 +180,7 @@ def reconcile_runtime_symlinks(
             report.errors.append(f"Canonical skill path missing on disk: {canonical_rel}")
             continue
 
-        rel_target = os.path.relpath(canonical_abs, runtime_dir)
+        rel_target = _safe_relpath(canonical_abs, runtime_dir)
 
         if not os.path.lexists(symlink_path):
             # Missing symlink -> create it
@@ -202,7 +210,7 @@ def reconcile_runtime_symlinks(
         op_runtime = os.path.join(runtime_dir, op_name)
         op_canonical = os.path.join(library_dir, op_name)
         if os.path.exists(op_canonical):
-            rel_target = os.path.relpath(op_canonical, runtime_dir)
+            rel_target = _safe_relpath(op_canonical, runtime_dir)
             if not os.path.lexists(op_runtime):
                 if not dry_run:
                     os.symlink(rel_target, op_runtime)
@@ -223,7 +231,7 @@ def reconcile_runtime_symlinks(
     rt_root = os.path.join(runtime_dir, "SKILL.md")
     lib_root = os.path.join(library_dir, "SKILL.md")
     if os.path.exists(lib_root):
-        rel_root = os.path.relpath(lib_root, runtime_dir)
+        rel_root = _safe_relpath(lib_root, runtime_dir)
         if not os.path.lexists(rt_root):
             if not dry_run:
                 os.symlink(rel_root, rt_root)
