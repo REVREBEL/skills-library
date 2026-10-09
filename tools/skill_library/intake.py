@@ -159,11 +159,14 @@ def evaluate_candidate(
         try:
             with open(meta_file, "r", encoding="utf-8") as mf:
                 meta = json.load(mf)
-                if meta.get("type") == "external_update":
+                if meta.get("type") == "external_update" or meta.get("classification") == "EXTERNAL_UPDATE":
                     is_external_update = True
                     existing_canonical_path = meta.get("target_canonical_path", "")
         except Exception:
             pass
+
+    if is_external_update and not existing_canonical_path and candidate_name in m.skills:
+        existing_canonical_path = m.skills[candidate_name].get("canonical_path", "")
 
     # 1. Package Structure & Validation
     pkg = scan_candidate_directory(candidate_path, name=candidate_name)

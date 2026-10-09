@@ -31,6 +31,7 @@ from .config import (
     load_runtime_targets,
 )
 from .manifest import RuntimeManifest
+from .publisher import get_commit_tree_sha, get_ref_commit_sha
 
 
 @dataclass
@@ -347,6 +348,24 @@ def validate_library_integrity(
     # Step 7: Verify Configured Runtime Targets
     if verify_targets:
         targets = load_runtime_targets(config_path)
+        expected_runtime_commit = get_ref_commit_sha(repo_root, f"refs/heads/{RUNTIME_BRANCH}")
+        expected_runtime_tree = get_commit_tree_sha(repo_root, expected_runtime_commit) if expected_runtime_commit else None
+
+        valid_remotes: Set[str] = {
+            str(repo_root).rstrip("/").removesuffix(".git"),
+            str(Path(repo_root).resolve()).rstrip("/").removesuffix(".git"),
+        }
+        rem_proc = subprocess.run(["git", "config", "--get", "remote.origin.url"], cwd=repo_root, capture_output=True, text=True)
+        if rem_proc.returncode == 0 and rem_proc.stdout.strip():
+            raw_origin = rem_proc.stdout.strip().rstrip("/").removesuffix(".git")
+            valid_remotes.add(raw_origin)
+            try:
+                p_orig = Path(raw_origin)
+                if p_orig.exists():
+                    valid_remotes.add(str(p_orig.resolve()).rstrip("/").removesuffix(".git"))
+            except Exception:
+                pass
+
         for target in targets:
             if not target.enabled:
                 continue
@@ -362,7 +381,30 @@ def validate_library_integrity(
                 result.target_errors.append(f"Target '{target.name}' ({t_path}) is not a Git checkout.")
                 continue
 
-            # Verify branch is runtime
+            # 1. Verify remote origin URL matches repo_root or its upstream origin
+            t_rem_proc = subprocess.run(["git", "config", "--get", "remote.origin.url"], cwd=str(t_path), capture_output=True, text=True)
+            if t_rem_proc.returncode == 0 and t_rem_proc.stdout.strip():
+                t_url = t_rem_proc.stdout.strip().rstrip("/").removesuffix(".git")
+                t_url_resolved = t_url
+                try:
+                    p_target_origin = Path(t_url)
+                    if p_target_origin.exists():
+                        t_url_resolved = str(p_target_origin.resolve()).rstrip("/").removesuffix(".git")
+                except Exception:
+                    pass
+
+                if t_url not in valid_remotes and t_url_resolved not in valid_remotes:
+                    result.is_valid = False
+                    result.target_reconciliation_passed = False
+                    result.target_errors.append(
+                        f"Target '{target.name}' remote URL '{t_rem_proc.stdout.strip()}' does not match expected source repository."
+                    )
+            else:
+                result.is_valid = False
+                result.target_reconciliation_passed = False
+                result.target_errors.append(f"Target '{target.name}' has no remote.origin.url configured.")
+
+            # 2. Verify branch is runtime
             b_proc = subprocess.run(["git", "branch", "--show-current"], cwd=str(t_path), capture_output=True, text=True)
             current_b = b_proc.stdout.strip()
             if current_b != RUNTIME_BRANCH:
@@ -370,13 +412,53 @@ def validate_library_integrity(
                 result.target_reconciliation_passed = False
                 result.target_errors.append(f"Target '{target.name}' is on branch '{current_b}', expected '{RUNTIME_BRANCH}'.")
 
-            # Verify sparse scope if subset
+            # 3. Verify target HEAD commit matches published runtime commit
+            head_proc = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(t_path), capture_output=True, text=True)
+            target_head = head_proc.stdout.strip() if head_proc.returncode == 0 else ""
+            if expected_runtime_commit and target_head != expected_runtime_commit:
+                result.is_valid = False
+                result.target_reconciliation_passed = False
+                result.target_errors.append(
+                    f"Target '{target.name}' HEAD commit ({target_head[:10]}) does not match published runtime commit ({expected_runtime_commit[:10]})."
+                )
+
+            # 4. Verify sparse scope and physical tree
             if target.mode == "subset":
                 sp_proc = subprocess.run(["git", "config", "core.sparseCheckout"], cwd=str(t_path), capture_output=True, text=True)
                 if sp_proc.stdout.strip().lower() != "true":
                     result.is_valid = False
                     result.target_reconciliation_passed = False
                     result.target_errors.append(f"Target '{target.name}' is mode 'subset' but sparse-checkout is not enabled.")
+                else:
+                    sp_list = subprocess.run(["git", "sparse-checkout", "list"], cwd=str(t_path), capture_output=True, text=True)
+                    actual_rules = set(line.strip().strip("/") for line in sp_list.stdout.splitlines() if line.strip())
+                    expected_rules = set(p.strip().strip("/") for p in target.include)
+                    if actual_rules != expected_rules:
+                        result.is_valid = False
+                        result.target_reconciliation_passed = False
+                        result.target_errors.append(
+                            f"Target '{target.name}' sparse scopes {sorted(list(actual_rules))} do not match configured include {sorted(list(expected_rules))}."
+                        )
+            elif target.mode == "full":
+                # Ensure sparse checkout is not active
+                sp_proc = subprocess.run(["git", "config", "core.sparseCheckout"], cwd=str(t_path), capture_output=True, text=True)
+                if sp_proc.stdout.strip().lower() == "true":
+                    sp_list = subprocess.run(["git", "sparse-checkout", "list"], cwd=str(t_path), capture_output=True, text=True)
+                    if sp_list.stdout.strip():
+                        result.is_valid = False
+                        result.target_reconciliation_passed = False
+                        result.target_errors.append(f"Target '{target.name}' is mode 'full' but sparse-checkout is active.")
+
+                # Verify checkout tree matches published runtime tree
+                if expected_runtime_tree:
+                    tree_proc = subprocess.run(["git", "rev-parse", "HEAD^{tree}"], cwd=str(t_path), capture_output=True, text=True)
+                    target_tree = tree_proc.stdout.strip() if tree_proc.returncode == 0 else ""
+                    if target_tree != expected_runtime_tree:
+                        result.is_valid = False
+                        result.target_reconciliation_passed = False
+                        result.target_errors.append(
+                            f"Target '{target.name}' tree ({target_tree[:10]}) does not match published runtime tree ({expected_runtime_tree[:10]})."
+                        )
 
     # Step 8: Validate individual skill structural health
     for s_rel in sorted(list(router_indexed_set)):
@@ -392,3 +474,6 @@ def validate_library_integrity(
                 result.secret_leaks.append(f"{s_rel}: {err}")
 
     return result
+
+
+validate_library = validate_library_integrity

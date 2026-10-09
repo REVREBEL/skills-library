@@ -116,6 +116,7 @@ def capture_dirty_target(
     remote: str = "origin",
     push: bool = True,
     base_repo_path: str = REPO_ROOT,
+    trigger_workflow: bool = False,
 ) -> Dict[str, Any]:
     """
     Captures uncommitted changes from a dirty runtime target.
@@ -188,6 +189,25 @@ def capture_dirty_target(
         run_git(["reset", "--hard", f"{remote}/{RUNTIME_BRANCH}"], cwd=str(dest), check=False)
         run_git(["clean", "-fd"], cwd=str(dest), check=False)
 
+        workflow_triggered = False
+        workflow_message = ""
+        if push and trigger_workflow:
+            try:
+                wf_proc = subprocess.run(
+                    ["gh", "workflow", "run", "runtime-intake.yml", "--ref", "main", "-f", f"incoming_branch={branch_name}"],
+                    cwd=base_repo_path,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if wf_proc.returncode == 0:
+                    workflow_triggered = True
+                    workflow_message = "GitHub Action runtime-intake.yml successfully dispatched on main."
+                else:
+                    workflow_message = wf_proc.stderr.strip() or wf_proc.stdout.strip()
+            except Exception as e:
+                workflow_message = str(e)
+
         return {
             "captured": True,
             "target": target.name,
@@ -196,6 +216,8 @@ def capture_dirty_target(
             "packages": list(dirty_state["packages"].keys()),
             "pushed": push,
             "reset": True,
+            "workflow_triggered": workflow_triggered,
+            "workflow_message": workflow_message,
         }
     else:
         # Push failed: RETAIN dirty content! Do NOT reset!

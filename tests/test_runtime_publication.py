@@ -489,6 +489,152 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
         self.assertEqual(len(res.publication_errors), 0)
         self.assertEqual(len(res.target_errors), 0)
 
+    def test_15_target_validation_fails_on_wrong_remote(self):
+        """Target validation fails when checkout origin URL does not match source repository."""
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        target_path = self.sandbox / "target-bad-remote"
+        target = RuntimeTarget(name="bad-remote", path=str(target_path), mode="full", enabled=True)
+        sync_target(target, source_repo=str(self.repo_dir))
+
+        # Point origin to a completely different, unauthorized remote
+        run_git(["remote", "set-url", "origin", "https://unauthorized-remote.example.com/fake.git"], cwd=target_path)
+
+        cfg_file = self.repo_dir / "config" / "runtime-targets.json"
+        cfg_file.write_text(json.dumps({
+            "targets": [{"name": "bad-remote", "path": str(target_path), "mode": "full", "enabled": True}]
+        }))
+
+        res = validate_library_integrity(
+            library_dir=str(self.lib_dir),
+            manifest=self.manifest,
+            config_path=str(cfg_file),
+            verify_publication=True,
+            verify_targets=True,
+        )
+        self.assertFalse(res.is_valid)
+        self.assertFalse(res.target_reconciliation_passed)
+        self.assertTrue(any("remote URL" in err and "does not match" in err for err in res.target_errors))
+
+    def test_16_target_validation_fails_on_wrong_branch(self):
+        """Target validation fails when target checkout is not on runtime branch."""
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        target_path = self.sandbox / "target-bad-branch"
+        target = RuntimeTarget(name="bad-branch", path=str(target_path), mode="full", enabled=True)
+        sync_target(target, source_repo=str(self.repo_dir))
+
+        # Switch to main or other branch in target
+        run_git(["checkout", "-b", "feature-wrong"], cwd=target_path)
+
+        cfg_file = self.repo_dir / "config" / "runtime-targets.json"
+        cfg_file.write_text(json.dumps({
+            "targets": [{"name": "bad-branch", "path": str(target_path), "mode": "full", "enabled": True}]
+        }))
+
+        res = validate_library_integrity(
+            library_dir=str(self.lib_dir),
+            manifest=self.manifest,
+            config_path=str(cfg_file),
+            verify_publication=True,
+            verify_targets=True,
+        )
+        self.assertFalse(res.is_valid)
+        self.assertFalse(res.target_reconciliation_passed)
+        self.assertTrue(any("on branch 'feature-wrong'" in err for err in res.target_errors))
+
+    def test_17_target_validation_fails_on_commit_mismatch(self):
+        """Target validation fails when target HEAD commit does not match published runtime commit."""
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        target_path = self.sandbox / "target-commit-mismatch"
+        target = RuntimeTarget(name="commit-mismatch", path=str(target_path), mode="full", enabled=True)
+        sync_target(target, source_repo=str(self.repo_dir))
+
+        # Commit an extra commit directly in the target on branch runtime
+        test_file = target_path / "extra.txt"
+        test_file.write_text("drift")
+        run_git(["add", "extra.txt"], cwd=target_path)
+        run_git(["commit", "-m", "Drift commit"], cwd=target_path)
+
+        cfg_file = self.repo_dir / "config" / "runtime-targets.json"
+        cfg_file.write_text(json.dumps({
+            "targets": [{"name": "commit-mismatch", "path": str(target_path), "mode": "full", "enabled": True}]
+        }))
+
+        res = validate_library_integrity(
+            library_dir=str(self.lib_dir),
+            manifest=self.manifest,
+            config_path=str(cfg_file),
+            verify_publication=True,
+            verify_targets=True,
+        )
+        self.assertFalse(res.is_valid)
+        self.assertFalse(res.target_reconciliation_passed)
+        self.assertTrue(any("HEAD commit" in err and "does not match" in err for err in res.target_errors))
+
+    def test_18_target_validation_fails_on_sparse_scope_mismatch(self):
+        """Target validation fails when subset target sparse rules do not match include list."""
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        target_path = self.sandbox / "target-bad-sparse"
+        target = RuntimeTarget(
+            name="bad-sparse",
+            path=str(target_path),
+            mode="subset",
+            include=["design-and-experience/design-systems"],
+            enabled=True,
+        )
+        sync_target(target, source_repo=str(self.repo_dir))
+
+        # Reconfigure sparse checkout to a different scope
+        run_git(["sparse-checkout", "set", "quality-and-security/debugging"], cwd=target_path)
+
+        cfg_file = self.repo_dir / "config" / "runtime-targets.json"
+        cfg_file.write_text(json.dumps({
+            "targets": [{
+                "name": "bad-sparse",
+                "path": str(target_path),
+                "mode": "subset",
+                "include": ["design-and-experience/design-systems"],
+                "enabled": True,
+            }]
+        }))
+
+        res = validate_library_integrity(
+            library_dir=str(self.lib_dir),
+            manifest=self.manifest,
+            config_path=str(cfg_file),
+            verify_publication=True,
+            verify_targets=True,
+        )
+        self.assertFalse(res.is_valid)
+        self.assertFalse(res.target_reconciliation_passed)
+        self.assertTrue(any("sparse scopes" in err and "do not match configured include" in err for err in res.target_errors))
+
+    def test_19_target_validation_fails_when_full_target_has_sparse_active(self):
+        """Target validation fails when a target configured as full has sparse-checkout filtering active."""
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        target_path = self.sandbox / "target-bad-full"
+        target = RuntimeTarget(name="bad-full", path=str(target_path), mode="full", enabled=True)
+        sync_target(target, source_repo=str(self.repo_dir))
+
+        # Enable sparse-checkout on a full target
+        run_git(["sparse-checkout", "init", "--cone"], cwd=target_path)
+        run_git(["sparse-checkout", "set", "workflow-and-automation"], cwd=target_path)
+
+        cfg_file = self.repo_dir / "config" / "runtime-targets.json"
+        cfg_file.write_text(json.dumps({
+            "targets": [{"name": "bad-full", "path": str(target_path), "mode": "full", "enabled": True}]
+        }))
+
+        res = validate_library_integrity(
+            library_dir=str(self.lib_dir),
+            manifest=self.manifest,
+            config_path=str(cfg_file),
+            verify_publication=True,
+            verify_targets=True,
+        )
+        self.assertFalse(res.is_valid)
+        self.assertFalse(res.target_reconciliation_passed)
+        self.assertTrue(any("mode 'full' but sparse-checkout is active" in err for err in res.target_errors))
+
 
 if __name__ == "__main__":
     unittest.main()
