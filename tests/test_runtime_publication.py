@@ -30,7 +30,7 @@ from skill_library.config import (
     RuntimeTarget,
     load_runtime_targets,
 )
-from skill_library.intake import evaluate_candidate
+from skill_library.intake import apply_candidate, evaluate_candidate
 from skill_library.intake_capture import (
     capture_dirty_target,
     convert_incoming_to_intake,
@@ -1011,7 +1011,6 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
         self.assertEqual(meta["target_canonical_path"], "library/quality-and-security/debugging/bug-hunter")
 
         # 8. Intake evaluation must recognize this as an external deletion proposal
-        from tools.skill_library.intake import evaluate_candidate, apply_candidate
         ev = evaluate_candidate(
             candidate_name="bug-hunter",
             intake_dir=str(fresh_runner / "intake"),
@@ -1117,7 +1116,6 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
         self.assertEqual(meta["target_canonical_path"], "library/quality-and-security/debugging/bug-hunter")
 
         # 8. Intake evaluation must recognize this as an external rename proposal
-        from tools.skill_library.intake import evaluate_candidate, apply_candidate
         ev = evaluate_candidate(
             candidate_name="bug-tracker",
             intake_dir=str(fresh_runner / "intake"),
