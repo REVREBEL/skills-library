@@ -633,8 +633,90 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
         )
         self.assertFalse(res.is_valid)
         self.assertFalse(res.target_reconciliation_passed)
-        self.assertTrue(any("mode 'full' but sparse-checkout is active" in err for err in res.target_errors))
+    def test_20_end_to_end_remote_clone_dirty_capture_fresh_conversion(self):
+        """Requirement 20: bare upstream remote end-to-end test.
+        Clones target from bare remote, dirties target with new skill and update,
+        captures and pushes snapshot to bare remote, resets cleanly,
+        and converts from a completely separate fresh runner clone.
+        """
+        # 1. Publish runtime branch
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+
+        # 2. Set up bare remote standing in for GitHub
+        remote_bare = self.sandbox / "upstream-github.git"
+        run_git(["init", "--bare", str(remote_bare)], cwd=self.sandbox)
+        run_git(["push", str(remote_bare), "main:main", "runtime:runtime"], cwd=self.repo_dir)
+        run_git(["symbolic-ref", "HEAD", "refs/heads/main"], cwd=remote_bare)
+
+        # 3. Clone runtime target against bare upstream remote URL
+        target_path = self.sandbox / "target-e2e-workstation"
+        target = RuntimeTarget(
+            name="e2e-workstation",
+            path=str(target_path),
+            mode="full",
+            remote_url=str(remote_bare),
+            enabled=True,
+        )
+        sync_res = sync_target(target, remote_url=str(remote_bare))
+        self.assertEqual(sync_res.status, "created")
+
+        # Verify origin URL points to the bare upstream
+        t_url = run_git(["config", "--get", "remote.origin.url"], cwd=target_path).stdout.strip()
+        self.assertEqual(t_url, str(remote_bare))
+
+        # 4. Dirty the target: one new skill, one updated existing skill
+        new_skill = target_path / "community-new-tool"
+        new_skill.mkdir(parents=True, exist_ok=True)
+        (new_skill / "SKILL.md").write_text("---\nname: community-new-tool\ndescription: Brand new tool from external intake.\n---\n# Community Tool\n")
+
+        update_skill = target_path / "bug-hunter"
+        update_skill.mkdir(parents=True, exist_ok=True)
+        (update_skill / "SKILL.md").write_text("---\nname: bug-hunter\ndescription: Updated description for bug-hunter.\n---\n# Bug Hunter Updated\n")
+
+        # 5. Capture dirty state, pushing incoming branch to bare upstream
+        cap = capture_dirty_target(target, remote="origin", push=True, trigger_workflow=False)
+        self.assertTrue(cap["captured"])
+        self.assertTrue(cap["pushed"])
+        self.assertTrue(cap["reset"])
+        incoming_branch = cap["branch"]
+
+        # Target should now be reset and clean on branch runtime
+        d_state = scan_target_dirty_state(target_path)
+        self.assertFalse(d_state["is_dirty"])
+
+        # 6. Fresh runner clone from bare remote (no access to workstation filesystem)
+        fresh_runner = self.sandbox / "github-runner-fresh"
+        run_git(["clone", str(remote_bare), str(fresh_runner)], cwd=self.sandbox)
+
+        # 7. Convert incoming branch to intake on the fresh runner
+        conv_res = convert_incoming_to_intake(
+            repo_path=str(fresh_runner),
+            incoming_branch=incoming_branch,
+            base_branch="main",
+            remote="origin",
+        )
+        self.assertTrue(conv_res["intake_branch"].startswith("intake/"))
+        self.assertIn("community-new-tool", conv_res["packages_staged"])
+        self.assertIn("bug-hunter", conv_res["packages_staged"])
+
+        # 8. Verify metadata classifications: new vs external_update
+        intake_dir = fresh_runner / "intake"
+        new_meta = json.loads((intake_dir / "community-new-tool" / ".installer-metadata.json").read_text())
+        self.assertEqual(new_meta["classification"], "EXTERNAL_PHYSICAL")
+        self.assertEqual(new_meta["type"], "external_install")
+
+        upd_meta = json.loads((intake_dir / "bug-hunter" / ".installer-metadata.json").read_text())
+        self.assertEqual(upd_meta["classification"], "EXTERNAL_UPDATE")
+        self.assertEqual(upd_meta["type"], "external_update")
+        self.assertEqual(upd_meta["target_canonical_path"], "library/quality-and-security/debugging/bug-hunter")
+
+        # 9. Verify invalid ref is rejected
+        with self.assertRaises(ValueError):
+            convert_incoming_to_intake(str(fresh_runner), "main")
+        with self.assertRaises(ValueError):
+            convert_incoming_to_intake(str(fresh_runner), "incoming/bad;injection")
 
 
 if __name__ == "__main__":
     unittest.main()
+

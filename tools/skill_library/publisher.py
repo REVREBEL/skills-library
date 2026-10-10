@@ -47,6 +47,15 @@ def get_ref_commit_sha(repo_path: str, ref_name: str) -> Optional[str]:
         return None
 
 
+def _push_runtime(repo_path: str, remote: str, branch_name: str) -> None:
+    res = run_git(["push", remote, f"{branch_name}:{branch_name}"], cwd=repo_path, check=False)
+    if res.returncode != 0:
+        raise RuntimeError(
+            f"Failed to push runtime branch '{branch_name}' to remote '{remote}' (returncode {res.returncode}):\n"
+            f"{res.stderr.strip() or res.stdout.strip()}"
+        )
+
+
 def publish_runtime_branch(
     repo_path: str = REPO_ROOT,
     branch_name: str = RUNTIME_BRANCH,
@@ -75,7 +84,7 @@ def publish_runtime_branch(
             # Tree matches exactly; ensure local ref is set to this commit
             run_git(["update-ref", local_ref, current_commit], cwd=repo_path)
             if push:
-                run_git(["push", remote, f"{branch_name}:{branch_name}"], cwd=repo_path)
+                _push_runtime(repo_path, remote, branch_name)
             return {
                 "status": "unchanged",
                 "branch": branch_name,
@@ -90,7 +99,7 @@ def publish_runtime_branch(
         run_git(["update-ref", local_ref, new_commit], cwd=repo_path)
         
         if push:
-            run_git(["push", remote, f"{branch_name}:{branch_name}"], cwd=repo_path)
+            _push_runtime(repo_path, remote, branch_name)
             
         return {
             "status": "updated",
@@ -107,7 +116,7 @@ def publish_runtime_branch(
         run_git(["update-ref", local_ref, new_commit], cwd=repo_path)
 
         if push:
-            run_git(["push", remote, f"{branch_name}:{branch_name}"], cwd=repo_path)
+            _push_runtime(repo_path, remote, branch_name)
 
         return {
             "status": "created",

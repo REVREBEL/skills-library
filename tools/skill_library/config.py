@@ -34,6 +34,7 @@ class RuntimeTarget:
     include: List[str] = field(default_factory=list)
     accept_external_intake: bool = False
     enabled: bool = True
+    remote_url: str = ""
 
     @property
     def resolved_path(self) -> Path:
@@ -47,6 +48,7 @@ def load_runtime_targets(config_path: Optional[str] = None) -> List[RuntimeTarge
         return []
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
+    global_remote = data.get("remote_url", "https://github.com/REVREBEL/skills-library.git")
     targets = []
     for item in data.get("targets", []):
         targets.append(
@@ -57,6 +59,7 @@ def load_runtime_targets(config_path: Optional[str] = None) -> List[RuntimeTarge
                 include=item.get("include", []),
                 accept_external_intake=item.get("accept_external_intake", False),
                 enabled=item.get("enabled", True),
+                remote_url=item.get("remote_url") or global_remote,
             )
         )
     return targets
@@ -200,7 +203,7 @@ DESTRUCTIVE_COMMAND_PATTERNS = [
 ]
 
 SECRET_PATTERNS = [
-    re.compile(r"-----BEGIN (?:RSA )?PRIVATE KEY-----"),
+    re.compile(r"-----BEGIN (?:RSA )?PRIVATE KEY-----\s*[A-Za-z0-9+/]{20,}"),
     re.compile(r"\bghp_[0-9a-zA-Z]{36}\b"),
     re.compile(r"\bgithub_pat_[0-9a-zA-Z_]{82}\b"),
     re.compile(r"\bsk-[0-9a-zA-Z]{32,}\b"),

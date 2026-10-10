@@ -196,20 +196,41 @@ def validate_single_skill(skill_dir: str) -> SkillValidationReport:
             for _, _, files in os.walk(sdir):
                 report.resources_checked += len(files)
 
-    # 5. Workstation Path and Secret Leaks
-    for pattern in WORKSTATION_PATH_PATTERNS:
-        match = pattern.search(content)
-        if match:
-            report.is_valid = False
-            report.errors.append(f"Workstation path leak: {match.group(1)}")
-            break
+    # 5. Workstation Path and Secret Leaks across the entire package
+    for root, dirs, files in os.walk(skill_dir):
+        dirs[:] = [d for d in dirs if d not in (".git", "__pycache__", ".pytest_cache")]
+        for file in files:
+            if file.endswith((".pyc", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".pdf", ".zip", ".tar", ".gz")):
+                continue
+            fpath = os.path.join(root, file)
+            try:
+                # Guard against huge files (> 1MB)
+                if os.path.getsize(fpath) > 1024 * 1024:
+                    continue
+                # Guard against binary files
+                with open(fpath, "rb") as bf:
+                    chunk = bf.read(1024)
+                    if b"\0" in chunk:
+                        continue
+                with open(fpath, "r", encoding="utf-8", errors="replace") as tf:
+                    fcontent = tf.read()
+            except Exception:
+                continue
 
-    for pattern in SECRET_PATTERNS:
-        match = pattern.search(content)
-        if match:
-            report.is_valid = False
-            report.errors.append("Potential secret leak found matching pattern")
-            break
+            rel_file = os.path.relpath(fpath, skill_dir)
+            for pattern in WORKSTATION_PATH_PATTERNS:
+                match = pattern.search(fcontent)
+                if match:
+                    report.is_valid = False
+                    report.errors.append(f"Workstation path leak in {rel_file}: {match.group(1)}")
+                    break
+
+            for pattern in SECRET_PATTERNS:
+                match = pattern.search(fcontent)
+                if match:
+                    report.is_valid = False
+                    report.errors.append(f"Potential secret leak in {rel_file} matching pattern")
+                    break
 
     return report
 
@@ -365,6 +386,9 @@ def validate_library_integrity(
                     valid_remotes.add(str(p_orig.resolve()).rstrip("/").removesuffix(".git"))
             except Exception:
                 pass
+        for t in targets:
+            if t.remote_url:
+                valid_remotes.add(t.remote_url.strip().rstrip("/").removesuffix(".git"))
 
         for target in targets:
             if not target.enabled:

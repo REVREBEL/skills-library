@@ -8,6 +8,10 @@ on:
       - 'library/**'
   workflow_dispatch:
 
+concurrency:
+  group: publish-runtime
+  cancel-in-progress: false
+
 permissions:
   contents: write
 

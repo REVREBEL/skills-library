@@ -179,15 +179,18 @@ def migrate_legacy_symlink_target(
 
 def sync_target(
     target: RuntimeTarget,
-    source_repo: str = REPO_ROOT,
+    source_repo: Optional[str] = None,
     runtime_branch: str = RUNTIME_BRANCH,
     allow_intake_capture: bool = True,
+    remote_url: Optional[str] = None,
 ) -> TargetSyncReport:
     """
     Reconciles an individual runtime target to the published runtime branch.
     Never overwrites a dirty target. Applies sparse-checkout rules for subset mode.
+    Clones/fetches from configured canonical remote URL unless an explicit test source is provided.
     """
     dest = target.resolved_path
+    effective_remote = remote_url or source_repo or target.remote_url or "https://github.com/REVREBEL/skills-library.git"
     report = TargetSyncReport(name=target.name, path=str(dest), status="up_to_date", mode=target.mode)
 
     try:
@@ -216,7 +219,7 @@ def sync_target(
             if target.mode == "subset":
                 # Clone with --no-checkout then set sparse-checkout
                 run_git(
-                    ["clone", "--branch", runtime_branch, "--no-checkout", source_repo, str(dest)],
+                    ["clone", "--branch", runtime_branch, "--no-checkout", effective_remote, str(dest)],
                     cwd=str(dest.parent),
                 )
                 if target.include:
@@ -228,7 +231,7 @@ def sync_target(
             else:
                 # Full clone
                 run_git(
-                    ["clone", "--branch", runtime_branch, source_repo, str(dest)],
+                    ["clone", "--branch", runtime_branch, effective_remote, str(dest)],
                     cwd=str(dest.parent),
                 )
 
@@ -251,6 +254,13 @@ def sync_target(
                 )
                 return report
 
+            # Align remote origin URL with effective_remote
+            cur_rem = run_git(["config", "--get", "remote.origin.url"], cwd=str(dest), check=False)
+            if cur_rem.returncode != 0:
+                run_git(["remote", "add", "origin", effective_remote], cwd=str(dest), check=False)
+            elif cur_rem.stdout.strip() != effective_remote:
+                run_git(["remote", "set-url", "origin", effective_remote], cwd=str(dest), check=False)
+
             # Check branch
             if state["branch"] != runtime_branch:
                 # Attempt to checkout runtime branch
@@ -265,9 +275,13 @@ def sync_target(
 
             # Fetch and fast-forward
             old_sha = state["commit_sha"]
-            fetch_res = run_git(["fetch", source_repo, runtime_branch], cwd=str(dest), check=False)
+            fetch_res = run_git(["fetch", "origin", runtime_branch], cwd=str(dest), check=False)
             if fetch_res.returncode == 0:
                 ff_res = run_git(["merge", "--ff-only", "FETCH_HEAD"], cwd=str(dest), check=False)
+                if ff_res.returncode != 0:
+                    report.status = "error"
+                    report.errors.append(f"Fast-forward merge failed on {target.name}: {ff_res.stderr.strip() or ff_res.stdout.strip()}")
+                    return report
                 new_sha = run_git(["rev-parse", "HEAD"], cwd=str(dest)).stdout.strip()
                 report.commit_sha = new_sha
                 if old_sha != new_sha:
@@ -278,7 +292,7 @@ def sync_target(
                     report.message = "Already up to date."
             else:
                 report.status = "error"
-                report.errors.append(f"Failed to fetch {runtime_branch} from {source_repo}: {fetch_res.stderr}")
+                report.errors.append(f"Failed to fetch {runtime_branch} from origin ({effective_remote}): {fetch_res.stderr.strip()}")
 
             return report
 
@@ -294,7 +308,8 @@ def sync_target(
 
 def sync_all_targets(
     config_path: Optional[str] = None,
-    source_repo: str = REPO_ROOT,
+    source_repo: Optional[str] = None,
+    remote_url: Optional[str] = None,
 ) -> MultiTargetSyncReport:
     """Loads all runtime targets from configuration and synchronizes all enabled targets."""
     targets = load_runtime_targets(config_path)
@@ -303,7 +318,7 @@ def sync_all_targets(
     for target in targets:
         if not target.enabled:
             continue
-        target_report = sync_target(target=target, source_repo=source_repo)
+        target_report = sync_target(target=target, source_repo=source_repo, remote_url=remote_url)
         report.targets.append(target_report)
 
     return report

@@ -522,17 +522,6 @@ def apply_candidate(
             with open(router_path, "r", encoding="utf-8") as rf:
                 orig_router_content = rf.read()
 
-        runtime_item_path = os.path.join(runtime_dir, runtime_name)
-        candidate_runtime_path = os.path.join(runtime_dir, candidate_name)
-        orig_runtime_states = {}
-        for p in {runtime_item_path, candidate_runtime_path}:
-            if os.path.islink(p):
-                orig_runtime_states[p] = ("symlink", os.readlink(p))
-            elif os.path.isdir(p):
-                orig_runtime_states[p] = ("dir", None)
-            else:
-                orig_runtime_states[p] = ("missing", None)
-
         canonical_rel = os.path.relpath(target_dir, repo_root).replace(os.sep, "/")
         router_rel = os.path.relpath(router_path, repo_root).replace(os.sep, "/")
 
@@ -726,7 +715,6 @@ def apply_candidate(
         "candidate_name": candidate_name,
         "canonical_name": final_name,
         "runtime_name": runtime_name,
-        "runtime_symlink": runtime_item_path,
         "operation": operation,
         "target_directory": target_dir,
         "router_updated": router_path,

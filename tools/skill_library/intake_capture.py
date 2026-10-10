@@ -7,6 +7,7 @@ and guarantees dirty state is never reset until remote transport succeeds.
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import uuid
@@ -22,6 +23,18 @@ from .config import (
     RuntimeTarget,
     load_runtime_targets,
 )
+from .manifest import RuntimeManifest
+
+INCOMING_REF_PATTERN = re.compile(r"^incoming/[A-Za-z0-9._/-]+$")
+
+
+def validate_incoming_ref(ref_name: str) -> None:
+    """Validate that incoming ref is a well-formed incoming/* ref with no command injection or traversal."""
+    if not isinstance(ref_name, str) or not ref_name.startswith("incoming/"):
+        raise ValueError(f"Invalid incoming branch ref '{ref_name}': must start with 'incoming/'")
+    if not INCOMING_REF_PATTERN.match(ref_name) or ".." in ref_name or ref_name.endswith(("/", ".lock")):
+        raise ValueError(f"Invalid incoming branch ref '{ref_name}': contains unsafe or illegal characters")
+
 
 
 def run_git(cmd: List[str], cwd: str, check: bool = True) -> subprocess.CompletedProcess:
@@ -116,12 +129,12 @@ def capture_dirty_target(
     remote: str = "origin",
     push: bool = True,
     base_repo_path: str = REPO_ROOT,
-    trigger_workflow: bool = False,
+    trigger_workflow: bool = True,
 ) -> Dict[str, Any]:
     """
     Captures uncommitted changes from a dirty runtime target.
     Commits changes to an incoming/<timestamp-id> snapshot branch, pushes to remote,
-    and ONLY resets the local working copy if the push succeeds.
+    dispatches GitHub Action workflow on main, and ONLY resets the local working copy if the push succeeds.
     """
     dest = target.resolved_path
     dirty_state = scan_target_dirty_state(dest)
@@ -183,12 +196,6 @@ def capture_dirty_target(
 
     # 5. Confirm push succeeded BEFORE resetting local checkout
     if push_success:
-        # Switch back to runtime branch
-        run_git(["checkout", RUNTIME_BRANCH], cwd=str(dest))
-        # Reset cleanly to remote runtime baseline
-        run_git(["reset", "--hard", f"{remote}/{RUNTIME_BRANCH}"], cwd=str(dest), check=False)
-        run_git(["clean", "-fd"], cwd=str(dest), check=False)
-
         workflow_triggered = False
         workflow_message = ""
         if push and trigger_workflow:
@@ -207,6 +214,12 @@ def capture_dirty_target(
                     workflow_message = wf_proc.stderr.strip() or wf_proc.stdout.strip()
             except Exception as e:
                 workflow_message = str(e)
+
+        # Switch back to runtime branch
+        run_git(["checkout", RUNTIME_BRANCH], cwd=str(dest))
+        # Reset cleanly to remote runtime baseline
+        run_git(["reset", "--hard", f"{remote}/{RUNTIME_BRANCH}"], cwd=str(dest), check=False)
+        run_git(["clean", "-fd"], cwd=str(dest), check=False)
 
         return {
             "captured": True,
@@ -244,25 +257,36 @@ def convert_incoming_to_intake(
     Converts an incoming snapshot branch into a reviewed intake branch based on main.
     Copies incoming skill packages into intake/ and creates a commit ready for PR.
     """
+    validate_incoming_ref(incoming_branch)
     clean_id = incoming_branch.replace("incoming/", "")
     intake_branch = f"intake/{clean_id}"
 
-    # Fetch branches if needed
-    run_git(["fetch", remote, incoming_branch], cwd=repo_path, check=False)
+    # Fetch explicit refspec to ensure remote ref is populated
+    refspec = f"refs/heads/{incoming_branch}:refs/remotes/{remote}/{incoming_branch}"
+    run_git(["fetch", remote, refspec], cwd=repo_path, check=False)
     run_git(["fetch", remote, base_branch], cwd=repo_path, check=False)
 
-    # Check whether incoming branch and base branch are local or remote
-    check_local_inc = run_git(["rev-parse", "--verify", incoming_branch], cwd=repo_path, check=False)
-    incoming_ref = incoming_branch if check_local_inc.returncode == 0 else f"{remote}/{incoming_branch}"
+    # Resolve immutable commit SHA for incoming branch
+    sha_proc = run_git(["rev-parse", f"refs/remotes/{remote}/{incoming_branch}"], cwd=repo_path, check=False)
+    if sha_proc.returncode != 0 or not sha_proc.stdout.strip():
+        sha_proc = run_git(["rev-parse", incoming_branch], cwd=repo_path, check=False)
+    if sha_proc.returncode != 0 or not sha_proc.stdout.strip():
+        sha_proc = run_git(["rev-parse", "FETCH_HEAD"], cwd=repo_path, check=False)
+    if sha_proc.returncode != 0 or not sha_proc.stdout.strip():
+        raise ValueError(f"Could not resolve incoming branch ref '{incoming_branch}' to an immutable commit SHA.")
+    incoming_commit = sha_proc.stdout.strip()
 
-    check_local_base = run_git(["rev-parse", "--verify", base_branch], cwd=repo_path, check=False)
-    base_ref = base_branch if check_local_base.returncode == 0 else f"{remote}/{base_branch}"
+    # Resolve base branch ref
+    base_sha_proc = run_git(["rev-parse", f"refs/remotes/{remote}/{base_branch}"], cwd=repo_path, check=False)
+    if base_sha_proc.returncode != 0 or not base_sha_proc.stdout.strip():
+        base_sha_proc = run_git(["rev-parse", base_branch], cwd=repo_path, check=False)
+    base_ref = base_sha_proc.stdout.strip() if base_sha_proc.returncode == 0 and base_sha_proc.stdout.strip() else base_branch
 
     # Checkout new intake branch starting from base_ref
     run_git(["checkout", "-B", intake_branch, base_ref], cwd=repo_path, check=True)
 
-    # Extract metadata
-    meta_proc = run_git(["show", f"{incoming_ref}:.incoming-metadata.json"], cwd=repo_path, check=False)
+    # Extract metadata using immutable incoming commit SHA
+    meta_proc = run_git(["show", f"{incoming_commit}:.incoming-metadata.json"], cwd=repo_path, check=False)
     metadata = {}
     if meta_proc.returncode == 0:
         try:
@@ -270,37 +294,60 @@ def convert_incoming_to_intake(
         except Exception:
             pass
 
+    # Load canonical manifest to determine whether incoming skills are external updates or new
+    try:
+        manifest_file = os.path.join(repo_path, "audit", "runtime-manifest.json")
+        manifest = RuntimeManifest(manifest_path=manifest_file)
+    except Exception:
+        manifest = None
+
     packages_staged = []
-    intake_dir = Path(repo_path) / "intake"
+    intake_dir = (Path(repo_path) / "intake").resolve()
     intake_dir.mkdir(parents=True, exist_ok=True)
 
-    # Check out incoming tree into a temporary index or extract files
+    # Check out incoming tree into intake directory with containment validation
     for pkg in metadata.get("packages", []):
-        if pkg in (".git", ".DS_Store", "SKILL.md", ".incoming-metadata.json"):
+        if not isinstance(pkg, str) or not pkg.strip():
             continue
-        dest_pkg_dir = intake_dir / pkg
+        if any(c in pkg for c in ("\0", "/", "\\", "..")) or pkg in (".git", ".DS_Store", "SKILL.md", ".incoming-metadata.json"):
+            continue
+
+        dest_pkg_dir = (intake_dir / pkg).resolve()
+        try:
+            dest_pkg_dir.relative_to(intake_dir)
+        except ValueError:
+            raise ValueError(f"Path traversal detected: package '{pkg}' escapes intake directory.")
+
         dest_pkg_dir.mkdir(parents=True, exist_ok=True)
 
         # Checkout files from incoming branch into intake/<pkg>
-        # Use git archive to export incoming pkg
         archive_proc = subprocess.Popen(
-            ["git", "archive", incoming_ref, pkg],
+            ["git", "archive", incoming_commit, pkg],
             cwd=repo_path,
             stdout=subprocess.PIPE,
         )
         tar_proc = subprocess.Popen(
-            ["tar", "-x", "-C", str(dest_pkg_dir.parent)],
+            ["tar", "-x", "-C", str(intake_dir)],
             stdin=archive_proc.stdout,
             cwd=repo_path,
         )
         archive_proc.stdout.close()
         tar_proc.communicate()
 
-        # Write provenance info
+        # Classify as external update if package exists in canonical manifest
+        is_existing = bool(manifest and pkg in manifest.skills)
+        target_can_path = manifest.skills[pkg].get("canonical_path", "") if is_existing else ""
+        classification = "EXTERNAL_UPDATE" if is_existing else "EXTERNAL_PHYSICAL"
+        installer_type = "external_update" if is_existing else "external_install"
+
+        # Write provenance info and classification
         pkg_meta_path = dest_pkg_dir / ".installer-metadata.json"
         with open(pkg_meta_path, "w", encoding="utf-8") as pf:
             json.dump({
                 "source_snapshot": incoming_branch,
+                "type": installer_type,
+                "classification": classification,
+                "target_canonical_path": target_can_path,
                 "captured_at": metadata.get("captured_at"),
                 "target_name": metadata.get("target_name"),
                 "provenance": metadata.get("provenance", {}),

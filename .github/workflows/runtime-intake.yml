@@ -7,9 +7,6 @@ on:
         description: 'Name of incoming branch (e.g. incoming/20261008...)'
         required: true
         type: string
-  push:
-    branches:
-      - 'incoming/**'
 
 permissions:
   contents: write
@@ -32,15 +29,16 @@ jobs:
 
       - name: Convert Incoming Snapshot to Intake Branch
         id: convert
+        env:
+          INCOMING_REF: ${{ inputs.incoming_branch }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          INCOMING_REF="${{ inputs.incoming_branch || github.ref_name }}"
           echo "Processing incoming branch: $INCOMING_REF"
           python3 tools/skill-library.py convert-incoming --incoming-branch "$INCOMING_REF"
           INTAKE_BRANCH="intake/${INCOMING_REF#incoming/}"
-          echo "incoming_ref=$INCOMING_REF" >> $GITHUB_OUTPUT
-          echo "intake_branch=$INTAKE_BRANCH" >> $GITHUB_OUTPUT
+          echo "incoming_ref=$INCOMING_REF" >> "$GITHUB_OUTPUT"
+          echo "intake_branch=$INTAKE_BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Push Intake Branch
         run: |
