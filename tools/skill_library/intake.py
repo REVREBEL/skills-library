@@ -151,22 +151,43 @@ def evaluate_candidate(
 
     m = manifest or RuntimeManifest()
 
-    # Check for installer metadata indicating an EXTERNAL_UPDATE
+    # Check for installer metadata indicating an EXTERNAL_UPDATE, EXTERNAL_DELETE, or EXTERNAL_RENAME
     meta_file = os.path.join(candidate_path, ".installer-metadata.json")
     is_external_update = False
+    is_external_delete = False
+    is_external_rename = False
     existing_canonical_path = ""
+    meta: Dict[str, Any] = {}
     if os.path.exists(meta_file):
         try:
             with open(meta_file, "r", encoding="utf-8") as mf:
                 meta = json.load(mf)
-                if meta.get("type") == "external_update" or meta.get("classification") == "EXTERNAL_UPDATE":
+                classification = meta.get("classification", "")
+                if meta.get("type") == "external_update" or classification == "EXTERNAL_UPDATE":
                     is_external_update = True
+                    existing_canonical_path = meta.get("target_canonical_path", "")
+                elif classification == "EXTERNAL_DELETE":
+                    is_external_delete = True
+                    existing_canonical_path = meta.get("target_canonical_path", "")
+                elif classification == "EXTERNAL_RENAME":
+                    is_external_rename = True
                     existing_canonical_path = meta.get("target_canonical_path", "")
         except Exception:
             pass
 
-    if is_external_update and not existing_canonical_path and candidate_name in m.skills:
+    if (is_external_update or is_external_delete or is_external_rename) and not existing_canonical_path and candidate_name in m.skills:
         existing_canonical_path = m.skills[candidate_name].get("canonical_path", "")
+
+    if is_external_delete:
+        eval_result.is_valid_package = True
+        eval_result.is_update = False
+        eval_result.recommended_decision = "HOLD"
+        eval_result.approval_required = True
+        eval_result.target_canonical_path = existing_canonical_path
+        eval_result.approval_reasons.append(
+            f"External deletion proposal for '{existing_canonical_path}'. Review-only proposal."
+        )
+        return eval_result
 
     # 1. Package Structure & Validation
     pkg = scan_candidate_directory(candidate_path, name=candidate_name)
@@ -180,6 +201,16 @@ def evaluate_candidate(
     if not val_rep.is_valid:
         eval_result.is_valid_package = False
         eval_result.errors.extend(val_rep.errors)
+
+    if is_external_rename:
+        eval_result.approval_required = True
+        old_rt = meta.get("old_runtime_path", "")
+        new_rt = meta.get("new_runtime_path", "")
+        eval_result.target_canonical_path = existing_canonical_path
+        eval_result.approval_reasons.append(
+            f"External rename proposal from '{old_rt}' to '{new_rt}'. Review-only proposal."
+        )
+        eval_result.recommended_decision = "HOLD"
 
     # 2. Provider Coupling & Workstation Paths
     if pkg.provider_assumptions:
@@ -248,15 +279,26 @@ def evaluate_candidate(
         )
         return eval_result
 
-    # Brand new candidate categorization
-    eval_result.assigned_category = pkg.suggested_category
-    eval_result.assigned_subcategory = pkg.suggested_subcategory
-    if pkg.suggested_category in DEEP_CATEGORIES:
-        eval_result.target_router_path = f"library/{pkg.suggested_category}/{pkg.suggested_subcategory}/SKILL.md"
+    if is_external_rename and existing_canonical_path:
+        eval_result.target_canonical_path = existing_canonical_path
+        parts = existing_canonical_path.strip("/").split("/")
+        if len(parts) >= 3:
+            eval_result.assigned_category = parts[1]
+            eval_result.assigned_subcategory = parts[2]
+        if eval_result.assigned_category in DEEP_CATEGORIES:
+            eval_result.target_router_path = f"library/{eval_result.assigned_category}/{eval_result.assigned_subcategory}/SKILL.md"
+        else:
+            eval_result.target_router_path = f"library/{eval_result.assigned_category}/SKILL.md"
     else:
-        eval_result.target_router_path = f"library/{pkg.suggested_category}/SKILL.md"
+        # Brand new candidate categorization
+        eval_result.assigned_category = pkg.suggested_category
+        eval_result.assigned_subcategory = pkg.suggested_subcategory
+        if pkg.suggested_category in DEEP_CATEGORIES:
+            eval_result.target_router_path = f"library/{pkg.suggested_category}/{pkg.suggested_subcategory}/SKILL.md"
+        else:
+            eval_result.target_router_path = f"library/{pkg.suggested_category}/SKILL.md"
 
-    eval_result.target_canonical_path = f"library/{pkg.suggested_category}/{pkg.suggested_subcategory}/{candidate_name}"
+        eval_result.target_canonical_path = f"library/{pkg.suggested_category}/{pkg.suggested_subcategory}/{candidate_name}"
 
     # 4. Compare against Canonical Library (Semantic Overlap & Name Collisions)
     candidate_tokens = tokenize(candidate_name + " " + pkg.description)
@@ -331,6 +373,10 @@ def evaluate_candidate(
         eval_result.approval_required = True
     else:
         eval_result.recommended_decision = "NEW"
+
+    if is_external_rename:
+        eval_result.recommended_decision = "HOLD"
+        eval_result.approval_required = True
 
     return eval_result
 
@@ -423,6 +469,23 @@ def apply_candidate(
 
     m = manifest or RuntimeManifest()
     eval_res = evaluate_candidate(candidate_name, intake_dir=intake_dir, library_dir=library_dir, manifest=m)
+
+    # Check if candidate is an EXTERNAL_DELETE or EXTERNAL_RENAME review-only proposal
+    meta_file = os.path.join(src_dir, ".installer-metadata.json")
+    if os.path.exists(meta_file):
+        try:
+            with open(meta_file, "r", encoding="utf-8") as mf:
+                mdata = json.load(mf)
+                cls_type = mdata.get("classification")
+                if cls_type in ("EXTERNAL_DELETE", "EXTERNAL_RENAME"):
+                    raise PermissionError(
+                        f"Candidate '{candidate_name}' has classification '{cls_type}' and is a review-only proposal. "
+                        "Automatic canonical modification is prohibited."
+                    )
+        except PermissionError:
+            raise
+        except Exception:
+            pass
 
     # Enforce Human Approval Gate (Finding 3)
     if eval_res.approval_required and not approved:

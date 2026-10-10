@@ -149,28 +149,62 @@ def scan_target_dirty_state(target_path: Path) -> Dict[str, Any]:
         rel_file = line[3:].strip()
         res["raw_entries"].append((status, rel_file))
 
-        if "??" in status:
-            res["untracked"].append(rel_file)
-        elif "M" in status:
-            res["modified"].append(rel_file)
-        elif "D" in status:
-            res["deleted"].append(rel_file)
-        elif "R" in status:
-            res["renamed"].append(rel_file)
+        if " -> " in rel_file:
+            old_rel, new_rel = [p.strip() for p in rel_file.split(" -> ", 1)]
+            res["renamed"].append((old_rel, new_rel))
+            old_pkg, old_rt = find_skill_package_root(target_path, old_rel)
+            new_pkg, new_rt = find_skill_package_root(target_path, new_rel)
 
-        # Resolve nearest skill package root
-        pkg_name, runtime_path = find_skill_package_root(target_path, rel_file)
-        if runtime_path not in res["packages"]:
-            res["packages"][runtime_path] = {
-                "package_name": pkg_name,
-                "runtime_path": runtime_path,
-                "files": [],
-            }
-        res["packages"][runtime_path]["files"].append(rel_file)
+            if new_rt not in res["packages"]:
+                res["packages"][new_rt] = {
+                    "package_name": new_pkg,
+                    "runtime_path": new_rt,
+                    "files": [],
+                    "action": "modify",
+                }
+            res["packages"][new_rt]["files"].append(new_rel)
 
-        # Support lookup by leaf package name as well
-        if pkg_name != runtime_path and pkg_name not in res["packages"]:
-            res["packages"][pkg_name] = res["packages"][runtime_path]
+            if old_rt != new_rt:
+                res["packages"][new_rt]["action"] = "rename"
+                res["packages"][new_rt]["old_runtime_path"] = old_rt
+                res["packages"][new_rt]["new_runtime_path"] = new_rt
+        else:
+            if "??" in status:
+                res["untracked"].append(rel_file)
+            elif "M" in status:
+                res["modified"].append(rel_file)
+            elif "D" in status:
+                res["deleted"].append(rel_file)
+            elif "R" in status:
+                res["renamed"].append(rel_file)
+
+            # Resolve nearest skill package root
+            pkg_name, runtime_path = find_skill_package_root(target_path, rel_file)
+            if runtime_path not in res["packages"]:
+                res["packages"][runtime_path] = {
+                    "package_name": pkg_name,
+                    "runtime_path": runtime_path,
+                    "files": [],
+                    "action": "modify",
+                }
+            res["packages"][runtime_path]["files"].append(rel_file)
+
+    # Detect whole-package deletions
+    for rt, pinfo in list(res["packages"].items()):
+        if pinfo.get("action") == "rename":
+            continue
+        pkg_skill_md = target_path / rt / "SKILL.md"
+        if not pkg_skill_md.exists():
+            if (target_path / ".git").exists():
+                head_check = run_git(["cat-file", "-e", f"HEAD:{rt}/SKILL.md"], cwd=str(target_path), check=False)
+                if head_check.returncode == 0:
+                    pinfo["action"] = "delete"
+
+    # Support lookup by leaf package name as well
+    for rt, pinfo in list(res["packages"].items()):
+        pkg_name = pinfo["package_name"]
+        if pkg_name != rt and pkg_name not in res["packages"]:
+            res["packages"][pkg_name] = pinfo
 
     return res
 
@@ -258,6 +292,9 @@ def capture_dirty_target(
             {
                 "package_name": info["package_name"],
                 "runtime_path": info["runtime_path"],
+                "action": info.get("action", "modify"),
+                "old_runtime_path": info.get("old_runtime_path"),
+                "new_runtime_path": info.get("new_runtime_path"),
             }
             for info in unique_packages.values()
         ],
@@ -423,6 +460,131 @@ def convert_incoming_to_intake(
         if any(c in pkg for c in ("\0", "/", "\\", "..")) or pkg in (".git", ".DS_Store", "SKILL.md", ".incoming-metadata.json"):
             continue
         if any(c in runtime_path for c in ("\0", "\\", "..")):
+            continue
+
+        action = item.get("action", "modify") if isinstance(item, dict) else "modify"
+
+        if action == "delete":
+            canonical_path_candidate = f"library/{runtime_path}"
+            manifest_entry = None
+            if manifest:
+                manifest_entry = manifest.find_by_canonical_path(canonical_path_candidate)
+                if not manifest_entry and pkg in manifest.skills:
+                    manifest_entry = manifest.skills[pkg]
+
+            if manifest_entry:
+                runtime_name = manifest_entry.get("runtime_name", pkg)
+                target_can_path = manifest_entry.get("canonical_path", canonical_path_candidate)
+            else:
+                runtime_name = pkg
+                target_can_path = canonical_path_candidate
+
+            if any(c in runtime_name for c in ("\0", "/", "\\", "..")) or runtime_name in (".git", ".DS_Store", "SKILL.md", ".incoming-metadata.json"):
+                continue
+
+            dest_pkg_dir = (intake_dir / runtime_name).resolve()
+            try:
+                dest_pkg_dir.relative_to(intake_dir)
+            except ValueError:
+                raise ValueError(f"Path traversal detected: package '{runtime_name}' escapes intake directory.")
+
+            dest_pkg_dir.mkdir(parents=True, exist_ok=True)
+
+            proposal_file = dest_pkg_dir / "PROPOSAL.md"
+            with open(proposal_file, "w", encoding="utf-8") as pf:
+                pf.write(
+                    f"# External Deletion Proposal\n\n"
+                    f"- **Package Name**: {pkg}\n"
+                    f"- **Runtime Name**: {runtime_name}\n"
+                    f"- **Runtime Path**: {runtime_path}\n"
+                    f"- **Target Canonical Path**: {target_can_path}\n"
+                    f"- **Classification**: EXTERNAL_DELETE\n\n"
+                    f"This proposal records the external deletion of `{runtime_path}` from runtime target `{metadata.get('target_name', 'target')}`.\n"
+                    f"This is a review-only proposal and cannot be automatically applied to the canonical library.\n"
+                )
+
+            pkg_meta_path = dest_pkg_dir / ".installer-metadata.json"
+            with open(pkg_meta_path, "w", encoding="utf-8") as pf:
+                json.dump({
+                    "source_snapshot": incoming_branch,
+                    "type": "external_delete_proposal",
+                    "classification": "EXTERNAL_DELETE",
+                    "package_name": pkg,
+                    "runtime_name": runtime_name,
+                    "runtime_path": runtime_path,
+                    "target_canonical_path": target_can_path,
+                    "captured_at": metadata.get("captured_at"),
+                    "target_name": metadata.get("target_name"),
+                    "provenance": metadata.get("provenance", {}),
+                }, pf, indent=2)
+
+            packages_staged.append(runtime_name)
+            continue
+
+        if action == "rename":
+            old_rt = item.get("old_runtime_path", runtime_path)
+            new_rt = item.get("new_runtime_path", runtime_path)
+            old_can_path = f"library/{old_rt}"
+            new_can_path = f"library/{new_rt}"
+
+            manifest_entry = None
+            if manifest:
+                manifest_entry = manifest.find_by_canonical_path(old_can_path)
+
+            parts = Path(new_rt).parts
+            new_leaf = parts[-1] if parts else pkg
+            runtime_name = new_leaf
+            if runtime_name in packages_staged or (intake_dir / runtime_name).exists():
+                if len(parts) > 1:
+                    runtime_name = f"{parts[0]}-{new_leaf}"
+
+            if any(c in runtime_name for c in ("\0", "/", "\\", "..")) or runtime_name in (".git", ".DS_Store", "SKILL.md", ".incoming-metadata.json"):
+                continue
+
+            dest_pkg_dir = (intake_dir / runtime_name).resolve()
+            try:
+                dest_pkg_dir.relative_to(intake_dir)
+            except ValueError:
+                raise ValueError(f"Path traversal detected: package '{runtime_name}' escapes intake directory.")
+
+            dest_pkg_dir.mkdir(parents=True, exist_ok=True)
+
+            archive_target = f"{incoming_commit}:{new_rt}" if new_rt not in ("", ".") else incoming_commit
+            tree_check = run_git(["rev-parse", "--verify", archive_target], cwd=repo_path, check=False)
+            if tree_check.returncode == 0:
+                archive_proc = subprocess.Popen(
+                    ["git", "archive", f"--prefix={runtime_name}/", archive_target],
+                    cwd=repo_path,
+                    stdout=subprocess.PIPE,
+                )
+                tar_proc = subprocess.Popen(
+                    ["tar", "-x", "-C", str(intake_dir)],
+                    stdin=archive_proc.stdout,
+                    cwd=repo_path,
+                )
+                archive_proc.stdout.close()
+                tar_proc.communicate()
+                archive_proc.wait()
+
+            pkg_meta_path = dest_pkg_dir / ".installer-metadata.json"
+            with open(pkg_meta_path, "w", encoding="utf-8") as pf:
+                json.dump({
+                    "source_snapshot": incoming_branch,
+                    "type": "external_rename_proposal",
+                    "classification": "EXTERNAL_RENAME",
+                    "package_name": pkg,
+                    "runtime_name": runtime_name,
+                    "runtime_path": new_rt,
+                    "old_runtime_path": old_rt,
+                    "new_runtime_path": new_rt,
+                    "target_canonical_path": old_can_path,
+                    "new_canonical_path": new_can_path,
+                    "captured_at": metadata.get("captured_at"),
+                    "target_name": metadata.get("target_name"),
+                    "provenance": metadata.get("provenance", {}),
+                }, pf, indent=2)
+
+            packages_staged.append(runtime_name)
             continue
 
         # Resolve runtime_name and canonical target from manifest

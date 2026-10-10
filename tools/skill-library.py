@@ -73,7 +73,8 @@ def cmd_scan(args):
 
 
 def cmd_intake(args):
-    intake_candidates = scan_intake()
+    intake_dir = getattr(args, "intake_dir", None)
+    intake_candidates = scan_intake(intake_dir) if intake_dir else scan_intake()
     if not intake_candidates:
         print("No candidates found in intake/.")
         return 0
@@ -83,14 +84,31 @@ def cmd_intake(args):
 
     evaluations = []
     has_approval_blocker = False
+    has_failure = False
+    report_lines = []
 
     for cname in targets:
         print(f"\nEvaluating candidate '{cname}' ...")
-        ev = evaluate_candidate(candidate_name=cname, manifest=manifest)
+        ev = (
+            evaluate_candidate(candidate_name=cname, manifest=manifest, intake_dir=intake_dir)
+            if intake_dir
+            else evaluate_candidate(candidate_name=cname, manifest=manifest)
+        )
         evaluations.append(ev)
-        print(ev.summary())
+        s = ev.summary()
+        print(s)
+        report_lines.append(s)
         if ev.approval_required:
             has_approval_blocker = True
+        if not ev.is_valid_package or ev.recommended_decision == "REJECT":
+            has_failure = True
+
+    if getattr(args, "output_report", None):
+        try:
+            with open(args.output_report, "w", encoding="utf-8") as rf:
+                rf.write("\n\n".join(report_lines) + "\n")
+        except Exception as e:
+            print(f"Warning: Failed to write report to {args.output_report}: {e}", file=sys.stderr)
 
     if args.json:
         print(json.dumps([e.to_dict() for e in evaluations], indent=2))
@@ -98,6 +116,10 @@ def cmd_intake(args):
     if has_approval_blocker and not args.force:
         print("\n[HUMAN APPROVAL GATE] One or more candidates require human approval.")
         print("Review the decisions above before running 'apply'.")
+
+    if getattr(args, "strict", False) and has_failure:
+        print("\n[STRICT INTAKE GATE FAILED] One or more candidates failed validation or were rejected.", file=sys.stderr)
+        return 1
 
     return 0
 
@@ -293,7 +315,10 @@ def main():
     # intake
     p_intake = subparsers.add_parser("intake", help="Evaluate candidates in intake/")
     p_intake.add_argument("--candidate", help="Specific candidate to evaluate")
+    p_intake.add_argument("--intake-dir", help="Path to intake directory (defaults to repo intake/)")
     p_intake.add_argument("--force", action="store_true", help="Bypass approval warning display")
+    p_intake.add_argument("--strict", action="store_true", help="Exit with code 1 if any candidate fails validation or is rejected")
+    p_intake.add_argument("--output-report", help="Path to write evaluation report (e.g. for PR description)")
     p_intake.add_argument("--json", action="store_true", help="Output JSON format")
 
     # apply

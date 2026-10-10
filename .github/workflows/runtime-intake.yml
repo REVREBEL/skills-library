@@ -40,6 +40,11 @@ jobs:
           echo "incoming_ref=$INCOMING_REF" >> "$GITHUB_OUTPUT"
           echo "intake_branch=$INTAKE_BRANCH" >> "$GITHUB_OUTPUT"
 
+      - name: Evaluate Staged Intake Candidates
+        id: evaluate
+        run: |
+          python3 tools/skill-library.py intake --strict --output-report /tmp/intake-report.md
+
       - name: Push Intake Branch
         run: |
           INTAKE_BRANCH="${{ steps.convert.outputs.intake_branch }}"
@@ -51,8 +56,20 @@ jobs:
         run: |
           INCOMING_REF="${{ steps.convert.outputs.incoming_ref }}"
           INTAKE_BRANCH="${{ steps.convert.outputs.intake_branch }}"
+          REPORT_SUMMARY=$(cat /tmp/intake-report.md 2>/dev/null || echo "No evaluation report generated.")
+          BODY=$(cat <<EOF
+Automated intake PR generated from runtime snapshot branch \`${INCOMING_REF}\`.
+
+### Intake Evaluation Gate Summary
+\`\`\`
+${REPORT_SUMMARY}
+\`\`\`
+
+Please review compatibility, documentation standards, and semantic duplicates before merging.
+EOF
+)
           gh pr create \
             --base main \
             --head "$INTAKE_BRANCH" \
             --title "Intake: Review incoming runtime skills [${INCOMING_REF}]" \
-            --body "Automated intake PR generated from runtime snapshot branch \`${INCOMING_REF}\`.\n\nPlease review compatibility, documentation standards, and semantic duplicates before merging."
+            --body "$BODY"

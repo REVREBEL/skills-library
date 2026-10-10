@@ -932,6 +932,244 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
         self.assertEqual(meta2["runtime_path"], "marketing-and-seo/content-and-campaigns/ad-creative")
         self.assertEqual(meta2["target_canonical_path"], "library/marketing-and-seo/content-and-campaigns/ad-creative")
 
+    def test_23_whole_skill_deletion_is_preserved_as_intake_event(self):
+        """Requirement 23: when an entire managed skill directory is deleted in a runtime target,
+        it is captured as an EXTERNAL_DELETE intake proposal rather than skipped or dropped.
+        """
+        # 1. Publish runtime branch
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+
+        # 2. Bare remote standing in for GitHub
+        remote_bare = self.sandbox / "upstream-github-23.git"
+        run_git(["init", "--bare", str(remote_bare)], cwd=self.sandbox)
+        run_git(["push", str(remote_bare), "main:main", "runtime:runtime"], cwd=self.repo_dir)
+        run_git(["symbolic-ref", "HEAD", "refs/heads/main"], cwd=remote_bare)
+
+        # 3. Clone runtime target against bare upstream
+        target_path = self.sandbox / "target-delete-workstation"
+        target = RuntimeTarget(
+            name="delete-workstation",
+            path=str(target_path),
+            mode="full",
+            remote_url=str(remote_bare),
+            accept_external_intake=True,
+            enabled=True,
+        )
+        sync_res = sync_target(target, remote_url=str(remote_bare))
+        self.assertEqual(sync_res.status, "created")
+
+        # Verify bug-hunter exists initially
+        bug_hunter_dir = target_path / "quality-and-security" / "debugging" / "bug-hunter"
+        self.assertTrue((bug_hunter_dir / "SKILL.md").exists())
+
+        # 4. Delete the entire bug-hunter skill directory
+        shutil.rmtree(bug_hunter_dir)
+        self.assertFalse(bug_hunter_dir.exists())
+
+        # 5. Capture dirty state
+        cap = capture_dirty_target(target, remote="origin", push=True, trigger_workflow=False)
+        self.assertTrue(cap["captured"])
+        self.assertTrue(cap["pushed"])
+        self.assertTrue(cap["reset"])
+        self.assertIn("bug-hunter", cap["packages"])
+        self.assertEqual(cap["package_details"][0]["action"], "delete")
+        incoming_branch = cap["branch"]
+
+        # Target should now be reset and clean on branch runtime
+        d_state = scan_target_dirty_state(target_path)
+        self.assertFalse(d_state["is_dirty"])
+
+        # 6. Fresh runner clone from bare remote
+        fresh_runner = self.sandbox / "github-runner-fresh-23"
+        run_git(["clone", str(remote_bare), str(fresh_runner)], cwd=self.sandbox)
+
+        # 7. Convert incoming branch to intake on the fresh runner
+        conv_res = convert_incoming_to_intake(
+            repo_path=str(fresh_runner),
+            incoming_branch=incoming_branch,
+            base_branch="main",
+            remote="origin",
+        )
+        self.assertIn("bug-hunter", conv_res["packages_staged"])
+
+        intake_pkg = fresh_runner / "intake" / "bug-hunter"
+        self.assertTrue(intake_pkg.exists())
+        self.assertTrue((intake_pkg / "PROPOSAL.md").exists())
+        self.assertTrue((intake_pkg / ".installer-metadata.json").exists())
+
+        meta = json.loads((intake_pkg / ".installer-metadata.json").read_text())
+        self.assertEqual(meta["classification"], "EXTERNAL_DELETE")
+        self.assertEqual(meta["package_name"], "bug-hunter")
+        self.assertEqual(meta["runtime_name"], "bug-hunter")
+        self.assertEqual(meta["runtime_path"], "quality-and-security/debugging/bug-hunter")
+        self.assertEqual(meta["target_canonical_path"], "library/quality-and-security/debugging/bug-hunter")
+
+        # 8. Intake evaluation must recognize this as an external deletion proposal
+        from tools.skill_library.intake import evaluate_candidate, apply_candidate
+        ev = evaluate_candidate(
+            candidate_name="bug-hunter",
+            intake_dir=str(fresh_runner / "intake"),
+            library_dir=str(fresh_runner / "library"),
+            repo_root=str(fresh_runner),
+        )
+        self.assertTrue(ev.is_valid_package)
+        self.assertTrue(ev.approval_required)
+        self.assertEqual(ev.recommended_decision, "HOLD")
+        self.assertEqual(ev.target_canonical_path, "library/quality-and-security/debugging/bug-hunter")
+
+        # 9. Verify automatic apply is strictly prohibited
+        with self.assertRaises(PermissionError) as ctx:
+            apply_candidate(
+                candidate_name="bug-hunter",
+                approved=True,
+                intake_dir=str(fresh_runner / "intake"),
+                library_dir=str(fresh_runner / "library"),
+            )
+        self.assertIn("review-only proposal", str(ctx.exception))
+
+    def test_24_skill_directory_rename_preserves_old_and_new_paths(self):
+        """Requirement 24: when a managed skill directory is renamed in a runtime target,
+        it is captured as an EXTERNAL_RENAME proposal preserving both old and new paths.
+        """
+        # 1. Publish runtime branch
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+
+        # 2. Bare remote standing in for GitHub
+        remote_bare = self.sandbox / "upstream-github-24.git"
+        run_git(["init", "--bare", str(remote_bare)], cwd=self.sandbox)
+        run_git(["push", str(remote_bare), "main:main", "runtime:runtime"], cwd=self.repo_dir)
+        run_git(["symbolic-ref", "HEAD", "refs/heads/main"], cwd=remote_bare)
+
+        # 3. Clone runtime target against bare upstream
+        target_path = self.sandbox / "target-rename-workstation"
+        target = RuntimeTarget(
+            name="rename-workstation",
+            path=str(target_path),
+            mode="full",
+            remote_url=str(remote_bare),
+            accept_external_intake=True,
+            enabled=True,
+        )
+        sync_res = sync_target(target, remote_url=str(remote_bare))
+        self.assertEqual(sync_res.status, "created")
+
+        # 4. Rename skill directory using git mv
+        old_dir = target_path / "quality-and-security" / "debugging" / "bug-hunter"
+        new_dir = target_path / "quality-and-security" / "debugging" / "bug-tracker"
+        run_git(
+            ["mv", "quality-and-security/debugging/bug-hunter", "quality-and-security/debugging/bug-tracker"],
+            cwd=target_path,
+        )
+        self.assertFalse(old_dir.exists())
+        self.assertTrue((new_dir / "SKILL.md").exists())
+
+        # 5. Capture dirty state
+        cap = capture_dirty_target(target, remote="origin", push=True, trigger_workflow=False)
+        self.assertTrue(cap["captured"])
+        self.assertTrue(cap["pushed"])
+        self.assertTrue(cap["reset"])
+        self.assertIn("bug-tracker", cap["packages"])
+        self.assertEqual(cap["package_details"][0]["action"], "rename")
+        self.assertEqual(
+            cap["package_details"][0]["old_runtime_path"],
+            "quality-and-security/debugging/bug-hunter",
+        )
+        self.assertEqual(
+            cap["package_details"][0]["new_runtime_path"],
+            "quality-and-security/debugging/bug-tracker",
+        )
+        incoming_branch = cap["branch"]
+
+        # Target should now be reset and clean on branch runtime
+        d_state = scan_target_dirty_state(target_path)
+        self.assertFalse(d_state["is_dirty"])
+
+        # 6. Fresh runner clone from bare remote
+        fresh_runner = self.sandbox / "github-runner-fresh-24"
+        run_git(["clone", str(remote_bare), str(fresh_runner)], cwd=self.sandbox)
+
+        # 7. Convert incoming branch to intake on the fresh runner
+        conv_res = convert_incoming_to_intake(
+            repo_path=str(fresh_runner),
+            incoming_branch=incoming_branch,
+            base_branch="main",
+            remote="origin",
+        )
+        self.assertIn("bug-tracker", conv_res["packages_staged"])
+
+        intake_pkg = fresh_runner / "intake" / "bug-tracker"
+        self.assertTrue(intake_pkg.exists())
+        self.assertTrue((intake_pkg / "SKILL.md").exists())
+        self.assertTrue((intake_pkg / ".installer-metadata.json").exists())
+
+        meta = json.loads((intake_pkg / ".installer-metadata.json").read_text())
+        self.assertEqual(meta["classification"], "EXTERNAL_RENAME")
+        self.assertEqual(meta["package_name"], "bug-tracker")
+        self.assertEqual(meta["runtime_name"], "bug-tracker")
+        self.assertEqual(meta["old_runtime_path"], "quality-and-security/debugging/bug-hunter")
+        self.assertEqual(meta["new_runtime_path"], "quality-and-security/debugging/bug-tracker")
+        self.assertEqual(meta["target_canonical_path"], "library/quality-and-security/debugging/bug-hunter")
+
+        # 8. Intake evaluation must recognize this as an external rename proposal
+        from tools.skill_library.intake import evaluate_candidate, apply_candidate
+        ev = evaluate_candidate(
+            candidate_name="bug-tracker",
+            intake_dir=str(fresh_runner / "intake"),
+            library_dir=str(fresh_runner / "library"),
+            repo_root=str(fresh_runner),
+        )
+        self.assertTrue(ev.is_valid_package)
+        self.assertTrue(ev.approval_required)
+        self.assertEqual(ev.recommended_decision, "HOLD")
+        self.assertEqual(ev.target_canonical_path, "library/quality-and-security/debugging/bug-hunter")
+
+        # 9. Verify automatic apply is strictly prohibited
+        with self.assertRaises(PermissionError) as ctx:
+            apply_candidate(
+                candidate_name="bug-tracker",
+                approved=True,
+                intake_dir=str(fresh_runner / "intake"),
+                library_dir=str(fresh_runner / "library"),
+            )
+        self.assertIn("review-only proposal", str(ctx.exception))
+
+    def test_25_intake_strict_gate_enforcement(self):
+        """Requirement 25: intake CLI --strict gate fails on invalid/rejected candidates
+        and writes report to --output-report.
+        """
+        intake_dir = self.sandbox / "custom-intake"
+        intake_dir.mkdir(parents=True, exist_ok=True)
+
+        # 1. Clean valid candidate
+        cand_valid = intake_dir / "valid-candidate"
+        cand_valid.mkdir(parents=True, exist_ok=True)
+        (cand_valid / "SKILL.md").write_text("---\nname: valid-candidate\ndescription: A valid candidate tool.\n---\n# Valid Tool\n")
+
+        report_path = self.sandbox / "intake-report.md"
+        cmd = [
+            sys.executable,
+            str(REPO_ROOT_DIR / "tools" / "skill-library.py"),
+            "intake",
+            "--strict",
+            "--intake-dir",
+            str(intake_dir),
+            "--output-report",
+            str(report_path),
+        ]
+        proc = subprocess.run(cmd, cwd=str(self.repo_dir), capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, f"Valid candidate must pass strict gate: {proc.stderr}")
+        self.assertTrue(report_path.exists())
+        self.assertIn("valid-candidate", report_path.read_text())
+
+        # 2. Add invalid candidate (e.g. workstation path coupling)
+        cand_broken = intake_dir / "broken-candidate"
+        cand_broken.mkdir(parents=True, exist_ok=True)
+        (cand_broken / "SKILL.md").write_text("---\nname: broken-candidate\ndescription: Broken tool with hardcoded workstation path.\n---\nRun /Users/localdev/script.sh\n")
+
+        proc_fail = subprocess.run(cmd, cwd=str(self.repo_dir), capture_output=True, text=True)
+        self.assertEqual(proc_fail.returncode, 1, "Candidate with validation failure must fail strict gate")
+        self.assertIn("[STRICT INTAKE GATE FAILED]", proc_fail.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
