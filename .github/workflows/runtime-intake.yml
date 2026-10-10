@@ -50,26 +50,33 @@ jobs:
           INTAKE_BRANCH="${{ steps.convert.outputs.intake_branch }}"
           git push origin "$INTAKE_BRANCH:$INTAKE_BRANCH"
 
+      - name: Generate Intake PR Body
+        env:
+          INCOMING_REF: ${{ steps.convert.outputs.incoming_ref }}
+        run: |
+          echo "Automated intake PR generated from runtime snapshot branch \`${INCOMING_REF}\`." > /tmp/pr-body.md
+          echo "" >> /tmp/pr-body.md
+          echo "### Intake Evaluation Gate Summary" >> /tmp/pr-body.md
+          echo '```' >> /tmp/pr-body.md
+          if [ -f /tmp/intake-report.md ]; then
+            cat /tmp/intake-report.md >> /tmp/pr-body.md
+          else
+            echo "No evaluation report generated." >> /tmp/pr-body.md
+          fi
+          echo '```' >> /tmp/pr-body.md
+          echo "" >> /tmp/pr-body.md
+          echo "Please review compatibility, documentation standards, and semantic duplicates before merging." >> /tmp/pr-body.md
+
       - name: Open Intake Pull Request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INCOMING_REF: ${{ steps.convert.outputs.incoming_ref }}
+          INTAKE_BRANCH: ${{ steps.convert.outputs.intake_branch }}
         run: |
-          INCOMING_REF="${{ steps.convert.outputs.incoming_ref }}"
-          INTAKE_BRANCH="${{ steps.convert.outputs.intake_branch }}"
-          REPORT_SUMMARY=$(cat /tmp/intake-report.md 2>/dev/null || echo "No evaluation report generated.")
-          BODY=$(cat <<EOF
-Automated intake PR generated from runtime snapshot branch \`${INCOMING_REF}\`.
-
-### Intake Evaluation Gate Summary
-\`\`\`
-${REPORT_SUMMARY}
-\`\`\`
-
-Please review compatibility, documentation standards, and semantic duplicates before merging.
-EOF
-)
           gh pr create \
             --base main \
             --head "$INTAKE_BRANCH" \
             --title "Intake: Review incoming runtime skills [${INCOMING_REF}]" \
-            --body "$BODY"
+            --body-file /tmp/pr-body.md
+
+

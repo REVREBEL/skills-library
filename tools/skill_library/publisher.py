@@ -13,9 +13,15 @@ from skill_library.config import REPO_ROOT, RUNTIME_BRANCH
 
 def run_git(cmd: list, cwd: str = REPO_ROOT, check: bool = True) -> subprocess.CompletedProcess:
     """Run a git command in cwd and return CompletedProcess."""
+    env = os.environ.copy()
+    env.setdefault("GIT_AUTHOR_NAME", "Antigravity Agent")
+    env.setdefault("GIT_AUTHOR_EMAIL", "agent@antigravity.local")
+    env.setdefault("GIT_COMMITTER_NAME", "Antigravity Agent")
+    env.setdefault("GIT_COMMITTER_EMAIL", "agent@antigravity.local")
     return subprocess.run(
         ["git"] + cmd,
         cwd=cwd,
+        env=env,
         capture_output=True,
         text=True,
         check=check,
