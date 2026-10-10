@@ -343,7 +343,7 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
         """Requirement 10: local intake collector groups dirty runtime files into incoming/* snapshot."""
         publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
         target_path = self.sandbox / "target-collector"
-        target = RuntimeTarget(name="test-collector", path=str(target_path), mode="full", enabled=True)
+        target = RuntimeTarget(name="test-collector", path=str(target_path), mode="full", accept_external_intake=True, enabled=True)
         sync_target(target, source_repo=str(self.repo_dir))
 
         # Add dirty files
@@ -365,7 +365,7 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
         """Requirement 11: local intake collector does not clear dirty working state if snapshot push fails."""
         publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
         target_path = self.sandbox / "target-push-fail"
-        target = RuntimeTarget(name="test-push-fail", path=str(target_path), mode="full", enabled=True)
+        target = RuntimeTarget(name="test-push-fail", path=str(target_path), mode="full", accept_external_intake=True, enabled=True)
         sync_target(target, source_repo=str(self.repo_dir))
 
         # Add dirty file
@@ -386,7 +386,7 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
         """Requirement 12: GitHub intake workflow conversion produces a reviewed intake/* branch from main."""
         publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
         target_path = self.sandbox / "target-workflow"
-        target = RuntimeTarget(name="test-workflow", path=str(target_path), mode="full", enabled=True)
+        target = RuntimeTarget(name="test-workflow", path=str(target_path), mode="full", accept_external_intake=True, enabled=True)
         sync_target(target, source_repo=str(self.repo_dir))
 
         # Add dirty skill and capture with push
@@ -655,6 +655,7 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
             path=str(target_path),
             mode="full",
             remote_url=str(remote_bare),
+            accept_external_intake=True,
             enabled=True,
         )
         sync_res = sync_target(target, remote_url=str(remote_bare))
@@ -664,20 +665,30 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
         t_url = run_git(["config", "--get", "remote.origin.url"], cwd=target_path).stdout.strip()
         self.assertEqual(t_url, str(remote_bare))
 
-        # 4. Dirty the target: one new skill, one updated existing skill
+        # 4. Dirty the target: one new external skill, one updated hierarchical skill
         new_skill = target_path / "community-new-tool"
         new_skill.mkdir(parents=True, exist_ok=True)
         (new_skill / "SKILL.md").write_text("---\nname: community-new-tool\ndescription: Brand new tool from external intake.\n---\n# Community Tool\n")
 
-        update_skill = target_path / "bug-hunter"
-        update_skill.mkdir(parents=True, exist_ok=True)
+        # Real hierarchical skill in runtime: quality-and-security/debugging/bug-hunter
+        update_skill = target_path / "quality-and-security" / "debugging" / "bug-hunter"
+        self.assertTrue(update_skill.exists(), "bug-hunter must physically exist in published runtime clone")
         (update_skill / "SKILL.md").write_text("---\nname: bug-hunter\ndescription: Updated description for bug-hunter.\n---\n# Bug Hunter Updated\n")
+
+        # Verify dirty scanner groups changed files by nearest package root
+        dirty_before_cap = scan_target_dirty_state(target_path)
+        self.assertTrue(dirty_before_cap["is_dirty"])
+        self.assertIn("bug-hunter", dirty_before_cap["packages"])
+        self.assertIn("quality-and-security/debugging/bug-hunter", dirty_before_cap["packages"])
+        self.assertIn("community-new-tool", dirty_before_cap["packages"])
 
         # 5. Capture dirty state, pushing incoming branch to bare upstream
         cap = capture_dirty_target(target, remote="origin", push=True, trigger_workflow=False)
         self.assertTrue(cap["captured"])
         self.assertTrue(cap["pushed"])
         self.assertTrue(cap["reset"])
+        self.assertIn("bug-hunter", cap["packages"])
+        self.assertIn("community-new-tool", cap["packages"])
         incoming_branch = cap["branch"]
 
         # Target should now be reset and clean on branch runtime
@@ -701,6 +712,12 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
 
         # 8. Verify metadata classifications: new vs external_update
         intake_dir = fresh_runner / "intake"
+        self.assertTrue((intake_dir / "bug-hunter").exists())
+        self.assertTrue((intake_dir / "community-new-tool").exists())
+        # CRITICAL: Parent category and subcategory must NOT be copied wholesale into intake/!
+        self.assertFalse((intake_dir / "quality-and-security").exists(), "Category directory must not be copied into intake")
+        self.assertFalse((intake_dir / "debugging").exists(), "Subcategory directory must not be copied into intake")
+
         new_meta = json.loads((intake_dir / "community-new-tool" / ".installer-metadata.json").read_text())
         self.assertEqual(new_meta["classification"], "EXTERNAL_PHYSICAL")
         self.assertEqual(new_meta["type"], "external_install")
@@ -709,12 +726,59 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
         self.assertEqual(upd_meta["classification"], "EXTERNAL_UPDATE")
         self.assertEqual(upd_meta["type"], "external_update")
         self.assertEqual(upd_meta["target_canonical_path"], "library/quality-and-security/debugging/bug-hunter")
+        self.assertEqual(upd_meta["runtime_path"], "quality-and-security/debugging/bug-hunter")
+        self.assertEqual(upd_meta["package_name"], "bug-hunter")
 
         # 9. Verify invalid ref is rejected
         with self.assertRaises(ValueError):
             convert_incoming_to_intake(str(fresh_runner), "main")
         with self.assertRaises(ValueError):
             convert_incoming_to_intake(str(fresh_runner), "incoming/bad;injection")
+
+    def test_21_accept_external_intake_enforcement_and_dispatch_failure(self):
+        """Requirement 21: accept_external_intake enforcement and workflow dispatch error tracking."""
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+        target_path = self.sandbox / "target-intake-policy"
+        target = RuntimeTarget(
+            name="test-policy",
+            path=str(target_path),
+            mode="full",
+            accept_external_intake=False,
+            enabled=True,
+        )
+        sync_target(target, source_repo=str(self.repo_dir))
+
+        # Add dirty file
+        dirty_file = target_path / "community-tool" / "SKILL.md"
+        dirty_file.parent.mkdir(parents=True, exist_ok=True)
+        dirty_file.write_text("---\nname: community-tool\n---\n")
+
+        # 1. When accept_external_intake is False, capture is skipped
+        cap_skip = capture_dirty_target(target, push=False, force=False)
+        self.assertFalse(cap_skip["captured"])
+        self.assertIn("accept_external_intake is False", cap_skip["reason"])
+
+        # 2. When force is True, capture proceeds
+        cap_force = capture_dirty_target(target, push=False, force=True)
+        self.assertTrue(cap_force["captured"])
+        self.assertIn("community-tool", cap_force["packages"])
+
+        # 3. Test push failure retains dirty state locally
+        # Add new dirty change to target
+        extra_file = target_path / "community-tool" / "extra.py"
+        extra_file.parent.mkdir(parents=True, exist_ok=True)
+        extra_file.write_text("print('dirty extra')\n")
+
+        cap_push_fail = capture_dirty_target(
+            target,
+            remote="nonexistent-remote",
+            push=True,
+            trigger_workflow=False,
+            force=True,
+        )
+        self.assertFalse(cap_push_fail["captured"])
+        self.assertTrue(cap_push_fail.get("retained", False))
+        self.assertTrue(extra_file.exists())
 
 
 if __name__ == "__main__":

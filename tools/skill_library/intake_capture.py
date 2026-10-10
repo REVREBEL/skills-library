@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .config import (
+    CATEGORIES,
+    DEEP_CATEGORIES,
     INTAKE_DIR,
     LIBRARY_DIR,
     REPO_ROOT,
@@ -36,7 +38,6 @@ def validate_incoming_ref(ref_name: str) -> None:
         raise ValueError(f"Invalid incoming branch ref '{ref_name}': contains unsafe or illegal characters")
 
 
-
 def run_git(cmd: List[str], cwd: str, check: bool = True) -> subprocess.CompletedProcess:
     """Run a git command in cwd and return CompletedProcess."""
     return subprocess.run(
@@ -48,10 +49,80 @@ def run_git(cmd: List[str], cwd: str, check: bool = True) -> subprocess.Complete
     )
 
 
+def is_router_directory(target_path: Path, rel_dir: Path) -> bool:
+    """
+    Returns True if rel_dir represents a category or subcategory router directory
+    rather than an individual skill package root.
+    """
+    posix_str = rel_dir.as_posix()
+    if posix_str in ("", "."):
+        return True
+    # Depth 1 category router (e.g. quality-and-security)
+    if posix_str in CATEGORIES:
+        return True
+    # Depth 2 subcategory router in deep categories (e.g. development/backend)
+    parts = rel_dir.parts
+    if len(parts) == 2 and parts[0] in DEEP_CATEGORIES and parts[1] in DEEP_CATEGORIES[parts[0]]:
+        return True
+    # Check if SKILL.md in this directory contains router markers
+    skill_file = target_path / rel_dir / "SKILL.md"
+    if skill_file.is_file():
+        try:
+            head = skill_file.read_text(encoding="utf-8", errors="replace")[:400]
+            if "type: master-router" in head or "type: category-router" in head or "type: subcategory-router" in head:
+                return True
+        except Exception:
+            pass
+    return False
+
+
+def find_skill_package_root(target_path: Path, rel_file: str) -> tuple[str, str]:
+    """
+    Resolves the nearest actual skill package root for a dirty file path.
+    Returns (package_name, runtime_path).
+    For example:
+      'quality-and-security/debugging/bug-hunter/scripts/test.py'
+      -> ('bug-hunter', 'quality-and-security/debugging/bug-hunter')
+      'custom-pkg-one/SKILL.md'
+      -> ('custom-pkg-one', 'custom-pkg-one')
+    """
+    file_path = Path(rel_file)
+    curr = file_path.parent
+
+    # 1. Walk upward looking for nearest non-router ancestor containing SKILL.md
+    while curr.as_posix() not in ("", "."):
+        candidate_skill_md = target_path / curr / "SKILL.md"
+        if candidate_skill_md.is_file() and not is_router_directory(target_path, curr):
+            return (curr.name, curr.as_posix())
+        # Check git HEAD if file was deleted in working tree
+        if (target_path / ".git").exists():
+            check_head = run_git(["cat-file", "-e", f"HEAD:{curr.as_posix()}/SKILL.md"], cwd=str(target_path), check=False)
+            if check_head.returncode == 0 and not is_router_directory(target_path, curr):
+                return (curr.name, curr.as_posix())
+        curr = curr.parent
+
+    # 2. Taxonomy fallback if no SKILL.md found on disk (e.g. newly untracked files or deleted packages)
+    parts = file_path.parts
+    if not parts:
+        return ("root", ".")
+
+    if parts[0] not in CATEGORIES:
+        # Standalone / external package at target root (e.g. "community-new-tool")
+        return (parts[0], parts[0])
+
+    # In canonical taxonomy, skill leaves reside at category/subcategory/skill-name
+    if len(parts) >= 3:
+        return (parts[2], "/".join(parts[:3]))
+
+    # Fallback for changes directly at category or subcategory level
+    runtime_path = "/".join(parts[:-1]) if len(parts) > 1 else parts[0]
+    return (parts[-1], runtime_path)
+
+
 def scan_target_dirty_state(target_path: Path) -> Dict[str, Any]:
     """
     Inspects target Git checkout with git status --porcelain.
-    Groups changes by top-level incoming package directory.
+    Groups changes by nearest skill package root.
     """
     res: Dict[str, Any] = {
         "is_dirty": False,
@@ -87,13 +158,19 @@ def scan_target_dirty_state(target_path: Path) -> Dict[str, Any]:
         elif "R" in status:
             res["renamed"].append(rel_file)
 
-        # Identify top-level package or root file
-        parts = Path(rel_file).parts
-        if parts:
-            pkg_name = parts[0]
-            if pkg_name not in res["packages"]:
-                res["packages"][pkg_name] = []
-            res["packages"][pkg_name].append(rel_file)
+        # Resolve nearest skill package root
+        pkg_name, runtime_path = find_skill_package_root(target_path, rel_file)
+        if runtime_path not in res["packages"]:
+            res["packages"][runtime_path] = {
+                "package_name": pkg_name,
+                "runtime_path": runtime_path,
+                "files": [],
+            }
+        res["packages"][runtime_path]["files"].append(rel_file)
+
+        # Support lookup by leaf package name as well
+        if pkg_name != runtime_path and pkg_name not in res["packages"]:
+            res["packages"][pkg_name] = res["packages"][runtime_path]
 
     return res
 
@@ -130,6 +207,7 @@ def capture_dirty_target(
     push: bool = True,
     base_repo_path: str = REPO_ROOT,
     trigger_workflow: bool = True,
+    force: bool = False,
 ) -> Dict[str, Any]:
     """
     Captures uncommitted changes from a dirty runtime target.
@@ -137,6 +215,14 @@ def capture_dirty_target(
     dispatches GitHub Action workflow on main, and ONLY resets the local working copy if the push succeeds.
     """
     dest = target.resolved_path
+
+    if not target.accept_external_intake and not force:
+        return {
+            "captured": False,
+            "target": target.name,
+            "reason": "Target does not accept external intake (accept_external_intake is False)",
+        }
+
     dirty_state = scan_target_dirty_state(dest)
 
     if not dirty_state["is_dirty"]:
@@ -153,6 +239,11 @@ def capture_dirty_target(
 
     provenance = get_external_provenance(dest)
 
+    # Dedup packages by unique runtime_path
+    unique_packages = {}
+    for pkg_info in dirty_state["packages"].values():
+        unique_packages[pkg_info["runtime_path"]] = pkg_info
+
     # 1. Create incoming branch in the target checkout
     run_git(["checkout", "-b", branch_name], cwd=str(dest))
 
@@ -163,7 +254,13 @@ def capture_dirty_target(
         "target_name": target.name,
         "target_path": str(target.path),
         "captured_at": datetime.now(timezone.utc).isoformat(),
-        "packages": list(dirty_state["packages"].keys()),
+        "packages": [
+            {
+                "package_name": info["package_name"],
+                "runtime_path": info["runtime_path"],
+            }
+            for info in unique_packages.values()
+        ],
         "dirty_summary": {
             "untracked": dirty_state["untracked"],
             "modified": dirty_state["modified"],
@@ -221,17 +318,21 @@ def capture_dirty_target(
         run_git(["reset", "--hard", f"{remote}/{RUNTIME_BRANCH}"], cwd=str(dest), check=False)
         run_git(["clean", "-fd"], cwd=str(dest), check=False)
 
-        return {
+        res = {
             "captured": True,
             "target": target.name,
             "snapshot_id": snapshot_id,
             "branch": branch_name,
-            "packages": list(dirty_state["packages"].keys()),
+            "packages": [info["package_name"] for info in unique_packages.values()],
+            "package_details": list(unique_packages.values()),
             "pushed": push,
             "reset": True,
             "workflow_triggered": workflow_triggered,
             "workflow_message": workflow_message,
         }
+        if push and trigger_workflow and not workflow_triggered:
+            res["workflow_error"] = workflow_message or "GitHub Action workflow dispatch failed."
+        return res
     else:
         # Push failed: RETAIN dirty content! Do NOT reset!
         return {
@@ -239,7 +340,8 @@ def capture_dirty_target(
             "target": target.name,
             "snapshot_id": snapshot_id,
             "branch": branch_name,
-            "packages": list(dirty_state["packages"].keys()),
+            "packages": [info["package_name"] for info in unique_packages.values()],
+            "package_details": list(unique_packages.values()),
             "pushed": False,
             "reset": False,
             "error": f"Failed to push snapshot branch to {remote}: {push_error}",
@@ -306,10 +408,21 @@ def convert_incoming_to_intake(
     intake_dir.mkdir(parents=True, exist_ok=True)
 
     # Check out incoming tree into intake directory with containment validation
-    for pkg in metadata.get("packages", []):
-        if not isinstance(pkg, str) or not pkg.strip():
+    for item in metadata.get("packages", []):
+        if isinstance(item, dict):
+            pkg = item.get("package_name", "").strip()
+            runtime_path = item.get("runtime_path", pkg).strip()
+        elif isinstance(item, str):
+            pkg = item.strip()
+            runtime_path = item.strip()
+        else:
+            continue
+
+        if not pkg or not runtime_path:
             continue
         if any(c in pkg for c in ("\0", "/", "\\", "..")) or pkg in (".git", ".DS_Store", "SKILL.md", ".incoming-metadata.json"):
+            continue
+        if any(c in runtime_path for c in ("\0", "\\", "..")):
             continue
 
         dest_pkg_dir = (intake_dir / pkg).resolve()
@@ -320,9 +433,14 @@ def convert_incoming_to_intake(
 
         dest_pkg_dir.mkdir(parents=True, exist_ok=True)
 
-        # Checkout files from incoming branch into intake/<pkg>
+        # Checkout files from incoming branch into intake/<pkg> using git archive scoped to runtime_path
+        archive_target = f"{incoming_commit}:{runtime_path}" if runtime_path not in ("", ".") else incoming_commit
+        tree_check = run_git(["rev-parse", "--verify", archive_target], cwd=repo_path, check=False)
+        if tree_check.returncode != 0:
+            continue
+
         archive_proc = subprocess.Popen(
-            ["git", "archive", incoming_commit, pkg],
+            ["git", "archive", f"--prefix={pkg}/", archive_target],
             cwd=repo_path,
             stdout=subprocess.PIPE,
         )
@@ -333,12 +451,24 @@ def convert_incoming_to_intake(
         )
         archive_proc.stdout.close()
         tar_proc.communicate()
+        archive_proc.wait()
 
         # Classify as external update if package exists in canonical manifest
         is_existing = bool(manifest and pkg in manifest.skills)
-        target_can_path = manifest.skills[pkg].get("canonical_path", "") if is_existing else ""
-        classification = "EXTERNAL_UPDATE" if is_existing else "EXTERNAL_PHYSICAL"
-        installer_type = "external_update" if is_existing else "external_install"
+        if is_existing:
+            target_can_path = manifest.skills[pkg].get("canonical_path", f"library/{runtime_path}")
+            classification = "EXTERNAL_UPDATE"
+            installer_type = "external_update"
+        else:
+            # Check if runtime_path is within library category taxonomy
+            if any(runtime_path.startswith(f"{c}/") for c in CATEGORIES):
+                target_can_path = f"library/{runtime_path}"
+                classification = "EXTERNAL_UPDATE"
+                installer_type = "external_update"
+            else:
+                target_can_path = ""
+                classification = "EXTERNAL_PHYSICAL"
+                installer_type = "external_install"
 
         # Write provenance info and classification
         pkg_meta_path = dest_pkg_dir / ".installer-metadata.json"
@@ -347,6 +477,8 @@ def convert_incoming_to_intake(
                 "source_snapshot": incoming_branch,
                 "type": installer_type,
                 "classification": classification,
+                "package_name": pkg,
+                "runtime_path": runtime_path,
                 "target_canonical_path": target_can_path,
                 "captured_at": metadata.get("captured_at"),
                 "target_name": metadata.get("target_name"),

@@ -172,6 +172,9 @@ def cmd_capture_intake(args):
             continue
         if args.target and t.name != args.target:
             continue
+        if not t.accept_external_intake and not getattr(args, "force", False):
+            print(f"Skipping target '{t.name}' (accept_external_intake is False).")
+            continue
 
         print(f"Checking target '{t.name}' ({t.path}) for dirty runtime changes ...")
         res = capture_dirty_target(
@@ -179,6 +182,7 @@ def cmd_capture_intake(args):
             push=not args.no_push,
             remote=args.remote,
             trigger_workflow=not args.no_dispatch,
+            force=getattr(args, "force", False),
         )
         if res.get("captured"):
             captured_any = True
@@ -187,6 +191,9 @@ def cmd_capture_intake(args):
                 print(f"  Pushed to {args.remote} and reset local checkout cleanly.")
             if res.get("workflow_triggered"):
                 print(f"  DISPATCHED: {res.get('workflow_message')}")
+            elif not args.no_dispatch and not args.no_push:
+                has_errors = True
+                print(f"  ERROR: Workflow dispatch failed: {res.get('workflow_message')}")
             elif res.get("workflow_message"):
                 print(f"  WORKFLOW DISPATCH NOTE: {res.get('workflow_message')}")
         elif res.get("retained"):
@@ -314,6 +321,7 @@ def main():
     p_cap.add_argument("--remote", default="origin", help="Remote to push snapshot branch")
     p_cap.add_argument("--no-push", action="store_true", help="Commit snapshot locally without pushing to remote")
     p_cap.add_argument("--no-dispatch", action="store_true", help="Skip automatic dispatch of runtime-intake.yml GitHub Action on main")
+    p_cap.add_argument("--force", action="store_true", help="Force capture even if accept_external_intake is false")
 
     # convert-incoming
     p_conv = subparsers.add_parser("convert-incoming", help="Convert incoming snapshot branch to intake/ PR branch")
