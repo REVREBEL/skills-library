@@ -107,6 +107,8 @@ def create_dataset_card(
 
 Note: Prompts exceeding the maximum model length were skipped and have empty responses."""
 
+    extra_max_model_len = f" \\\n    --max-model-len {max_model_len_used}" if max_model_len_used else ""
+
     return f"""---
 tags:
 - generated
@@ -160,7 +162,7 @@ uv run https://huggingface.co/datasets/uv-scripts/vllm/raw/main/generate-respons
     --temperature {sampling_params.temperature} \\
     --top-p {sampling_params.top_p} \\
     --top-k {sampling_params.top_k} \\
-    --max-tokens {sampling_params.max_tokens}{f" \\\\\\n    --max-model-len {max_model_len_used}" if max_model_len_used else ""}
+    --max-tokens {sampling_params.max_tokens}{extra_max_model_len}
 ```
 """
 

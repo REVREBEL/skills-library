@@ -2,10 +2,12 @@
 Configuration and constants for the reusable Agent Skills library pipeline.
 """
 
+import json
 import os
 import re
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 # Repository Root (determined dynamically relative to this module)
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -18,6 +20,50 @@ INTAKE_DIR = os.path.join(REPO_ROOT, "intake")
 RUNTIME_DIR = str(Path.home() / ".agents" / "skills")
 AUDIT_DIR = os.path.join(REPO_ROOT, "audit")
 DOCS_DIR = os.path.join(REPO_ROOT, "docs")
+CONFIG_DIR = os.path.join(REPO_ROOT, "config")
+TARGETS_CONFIG_PATH = os.path.join(CONFIG_DIR, "runtime-targets.json")
+
+# Runtime Publication Branch Name
+RUNTIME_BRANCH = "runtime"
+
+@dataclass
+class RuntimeTarget:
+    name: str
+    path: str
+    mode: str = "full"  # "full" | "subset"
+    include: List[str] = field(default_factory=list)
+    accept_external_intake: bool = False
+    enabled: bool = True
+    remote_url: str = ""
+
+    @property
+    def resolved_path(self) -> Path:
+        return Path(self.path).expanduser().resolve()
+
+
+def load_runtime_targets(config_path: Optional[str] = None) -> List[RuntimeTarget]:
+    """Load and parse runtime targets from runtime-targets.json."""
+    path = config_path or TARGETS_CONFIG_PATH
+    if not os.path.exists(path):
+        return []
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    global_remote = data.get("remote_url", "https://github.com/REVREBEL/skills-library.git")
+    targets = []
+    for item in data.get("targets", []):
+        targets.append(
+            RuntimeTarget(
+                name=item.get("name", ""),
+                path=item.get("path", ""),
+                mode=item.get("mode", "full"),
+                include=item.get("include", []),
+                accept_external_intake=item.get("accept_external_intake", False),
+                enabled=item.get("enabled", True),
+                remote_url=item.get("remote_url") or global_remote,
+            )
+        )
+    return targets
+
 
 # Audit & Metadata Files
 MANIFEST_FILE = os.path.join(AUDIT_DIR, "runtime-manifest.json")
@@ -157,7 +203,7 @@ DESTRUCTIVE_COMMAND_PATTERNS = [
 ]
 
 SECRET_PATTERNS = [
-    re.compile(r"-----BEGIN (?:RSA )?PRIVATE KEY-----"),
+    re.compile(r"-----BEGIN (?:RSA )?PRIVATE KEY-----\s*[A-Za-z0-9+/]{20,}"),
     re.compile(r"\bghp_[0-9a-zA-Z]{36}\b"),
     re.compile(r"\bgithub_pat_[0-9a-zA-Z_]{82}\b"),
     re.compile(r"\bsk-[0-9a-zA-Z]{32,}\b"),

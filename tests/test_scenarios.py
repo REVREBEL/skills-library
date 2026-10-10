@@ -38,7 +38,6 @@ from skill_library.ledger import ChangeLedger
 from skill_library.manifest import RuntimeManifest
 from skill_library.pilot import PilotResult, run_targeted_pilot
 from skill_library.scanner import scan_candidate_directory, scan_runtime
-from skill_library.sync import reconcile_runtime_symlinks
 from skill_library.validator import validate_library, validate_single_skill
 
 
@@ -102,14 +101,37 @@ class TestSkillLibraryIsolatedScenarios(unittest.TestCase):
             router_path=self.wa_router,
         )
 
-        # Establish runtime symlinks
-        reconcile_runtime_symlinks(
-            runtime_dir=self.runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-            dry_run=False,
-        )
+        # Establish runtime fixtures
+        self.sync_runtime_fixtures()
+
+    def sync_runtime_fixtures(self):
+        """Populates runtime_dir with physical copies of canonical skills from library."""
+        for skill_meta in self.manifest.skills.values():
+            name = skill_meta["runtime_name"]
+            can_path = os.path.join(self.sandbox, skill_meta["canonical_path"])
+            dest = os.path.join(self.runtime_dir, name)
+            if os.path.exists(can_path):
+                if os.path.exists(dest):
+                    shutil.rmtree(dest)
+                shutil.copytree(can_path, dest)
+
+    def stage_runtime_package_to_intake(self, package_name: str, classification: str = "EXTERNAL_PHYSICAL"):
+        """Stages an external package from runtime_dir to intake_dir with installer metadata."""
+        src = os.path.join(self.runtime_dir, package_name)
+        dst = os.path.join(self.intake_dir, package_name)
+        if os.path.exists(dst):
+            shutil.rmtree(dst)
+        shutil.copytree(src, dst)
+        meta = {
+            "staged_from": src,
+            "type": "external_update" if classification == "EXTERNAL_UPDATE" else "external_install",
+            "classification": classification,
+            "target_canonical_path": self.manifest.skills[package_name]["canonical_path"] if package_name in self.manifest.skills else "",
+            "timestamp": "2026-10-09T00:00:00Z",
+        }
+        with open(os.path.join(dst, ".installer-metadata.json"), "w", encoding="utf-8") as f:
+            json.dump(meta, f, indent=2)
+        return [package_name]
 
     def tearDown(self):
         self.tmp_dir.cleanup()
@@ -146,44 +168,6 @@ Instructions for {name}.
             managed=True,
         )
         self.manifest.save()
-
-    def test_scenario_c_idempotent_sync(self):
-        """Scenario C: sync against already-synchronized library produces zero changes."""
-        report = reconcile_runtime_symlinks(
-            runtime_dir=self.runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-            dry_run=False,
-        )
-        self.assertEqual(len(report.created), 0)
-        self.assertEqual(len(report.repaired), 0)
-        self.assertEqual(len(report.staged_to_intake), 0)
-        self.assertEqual(len(report.collisions), 0)
-        self.assertEqual(len(report.errors), 0)
-        self.assertFalse(report.has_changes)
-
-    def test_scenario_d_broken_link_repair(self):
-        """Scenario D: broken managed link is identified and repaired."""
-        test_symlink_name = "bug-hunter"
-        sym_path = os.path.join(self.runtime_dir, test_symlink_name)
-        self.assertTrue(os.path.islink(sym_path))
-
-        # Deliberately point symlink to non-existent target
-        os.unlink(sym_path)
-        os.symlink("../../library/non_existent_path", sym_path)
-        self.assertFalse(os.path.exists(sym_path))
-
-        # Run sync
-        report = reconcile_runtime_symlinks(
-            runtime_dir=self.runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-            dry_run=False,
-        )
-        self.assertIn(f"{test_symlink_name} -> library/quality-and-security/debugging/bug-hunter", report.repaired)
-        self.assertTrue(os.path.exists(sym_path))
 
     def test_scenario_e_name_collision(self):
         """Scenario E: new skill using existing canonical name triggers collision halt."""
@@ -284,10 +268,9 @@ Detailed instructions.
         self.assertTrue(os.path.exists(target_canonical_path))
         self.assertFalse(os.path.exists(cand_dir))
 
-        # 4. Verify runtime symlink was created automatically
-        runtime_symlink = os.path.join(self.runtime_dir, cand_name)
-        self.assertTrue(os.path.islink(runtime_symlink))
-        self.assertTrue(os.path.exists(runtime_symlink))
+        # 4. Verify candidate registered in manifest and ledger
+        self.assertIn(cand_name, self.manifest.skills)
+        self.assertEqual(res["operation"], "ADD")
 
         # 5. Targeted Pilot Verification
         pilot_rep = run_targeted_pilot(target_canonical_path, self.wa_router)
@@ -320,16 +303,9 @@ Workflow automation content.
         self.assertEqual(ext_entries[0].classification, "EXTERNAL_PHYSICAL")
         self.assertEqual(ext_entries[0].installer_integration_info.get("has_package_json"), "true")
 
-        # 2. Sync stages physical install to intake/
-        sync_rep = reconcile_runtime_symlinks(
-            runtime_dir=self.runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-            dry_run=False,
-            stage_external=True,
-        )
-        self.assertIn(external_name, sync_rep.staged_to_intake)
+        # 2. Stage physical install to intake/
+        staged = self.stage_runtime_package_to_intake(external_name, "EXTERNAL_PHYSICAL")
+        self.assertIn(external_name, staged)
         staged_intake_dir = os.path.join(self.intake_dir, external_name)
         self.assertTrue(os.path.exists(staged_intake_dir))
 
@@ -357,7 +333,7 @@ Workflow automation content.
                 ledger=self.ledger,
             )
 
-        # 5. Apply with approved=True normalizes provider coupling and restores symlink
+        # 5. Apply with approved=True normalizes provider coupling and applies to canonical library
         res = apply_candidate(
             candidate_name=external_name,
             category="workflow-and-automation",
@@ -375,10 +351,9 @@ Workflow automation content.
         self.assertNotIn("Claude", clean_content)
         self.assertIn("Agent", clean_content)
 
-        # Verify physical runtime folder replaced with canonical symlink
-        runtime_item = os.path.join(self.runtime_dir, external_name)
-        self.assertTrue(os.path.islink(runtime_item))
-        self.assertTrue(os.path.exists(runtime_item))
+        # Verify candidate applied to canonical library and manifest updated
+        self.assertIn(external_name, self.manifest.skills)
+        self.assertTrue(os.path.exists(target_dir))
 
     def test_scenario_g_skills_sh_brand_new_install(self):
         """
@@ -412,15 +387,8 @@ Functional documentation.
         self.assertEqual(matching[0].classification, "EXTERNAL_PHYSICAL")
 
         # 2. Stage to intake
-        sync_rep = reconcile_runtime_symlinks(
-            runtime_dir=self.runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-            dry_run=False,
-            stage_external=True,
-        )
-        self.assertIn(tool_name, sync_rep.staged_to_intake)
+        staged = self.stage_runtime_package_to_intake(tool_name, "EXTERNAL_PHYSICAL")
+        self.assertIn(tool_name, staged)
         staged_path = os.path.join(self.intake_dir, tool_name)
         self.assertTrue(os.path.exists(staged_path))
 
@@ -450,11 +418,8 @@ Functional documentation.
         canonical_dest = res["target_directory"]
         self.assertTrue(os.path.exists(canonical_dest))
 
-        # 5. Verify runtime directory is now a valid relative symbolic link
-        runtime_item = os.path.join(self.runtime_dir, tool_name)
-        self.assertTrue(os.path.islink(runtime_item))
-        self.assertTrue(os.path.exists(runtime_item))
-        self.assertFalse(os.path.isdir(runtime_item) and not os.path.islink(runtime_item))
+        # 5. Verify candidate registered in manifest
+        self.assertIn(tool_name, self.manifest.skills)
 
         # 6. Verify ledger record has real PASS statuses
         latest_change = self.ledger.get_history(limit=1)[0]
@@ -477,9 +442,12 @@ Functional documentation.
         managed_name = "existing-tool"
         runtime_pkg_dir = os.path.join(self.runtime_dir, managed_name)
 
-        # 1. Simulate skills.sh overwriting runtime symlink with a physical updated directory
-        self.assertTrue(os.path.islink(runtime_pkg_dir))
-        os.unlink(runtime_pkg_dir)
+        # 1. Simulate skills.sh writing an updated physical directory
+        if os.path.exists(runtime_pkg_dir):
+            if os.path.islink(runtime_pkg_dir):
+                os.unlink(runtime_pkg_dir)
+            else:
+                shutil.rmtree(runtime_pkg_dir)
         os.makedirs(os.path.join(runtime_pkg_dir, "scripts"), exist_ok=True)
 
         v2_skill_md = """---
@@ -504,16 +472,9 @@ Upgraded instructions for existing tool v2.
         diff_info = matching[0].installer_integration_info.get("diff_summary", "")
         self.assertIn("SKILL.md", diff_info)
 
-        # 3. Sync stages update to intake
-        sync_rep = reconcile_runtime_symlinks(
-            runtime_dir=self.runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-            dry_run=False,
-            stage_external=True,
-        )
-        self.assertTrue(any(managed_name in s and "EXTERNAL_UPDATE" in s for s in sync_rep.staged_to_intake))
+        # 3. Stage update to intake
+        staged = self.stage_runtime_package_to_intake(managed_name, "EXTERNAL_UPDATE")
+        self.assertIn(managed_name, staged)
         staged_path = os.path.join(self.intake_dir, managed_name)
         self.assertTrue(os.path.exists(staged_path))
 
@@ -561,10 +522,8 @@ Upgraded instructions for existing tool v2.
         self.assertIn("Standard automation helper v2", saved_content)
         self.assertTrue(os.path.exists(os.path.join(target_canonical, "scripts", "v2_action.py")))
 
-        # 8. Runtime symlink is safely restored
-        runtime_item = os.path.join(self.runtime_dir, managed_name)
-        self.assertTrue(os.path.islink(runtime_item))
-        self.assertTrue(os.path.exists(runtime_item))
+        # 8. Verify manifest records the managed skill
+        self.assertIn(managed_name, self.manifest.skills)
 
         # 9. Ledger recorded UPDATE with genuine PASS
         latest_change = self.ledger.get_history(limit=1)[0]
@@ -811,11 +770,6 @@ description: Autonomous system to identify and capture code bugs. Use when hunti
         # Assert manifest entry is preserved
         self.assertEqual(self.manifest.skills[managed_name], manifest_entry_before)
 
-        # Assert runtime symlink still points to canonical bug-hunter
-        runtime_item = os.path.join(self.runtime_dir, managed_name)
-        self.assertTrue(os.path.islink(runtime_item))
-        self.assertEqual(os.path.realpath(runtime_item), os.path.realpath(canonical_dir))
-
         # Assert proposed update is preserved in intake for review
         self.assertTrue(os.path.exists(cand_dir))
         self.assertTrue(os.path.exists(os.path.join(cand_dir, "scripts", "new_feature.py")))
@@ -827,14 +781,13 @@ description: Autonomous system to identify and capture code bugs. Use when hunti
         self.assertEqual(latest_change["validation_status"], "PASS")
         self.assertEqual(latest_change["pilot_status"], "FAIL")
 
-    def test_scenario_m_external_update_fails_pilot_restores_symlink(self):
-        """Scenario M (Regression Test): skills.sh external update fails pilot; restores prior canonical version, restores runtime symlink, and leaves update in intake."""
+    def test_scenario_m_external_update_fails_pilot_restores_canonical(self):
+        """Scenario M (Regression Test): skills.sh external update fails pilot; restores prior canonical version and leaves update in intake."""
         managed_name = "bug-hunter"
         canonical_dir = os.path.join(self.library_dir, "quality-and-security", "debugging", managed_name)
         runtime_item = os.path.join(self.runtime_dir, managed_name)
 
-        # 1. Start with managed symlink
-        self.assertTrue(os.path.islink(runtime_item))
+        # 1. Start with managed skill
         with open(os.path.join(canonical_dir, "SKILL.md"), "r", encoding="utf-8") as f:
             orig_skill_md_content = f.read()
         router_path = self.qs_router
@@ -842,8 +795,12 @@ description: Autonomous system to identify and capture code bugs. Use when hunti
             router_before = f.read()
         manifest_entry_before = copy.deepcopy(self.manifest.skills[managed_name])
 
-        # 2. skills.sh replaces symlink with physical updated directory
-        os.unlink(runtime_item)
+        # 2. skills.sh updates physical directory in runtime
+        if os.path.exists(runtime_item):
+            if os.path.islink(runtime_item):
+                os.unlink(runtime_item)
+            else:
+                shutil.rmtree(runtime_item)
         os.makedirs(runtime_item, exist_ok=True)
         with open(os.path.join(runtime_item, "SKILL.md"), "w", encoding="utf-8") as f:
             f.write("""---
@@ -859,18 +816,10 @@ description: Autonomous system to identify and capture code bugs. Use when hunti
             json.dump({"installer": "skills.sh", "version": "1.0"}, f)
 
         self.assertTrue(os.path.isdir(runtime_item))
-        self.assertFalse(os.path.islink(runtime_item))
 
-        # 3. Sync stages EXTERNAL_UPDATE to intake
-        sync_rep = reconcile_runtime_symlinks(
-            runtime_dir=self.runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-            dry_run=False,
-            stage_external=True,
-        )
-        self.assertTrue(any(managed_name in s and "EXTERNAL_UPDATE" in s for s in sync_rep.staged_to_intake))
+        # 3. Stage EXTERNAL_UPDATE to intake
+        staged = self.stage_runtime_package_to_intake(managed_name, "EXTERNAL_UPDATE")
+        self.assertIn(managed_name, staged)
         cand_dir = os.path.join(self.intake_dir, managed_name)
         self.assertTrue(os.path.exists(cand_dir))
 
@@ -905,18 +854,13 @@ description: Autonomous system to identify and capture code bugs. Use when hunti
         self.assertTrue(os.path.exists(cand_dir))
         self.assertTrue(os.path.exists(os.path.join(cand_dir, "scripts", "feature.py")))
 
-        # 7. Assert .agents/skills/<name> is restored as a symlink to previous canonical package
-        self.assertTrue(os.path.islink(runtime_item))
-        self.assertTrue(os.path.exists(runtime_item))
-        self.assertEqual(os.path.realpath(runtime_item), os.path.realpath(canonical_dir))
-
-        # 8. Assert manifest/router unchanged
+        # 7. Assert manifest/router unchanged
         with open(router_path, "r", encoding="utf-8") as f:
             router_after = f.read()
         self.assertEqual(router_before, router_after)
         self.assertEqual(self.manifest.skills[managed_name], manifest_entry_before)
 
-        # 9. Assert ledger records ROLLBACK
+        # 8. Assert ledger records ROLLBACK
         latest_change = self.ledger.get_history(limit=1)[0]
         self.assertEqual(latest_change["operation"], "UPDATE")
         self.assertEqual(latest_change["decision"], "ROLLBACK")
@@ -1065,15 +1009,12 @@ description: A test skill for global runtime. Use when testing global runtime op
         )
         self.manifest.save()
 
-        # Run sync inside sandbox with injected runtime_dir
-        report = reconcile_runtime_symlinks(
-            runtime_dir=self.global_runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-        )
-        self.assertIn(sentinel_name, report.created)
-        self.assertTrue((Path(self.global_runtime_dir) / sentinel_name).is_symlink())
+        # Simulate populating the isolated test runtime directory
+        sentinel_rt = Path(self.global_runtime_dir) / sentinel_name
+        sentinel_rt.mkdir(parents=True, exist_ok=True)
+        (sentinel_rt / "SKILL.md").write_text("isolated")
+
+        self.assertTrue((Path(self.global_runtime_dir) / sentinel_name).exists())
 
         # Assert unique sentinel was NEVER created in real home directory
         self.assertFalse((real_home_runtime / sentinel_name).exists())
@@ -1082,161 +1023,6 @@ description: A test skill for global runtime. Use when testing global runtime op
         if real_home_before is not None:
             real_home_after = set(os.listdir(real_home_runtime))
             self.assertEqual(real_home_before, real_home_after)
-
-    def test_03_empty_global_runtime_populated_with_individual_symlinks(self):
-        """3. Empty global runtime is populated from the manifest with individual symlinks."""
-        report = reconcile_runtime_symlinks(
-            runtime_dir=self.global_runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-        )
-        self.assertIn("test-skill", report.created)
-
-        # Verify individual symlink exists in the simulated global runtime
-        symlink_path = os.path.join(self.global_runtime_dir, "test-skill")
-        self.assertTrue(os.path.islink(symlink_path))
-        self.assertTrue(os.path.exists(symlink_path))
-        self.assertEqual(os.path.realpath(symlink_path), os.path.realpath(self.skill_canonical_dir))
-
-    def test_04_existing_valid_global_managed_symlinks_remain_unchanged(self):
-        """4. Existing valid global managed symlinks remain unchanged on re-sync."""
-        # Initial sync
-        reconcile_runtime_symlinks(
-            runtime_dir=self.global_runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-        )
-
-        # Second sync
-        report = reconcile_runtime_symlinks(
-            runtime_dir=self.global_runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-        )
-        self.assertEqual(len(report.created), 0)
-        self.assertEqual(len(report.repaired), 0)
-        self.assertIn("test-skill", report.verified)
-
-    def test_05_new_physical_skill_in_global_runtime_staged_to_intake(self):
-        """5. A new physical skill appearing in the global runtime is classified and staged as external intake."""
-        ext_dir = os.path.join(self.global_runtime_dir, "new-ext-skill")
-        os.makedirs(ext_dir, exist_ok=True)
-        with open(os.path.join(ext_dir, "SKILL.md"), "w", encoding="utf-8") as f:
-            f.write("---\nname: new-ext-skill\ndescription: External physical skill.\n---\n# External Skill\n")
-
-        report = reconcile_runtime_symlinks(
-            runtime_dir=self.global_runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-            stage_external=True,
-        )
-        self.assertIn("new-ext-skill", report.staged_to_intake)
-
-        staged_path = os.path.join(self.intake_dir, "new-ext-skill")
-        self.assertTrue(os.path.exists(staged_path))
-        self.assertTrue(os.path.exists(os.path.join(staged_path, ".installer-metadata.json")))
-
-    def test_06_managed_global_symlink_replaced_by_physical_dir_is_external_update(self):
-        """6. An existing managed global symlink replaced by a physical directory is classified as EXTERNAL_UPDATE."""
-        # Setup managed symlink
-        reconcile_runtime_symlinks(
-            runtime_dir=self.global_runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-        )
-
-        # Replace symlink with physical directory
-        skill_rt = os.path.join(self.global_runtime_dir, "test-skill")
-        os.unlink(skill_rt)
-        os.makedirs(skill_rt, exist_ok=True)
-        with open(os.path.join(skill_rt, "SKILL.md"), "w", encoding="utf-8") as f:
-            f.write("---\nname: test-skill\ndescription: Updated test skill externally.\n---\n# Updated Skill\n")
-
-        entries = scan_runtime(
-            runtime_dir=self.global_runtime_dir,
-            library_dir=self.library_dir,
-            manifest=self.manifest,
-        )
-        match = next((e for e in entries if e.name == "test-skill"), None)
-        self.assertIsNotNone(match)
-        self.assertEqual(match.classification, "EXTERNAL_UPDATE")
-
-    def test_07_failed_update_rollback_reconstructs_global_symlink(self):
-        """7. Failed UPDATE rollback reconstructs the global runtime symlink to the prior canonical package."""
-        # Initial sync establishes symlink
-        reconcile_runtime_symlinks(
-            runtime_dir=self.global_runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-        )
-        skill_rt = os.path.join(self.global_runtime_dir, "test-skill")
-        self.assertTrue(os.path.islink(skill_rt))
-
-        # Replace symlink with physical directory
-        os.unlink(skill_rt)
-        os.makedirs(skill_rt, exist_ok=True)
-        with open(os.path.join(skill_rt, "SKILL.md"), "w", encoding="utf-8") as f:
-            f.write("---\nname: test-skill\ndescription: External physical update. Use when testing update pilot rollback.\n---\n# Update\n")
-
-        # Stage to intake via reconcile_runtime_symlinks
-        sync_rep = reconcile_runtime_symlinks(
-            runtime_dir=self.global_runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-            dry_run=False,
-            stage_external=True,
-        )
-        self.assertTrue(any("test-skill" in s and "EXTERNAL_UPDATE" in s for s in sync_rep.staged_to_intake))
-
-        # Apply update with simulated pilot failure
-        simulated_pilot_fail = PilotResult(
-            skill_name="test-skill",
-            parent_router=self.router_path,
-            passed=False,
-            errors=["Simulated pilot failure"],
-        )
-        with patch("skill_library.intake.run_targeted_pilot", return_value=simulated_pilot_fail):
-            with self.assertRaises(RuntimeError):
-                apply_candidate(
-                    candidate_name="test-skill",
-                    approved=True,
-                    intake_dir=self.intake_dir,
-                    library_dir=self.library_dir,
-                    runtime_dir=self.global_runtime_dir,
-                    manifest=self.manifest,
-                    ledger=self.ledger,
-                )
-
-        # Verify global runtime symlink was reconstructed pointing to previous canonical package
-        self.assertTrue(os.path.islink(skill_rt))
-        self.assertTrue(os.path.exists(skill_rt))
-        self.assertEqual(os.path.realpath(skill_rt), os.path.realpath(self.skill_canonical_dir))
-
-    def test_08_four_way_validation_uses_global_runtime_targets(self):
-        """8. Four-way validation reconciles physical, router, manifest, and global runtime targets."""
-        # Sync runtime
-        reconcile_runtime_symlinks(
-            runtime_dir=self.global_runtime_dir,
-            library_dir=self.library_dir,
-            intake_dir=self.intake_dir,
-            manifest=self.manifest,
-        )
-
-        val_res = validate_library(
-            library_dir=self.library_dir,
-            runtime_dir=self.global_runtime_dir,
-            manifest=self.manifest,
-        )
-        self.assertTrue(val_res.set_reconciliation_passed)
-        self.assertEqual(val_res.total_managed_symlinks, 1)
-        self.assertEqual(len(val_res.broken_managed_symlinks), 0)
 
     def test_09_repo_local_agents_skills_not_required_or_generated(self):
         """9. Repo-local .agents/skills is no longer required or generated."""

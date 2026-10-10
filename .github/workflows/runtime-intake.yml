@@ -1,0 +1,82 @@
+name: Runtime Intake Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      incoming_branch:
+        description: 'Name of incoming branch (e.g. incoming/20261008...)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  process-incoming:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Convert Incoming Snapshot to Intake Branch
+        id: convert
+        env:
+          INCOMING_REF: ${{ inputs.incoming_branch }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          echo "Processing incoming branch: $INCOMING_REF"
+          python3 tools/skill-library.py convert-incoming --incoming-branch "$INCOMING_REF"
+          INTAKE_BRANCH="intake/${INCOMING_REF#incoming/}"
+          echo "incoming_ref=$INCOMING_REF" >> "$GITHUB_OUTPUT"
+          echo "intake_branch=$INTAKE_BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Evaluate Staged Intake Candidates
+        id: evaluate
+        run: |
+          python3 tools/skill-library.py intake --strict --output-report /tmp/intake-report.md
+
+      - name: Push Intake Branch
+        run: |
+          INTAKE_BRANCH="${{ steps.convert.outputs.intake_branch }}"
+          git push origin "$INTAKE_BRANCH:$INTAKE_BRANCH"
+
+      - name: Generate Intake PR Body
+        env:
+          INCOMING_REF: ${{ steps.convert.outputs.incoming_ref }}
+        run: |
+          echo "Automated intake PR generated from runtime snapshot branch \`${INCOMING_REF}\`." > /tmp/pr-body.md
+          echo "" >> /tmp/pr-body.md
+          echo "### Intake Evaluation Gate Summary" >> /tmp/pr-body.md
+          echo '```' >> /tmp/pr-body.md
+          if [ -f /tmp/intake-report.md ]; then
+            cat /tmp/intake-report.md >> /tmp/pr-body.md
+          else
+            echo "No evaluation report generated." >> /tmp/pr-body.md
+          fi
+          echo '```' >> /tmp/pr-body.md
+          echo "" >> /tmp/pr-body.md
+          echo "Please review compatibility, documentation standards, and semantic duplicates before merging." >> /tmp/pr-body.md
+
+      - name: Open Intake Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INCOMING_REF: ${{ steps.convert.outputs.incoming_ref }}
+          INTAKE_BRANCH: ${{ steps.convert.outputs.intake_branch }}
+        run: |
+          gh pr create \
+            --base main \
+            --head "$INTAKE_BRANCH" \
+            --title "Intake: Review incoming runtime skills [${INCOMING_REF}]" \
+            --body-file /tmp/pr-body.md
+
+

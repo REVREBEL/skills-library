@@ -132,6 +132,7 @@ def evaluate_candidate(
     intake_dir: str = INTAKE_DIR,
     library_dir: str = LIBRARY_DIR,
     manifest: Optional[RuntimeManifest] = None,
+    repo_root: Optional[str] = None,
 ) -> IntakeEvaluation:
     """Evaluates a candidate package against the canonical library."""
     candidate_path = os.path.join(intake_dir, candidate_name)
@@ -139,6 +140,8 @@ def evaluate_candidate(
         candidate_name=candidate_name,
         source_dir=candidate_path,
     )
+    if not repo_root:
+        repo_root = os.path.dirname(os.path.normpath(library_dir))
 
     if not os.path.exists(candidate_path):
         eval_result.is_valid_package = False
@@ -148,19 +151,43 @@ def evaluate_candidate(
 
     m = manifest or RuntimeManifest()
 
-    # Check for installer metadata indicating an EXTERNAL_UPDATE
+    # Check for installer metadata indicating an EXTERNAL_UPDATE, EXTERNAL_DELETE, or EXTERNAL_RENAME
     meta_file = os.path.join(candidate_path, ".installer-metadata.json")
     is_external_update = False
+    is_external_delete = False
+    is_external_rename = False
     existing_canonical_path = ""
+    meta: Dict[str, Any] = {}
     if os.path.exists(meta_file):
         try:
             with open(meta_file, "r", encoding="utf-8") as mf:
                 meta = json.load(mf)
-                if meta.get("type") == "external_update":
+                classification = meta.get("classification", "")
+                if meta.get("type") == "external_update" or classification == "EXTERNAL_UPDATE":
                     is_external_update = True
+                    existing_canonical_path = meta.get("target_canonical_path", "")
+                elif classification == "EXTERNAL_DELETE":
+                    is_external_delete = True
+                    existing_canonical_path = meta.get("target_canonical_path", "")
+                elif classification == "EXTERNAL_RENAME":
+                    is_external_rename = True
                     existing_canonical_path = meta.get("target_canonical_path", "")
         except Exception:
             pass
+
+    if (is_external_update or is_external_delete or is_external_rename) and not existing_canonical_path and candidate_name in m.skills:
+        existing_canonical_path = m.skills[candidate_name].get("canonical_path", "")
+
+    if is_external_delete:
+        eval_result.is_valid_package = True
+        eval_result.is_update = False
+        eval_result.recommended_decision = "HOLD"
+        eval_result.approval_required = True
+        eval_result.target_canonical_path = existing_canonical_path
+        eval_result.approval_reasons.append(
+            f"External deletion proposal for '{existing_canonical_path}'. Review-only proposal."
+        )
+        return eval_result
 
     # 1. Package Structure & Validation
     pkg = scan_candidate_directory(candidate_path, name=candidate_name)
@@ -174,6 +201,16 @@ def evaluate_candidate(
     if not val_rep.is_valid:
         eval_result.is_valid_package = False
         eval_result.errors.extend(val_rep.errors)
+
+    if is_external_rename:
+        eval_result.approval_required = True
+        old_rt = meta.get("old_runtime_path", "")
+        new_rt = meta.get("new_runtime_path", "")
+        eval_result.target_canonical_path = existing_canonical_path
+        eval_result.approval_reasons.append(
+            f"External rename proposal from '{old_rt}' to '{new_rt}'. Review-only proposal."
+        )
+        eval_result.recommended_decision = "HOLD"
 
     # 2. Provider Coupling & Workstation Paths
     if pkg.provider_assumptions:
@@ -242,24 +279,44 @@ def evaluate_candidate(
         )
         return eval_result
 
-    # Brand new candidate categorization
-    eval_result.assigned_category = pkg.suggested_category
-    eval_result.assigned_subcategory = pkg.suggested_subcategory
-    if pkg.suggested_category in DEEP_CATEGORIES:
-        eval_result.target_router_path = f"library/{pkg.suggested_category}/{pkg.suggested_subcategory}/SKILL.md"
+    if is_external_rename and existing_canonical_path:
+        eval_result.target_canonical_path = existing_canonical_path
+        parts = existing_canonical_path.strip("/").split("/")
+        if len(parts) >= 3:
+            eval_result.assigned_category = parts[1]
+            eval_result.assigned_subcategory = parts[2]
+        if eval_result.assigned_category in DEEP_CATEGORIES:
+            eval_result.target_router_path = f"library/{eval_result.assigned_category}/{eval_result.assigned_subcategory}/SKILL.md"
+        else:
+            eval_result.target_router_path = f"library/{eval_result.assigned_category}/SKILL.md"
     else:
-        eval_result.target_router_path = f"library/{pkg.suggested_category}/SKILL.md"
+        # Brand new candidate categorization
+        eval_result.assigned_category = pkg.suggested_category
+        eval_result.assigned_subcategory = pkg.suggested_subcategory
+        if pkg.suggested_category in DEEP_CATEGORIES:
+            eval_result.target_router_path = f"library/{pkg.suggested_category}/{pkg.suggested_subcategory}/SKILL.md"
+        else:
+            eval_result.target_router_path = f"library/{pkg.suggested_category}/SKILL.md"
 
-    eval_result.target_canonical_path = f"library/{pkg.suggested_category}/{pkg.suggested_subcategory}/{candidate_name}"
+        eval_result.target_canonical_path = f"library/{pkg.suggested_category}/{pkg.suggested_subcategory}/{candidate_name}"
 
     # 4. Compare against Canonical Library (Semantic Overlap & Name Collisions)
     candidate_tokens = tokenize(candidate_name + " " + pkg.description)
+    base_candidate_name = re.sub(r"[_vV\-](\d+|v\d+)$", "", candidate_name)
+    has_counter_suffix = (base_candidate_name != candidate_name)
 
     # Direct name collision check
     if candidate_name in m.skills:
         eval_result.name_collision = True
         eval_result.approval_required = True
         eval_result.approval_reasons.append(f"Name collision with existing runtime skill '{candidate_name}'")
+
+    if has_counter_suffix and base_candidate_name in m.skills:
+        eval_result.name_collision = True
+        eval_result.approval_required = True
+        eval_result.approval_reasons.append(
+            f"Candidate '{candidate_name}' uses synthetic counter/version suffix masking existing skill '{base_candidate_name}'"
+        )
 
     # Compare with existing skills
     competitor_scores = []
@@ -290,10 +347,11 @@ def evaluate_candidate(
     # Decision Matrix
     top_sim = competitor_scores[0]["similarity"] if competitor_scores else 0.0
 
-    if eval_result.name_collision and top_sim >= 0.75:
+    if eval_result.name_collision and (top_sim >= 0.50 or (has_counter_suffix and base_candidate_name in m.skills)):
         eval_result.recommended_decision = "REJECT"
         eval_result.approval_required = True
-        eval_result.approval_reasons.append(f"True duplicate of existing skill '{competitor_scores[0]['name']}'")
+        matched_target = base_candidate_name if (has_counter_suffix and base_candidate_name in m.skills) else (competitor_scores[0]['name'] if competitor_scores else candidate_name)
+        eval_result.approval_reasons.append(f"True duplicate of existing skill '{matched_target}'")
     elif top_sim >= 0.55:
         eval_result.recommended_decision = "MERGE"
         eval_result.approval_required = True
@@ -315,6 +373,10 @@ def evaluate_candidate(
         eval_result.approval_required = True
     else:
         eval_result.recommended_decision = "NEW"
+
+    if is_external_rename:
+        eval_result.recommended_decision = "HOLD"
+        eval_result.approval_required = True
 
     return eval_result
 
@@ -407,6 +469,23 @@ def apply_candidate(
 
     m = manifest or RuntimeManifest()
     eval_res = evaluate_candidate(candidate_name, intake_dir=intake_dir, library_dir=library_dir, manifest=m)
+
+    # Check if candidate is an EXTERNAL_DELETE or EXTERNAL_RENAME review-only proposal
+    meta_file = os.path.join(src_dir, ".installer-metadata.json")
+    if os.path.exists(meta_file):
+        try:
+            with open(meta_file, "r", encoding="utf-8") as mf:
+                mdata = json.load(mf)
+                cls_type = mdata.get("classification")
+                if cls_type in ("EXTERNAL_DELETE", "EXTERNAL_RENAME"):
+                    raise PermissionError(
+                        f"Candidate '{candidate_name}' has classification '{cls_type}' and is a review-only proposal. "
+                        "Automatic canonical modification is prohibited."
+                    )
+        except PermissionError:
+            raise
+        except Exception:
+            pass
 
     # Enforce Human Approval Gate (Finding 3)
     if eval_res.approval_required and not approved:
@@ -506,17 +585,6 @@ def apply_candidate(
             with open(router_path, "r", encoding="utf-8") as rf:
                 orig_router_content = rf.read()
 
-        runtime_item_path = os.path.join(runtime_dir, runtime_name)
-        candidate_runtime_path = os.path.join(runtime_dir, candidate_name)
-        orig_runtime_states = {}
-        for p in {runtime_item_path, candidate_runtime_path}:
-            if os.path.islink(p):
-                orig_runtime_states[p] = ("symlink", os.readlink(p))
-            elif os.path.isdir(p):
-                orig_runtime_states[p] = ("dir", None)
-            else:
-                orig_runtime_states[p] = ("missing", None)
-
         canonical_rel = os.path.relpath(target_dir, repo_root).replace(os.sep, "/")
         router_rel = os.path.relpath(router_path, repo_root).replace(os.sep, "/")
 
@@ -549,20 +617,7 @@ def apply_candidate(
                 except Exception:
                     pass
 
-                # 4. Explicitly restore runtime symlink to restored canonical package
-                try:
-                    rel_target_canonical = _safe_relpath(target_dir, runtime_dir)
-                    for p in {runtime_item_path, candidate_runtime_path}:
-                        if os.path.lexists(p):
-                            if os.path.islink(p) or os.path.isfile(p):
-                                os.unlink(p)
-                            elif os.path.isdir(p):
-                                shutil.rmtree(p)
-                    os.symlink(rel_target_canonical, runtime_item_path)
-                except Exception:
-                    pass
-
-                # 5. Restore candidate in intake for review
+                # 4. Restore candidate in intake for review
                 try:
                     if not os.path.exists(src_dir) and os.path.exists(candidate_backup_path):
                         shutil.copytree(candidate_backup_path, src_dir)
@@ -593,20 +648,7 @@ def apply_candidate(
                 except Exception:
                     pass
 
-                # 4. Remove/revert runtime symlink
-                try:
-                    for p, (stype, sval) in orig_runtime_states.items():
-                        if os.path.lexists(p):
-                            if os.path.islink(p) or os.path.isfile(p):
-                                os.unlink(p)
-                            elif os.path.isdir(p):
-                                shutil.rmtree(p)
-                        if stype == "symlink" and sval is not None:
-                            os.symlink(sval, p)
-                except Exception:
-                    pass
-
-                # 5. Restore candidate in intake
+                # 4. Restore candidate in intake
                 try:
                     if not os.path.exists(src_dir) and os.path.exists(candidate_backup_path):
                         shutil.copytree(candidate_backup_path, src_dir)
@@ -682,21 +724,7 @@ def apply_candidate(
             )
             m.save()
 
-            # Step F: Update Runtime Symlinks
-            rel_target = _safe_relpath(target_dir, runtime_dir)
-            for p in {runtime_item_path, candidate_runtime_path}:
-                if os.path.isdir(p) and not os.path.islink(p):
-                    shutil.rmtree(p)
-                    os.symlink(rel_target, p)
-                elif not os.path.lexists(p):
-                    os.symlink(rel_target, p)
-                elif os.path.islink(p):
-                    current = os.path.normpath(os.path.join(runtime_dir, os.readlink(p)))
-                    if current != os.path.normpath(target_dir):
-                        os.unlink(p)
-                        os.symlink(rel_target, p)
-
-            # Step G: Execute Post-Install Validation & Targeted Pilot Checks
+            # Step F: Execute Post-Install Validation & Targeted Pilot Checks
             val_res = validate_single_skill(target_dir)
             val_status = "PASS" if val_res.is_valid else "FAIL"
 
@@ -750,7 +778,6 @@ def apply_candidate(
         "candidate_name": candidate_name,
         "canonical_name": final_name,
         "runtime_name": runtime_name,
-        "runtime_symlink": runtime_item_path,
         "operation": operation,
         "target_directory": target_dir,
         "router_updated": router_path,

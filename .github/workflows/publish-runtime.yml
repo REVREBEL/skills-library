@@ -1,0 +1,36 @@
+name: Publish Runtime Branch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'library/**'
+  workflow_dispatch:
+
+concurrency:
+  group: publish-runtime
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Publish Runtime Branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          python3 tools/skill-library.py publish-runtime --push

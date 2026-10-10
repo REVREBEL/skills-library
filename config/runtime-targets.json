@@ -1,0 +1,25 @@
+{
+  "repository": "REVREBEL/skills-library",
+  "remote_url": "https://github.com/REVREBEL/skills-library.git",
+  "runtime_branch": "runtime",
+  "targets": [
+    {
+      "name": "universal-global",
+      "path": "~/.agents/skills",
+      "mode": "full",
+      "accept_external_intake": true,
+      "enabled": true
+    },
+    {
+      "name": "antigravity-global",
+      "path": "~/.gemini/config/skills",
+      "mode": "subset",
+      "include": [
+        "design-and-experience/design-systems",
+        "github-operations"
+      ],
+      "accept_external_intake": false,
+      "enabled": false
+    }
+  ]
+}

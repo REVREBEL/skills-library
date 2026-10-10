@@ -102,6 +102,18 @@ def scan_candidate_directory(pkg_dir: str, name: Optional[str] = None) -> Candid
 
     skill_md = os.path.join(pkg_dir, "SKILL.md")
     if not os.path.exists(skill_md):
+        meta_file = os.path.join(pkg_dir, ".installer-metadata.json")
+        if os.path.exists(meta_file):
+            try:
+                import json
+                with open(meta_file, "r", encoding="utf-8") as mf:
+                    meta = json.load(mf)
+                    if meta.get("classification") == "EXTERNAL_DELETE":
+                        pkg.installer_metadata = meta
+                        pkg.description = f"Proposal to delete {meta.get('runtime_path', pkg_name)}"
+                        return pkg
+            except Exception:
+                pass
         pkg.issues.append("Missing SKILL.md")
         return pkg
 

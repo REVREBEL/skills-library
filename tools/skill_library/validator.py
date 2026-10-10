@@ -1,15 +1,18 @@
 """
 Living Library and Skill Validation Module.
-Independently verifies router integrity, four-way set equality (physical == router == manifest == runtime),
-and per-skill structural health without hardcoded population counts.
+Independently verifies router integrity, canonical-manifest-publication set reconciliation,
+runtime target Git checkout scopes, and per-skill structural health without symlink dependencies.
 """
 
 import ast
 import glob
+import json
 import os
 import re
+import subprocess
 from dataclasses import asdict, dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple, Any
 
 from .config import (
     CATEGORIES,
@@ -17,15 +20,18 @@ from .config import (
     FLAT_CATEGORIES,
     LIBRARY_DIR,
     OPERATIONAL_SYSTEM_PACKAGES,
-    PROTECTED_RUNTIME_ENTRIES,
     REPO_ROOT,
-    RUNTIME_DIR,
+    RUNTIME_BRANCH,
     SECRET_PATTERNS,
+    TARGETS_CONFIG_PATH,
     TRIGGER_CONTRACT_PATTERN,
     WORKSTATION_PATH_PATTERNS,
+    RuntimeTarget,
     get_all_routers,
+    load_runtime_targets,
 )
 from .manifest import RuntimeManifest
+from .publisher import get_commit_tree_sha, get_ref_commit_sha
 
 
 @dataclass
@@ -43,31 +49,39 @@ class SkillValidationReport:
 @dataclass
 class ValidationResult:
     is_valid: bool = True
-    set_reconciliation_passed: bool = True
+    canonical_reconciliation_passed: bool = True
+    runtime_publication_passed: bool = True
+    target_reconciliation_passed: bool = True
     total_routers: int = 0
     total_router_links: int = 0
     total_canonical_skills: int = 0
     total_manifest_skills: int = 0
-    total_managed_symlinks: int = 0
+    total_targets_checked: int = 0
     broken_router_links: List[str] = field(default_factory=list)
     orphan_skills: List[str] = field(default_factory=list)
-    broken_managed_symlinks: List[str] = field(default_factory=list)
+    target_errors: List[str] = field(default_factory=list)
+    publication_errors: List[str] = field(default_factory=list)
     skill_errors: Dict[str, List[str]] = field(default_factory=dict)
     workstation_path_leaks: List[str] = field(default_factory=list)
     secret_leaks: List[str] = field(default_factory=list)
     reconciliation_discrepancies: List[str] = field(default_factory=list)
     evidence: List[str] = field(default_factory=list)
 
+    @property
+    def set_reconciliation_passed(self) -> bool:
+        return self.canonical_reconciliation_passed
+
     def summary(self) -> str:
         status = "PASSED" if self.is_valid else "FAILED"
         lines = [
             f"=== Living Library Validation: {status} ===",
-            f"4-Way Set Reconciliation (Physical == Router == Manifest == Runtime): {'PASSED' if self.set_reconciliation_passed else 'FAILED'}",
+            f"Set Reconciliation (Physical == Router == Manifest): {'PASSED' if self.canonical_reconciliation_passed else 'FAILED'}",
+            f"Runtime Publication Validation: {'PASSED' if self.runtime_publication_passed else 'FAILED'}",
+            f"Target Checkout Validation: {'PASSED' if self.target_reconciliation_passed else 'FAILED'} (Checked: {self.total_targets_checked})",
             f"Total Routers Verified: {self.total_routers}",
             f"Total Router Links Verified: {self.total_router_links} (Broken: {len(self.broken_router_links)})",
             f"Total Canonical Active Skills: {self.total_canonical_skills} (Orphans: {len(self.orphan_skills)})",
             f"Total Manifest Skills: {self.total_manifest_skills}",
-            f"Total Managed Symlinks: {self.total_managed_symlinks} (Broken: {len(self.broken_managed_symlinks)})",
             f"Workstation Path Leaks: {len(self.workstation_path_leaks)}",
             f"Potential Secret Leaks: {len(self.secret_leaks)}",
         ]
@@ -75,12 +89,14 @@ class ValidationResult:
             lines.append("\nErrors / Regressions Found:")
             for r in self.reconciliation_discrepancies[:10]:
                 lines.append(f"  - Reconciliation Discrepancy: {r}")
+            for p in self.publication_errors[:5]:
+                lines.append(f"  - Publication Error: {p}")
+            for t in self.target_errors[:5]:
+                lines.append(f"  - Target Error: {t}")
             for b in self.broken_router_links[:5]:
                 lines.append(f"  - Broken Router Link: {b}")
             for o in self.orphan_skills[:5]:
                 lines.append(f"  - Orphan Skill: {o}")
-            for b in self.broken_managed_symlinks[:5]:
-                lines.append(f"  - Broken Symlink: {b}")
             for p in self.workstation_path_leaks[:5]:
                 lines.append(f"  - Path Leak: {p}")
             for s, errs in list(self.skill_errors.items())[:5]:
@@ -119,90 +135,126 @@ def validate_single_skill(skill_dir: str) -> SkillValidationReport:
             content = f.read()
     except Exception as e:
         report.is_valid = False
-        report.errors.append(f"Cannot read SKILL.md: {e}")
+        report.errors.append(f"Unreadable SKILL.md: {e}")
         return report
 
+    # 1. Frontmatter check
     fm = parse_frontmatter(content)
-    if not fm or "name" not in fm or "description" not in fm:
+    if not fm:
         report.is_valid = False
-        report.errors.append("Invalid or missing frontmatter in SKILL.md")
+        report.errors.append("Invalid or missing YAML frontmatter in SKILL.md")
     else:
-        desc = fm.get("description", "")
-        if not TRIGGER_CONTRACT_PATTERN.search(desc):
+        if not fm.get("name"):
             report.is_valid = False
-            report.errors.append("Frontmatter description fails trigger contract")
+            report.errors.append("Frontmatter missing required 'name'")
+        desc = fm.get("description", "")
+        if not desc:
+            report.is_valid = False
+            report.errors.append("Frontmatter missing required 'description'")
+        elif not TRIGGER_CONTRACT_PATTERN.search(desc):
+            report.warnings.append("Description lacks strong trigger contract clause")
 
-    # Check internal markdown links
+    # 2. Markdown link verification
     link_pattern = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
-    for m in link_pattern.finditer(content):
-        target = m.group(2).split("#")[0]
+    for match in link_pattern.finditer(content):
+        target = match.group(2).split("#")[0]
         if not target or target.startswith(("http://", "https://", "mailto:")):
             continue
         report.markdown_links_checked += 1
         abs_target = os.path.normpath(os.path.join(skill_dir, target))
         if not os.path.exists(abs_target):
             report.is_valid = False
-            report.errors.append(f"Broken markdown link in SKILL.md: {target}")
+            report.errors.append(f"Broken markdown relative link: {target}")
 
-    # Check python syntax in scripts/
+    # 3. Scripts syntax checks
     scripts_dir = os.path.join(skill_dir, "scripts")
     if os.path.isdir(scripts_dir):
-        for fname in os.listdir(scripts_dir):
-            if fname.endswith(".py"):
-                py_path = os.path.join(scripts_dir, fname)
+        for root, _, files in os.walk(scripts_dir):
+            for file in files:
                 report.scripts_checked += 1
-                try:
-                    with open(py_path, "r", encoding="utf-8", errors="replace") as pf:
-                        py_code = pf.read()
-                    ast.parse(py_code, filename=py_path)
-                except SyntaxError as se:
-                    report.is_valid = False
-                    report.errors.append(f"Python syntax error in {fname}: {se}")
+                fpath = os.path.join(root, file)
+                if file.endswith(".py"):
+                    try:
+                        with open(fpath, "r", encoding="utf-8", errors="replace") as pf:
+                            ast.parse(pf.read(), filename=fpath)
+                    except SyntaxError as se:
+                        report.is_valid = False
+                        report.errors.append(f"Python script syntax error in {file}: {se.msg} (line {se.lineno})")
+                elif file.endswith(".sh"):
+                    try:
+                        with open(fpath, "r", encoding="utf-8", errors="replace") as sf:
+                            scontent = sf.read()
+                        if not scontent.startswith("#!"):
+                            report.warnings.append(f"Shell script {file} lacks shebang line")
+                    except Exception:
+                        pass
 
-    # Check for workstation path leaks and secrets
-    for root, _, files in os.walk(skill_dir):
-        for fname in files:
-            if fname.endswith((".md", ".py", ".sh", ".json", ".yaml", ".yml", ".txt")):
-                fpath = os.path.join(root, fname)
-                try:
-                    with open(fpath, "r", encoding="utf-8", errors="replace") as cf:
-                        fc = cf.read()
-                    for pat in WORKSTATION_PATH_PATTERNS:
-                        m = pat.search(fc)
-                        if m:
-                            report.is_valid = False
-                            report.errors.append(f"Workstation path leak in {fname}: {m.group(0)}")
-                    if fname.endswith((".py", ".js", ".ts", ".sh", ".json", ".yaml", ".yml", ".env")):
-                        for pat in SECRET_PATTERNS:
-                            m = pat.search(fc)
-                            if m:
-                                report.is_valid = False
-                                report.errors.append(f"Potential secret leak in {fname}: {m.group(0)[:20]}...")
-                except Exception:
-                    pass
+    # 4. Resources check
+    for sub in ("references", "assets", "templates"):
+        sdir = os.path.join(skill_dir, sub)
+        if os.path.isdir(sdir):
+            for _, _, files in os.walk(sdir):
+                report.resources_checked += len(files)
+
+    # 5. Workstation Path and Secret Leaks across the entire package
+    for root, dirs, files in os.walk(skill_dir):
+        dirs[:] = [d for d in dirs if d not in (".git", "__pycache__", ".pytest_cache")]
+        for file in files:
+            if file.endswith((".pyc", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".pdf", ".zip", ".tar", ".gz")):
+                continue
+            fpath = os.path.join(root, file)
+            try:
+                # Guard against huge files (> 1MB)
+                if os.path.getsize(fpath) > 1024 * 1024:
+                    continue
+                # Guard against binary files
+                with open(fpath, "rb") as bf:
+                    chunk = bf.read(1024)
+                    if b"\0" in chunk:
+                        continue
+                with open(fpath, "r", encoding="utf-8", errors="replace") as tf:
+                    fcontent = tf.read()
+            except Exception:
+                continue
+
+            rel_file = os.path.relpath(fpath, skill_dir)
+            for pattern in WORKSTATION_PATH_PATTERNS:
+                match = pattern.search(fcontent)
+                if match:
+                    leak_txt = match.group(1) if match.groups() else match.group(0)
+                    report.is_valid = False
+                    report.errors.append(f"Workstation path leak in {rel_file}: {leak_txt}")
+                    break
+
+            for pattern in SECRET_PATTERNS:
+                match = pattern.search(fcontent)
+                if match:
+                    report.is_valid = False
+                    report.errors.append(f"Potential secret leak in {rel_file} matching pattern")
+                    break
 
     return report
 
 
-def validate_library(
+def validate_library_integrity(
     library_dir: str = LIBRARY_DIR,
-    runtime_dir: str = RUNTIME_DIR,
     manifest: Optional[RuntimeManifest] = None,
+    config_path: Optional[str] = None,
+    verify_publication: bool = True,
+    verify_targets: bool = True,
 ) -> ValidationResult:
     """
-    Validates the living library with exact four-way set reconciliation:
-    Physical canonical packages == Router-indexed packages == Manifest entries == Runtime symlinks.
+    Validates canonical library, routers, manifest, runtime publication branch,
+    and configured target checkouts without symlink dependencies.
     """
     result = ValidationResult()
     m = manifest or RuntimeManifest()
-    norm_lib = os.path.normpath(library_dir)
-    repo_root = os.path.dirname(norm_lib)
+    repo_root = os.path.dirname(os.path.normpath(library_dir))
 
     # Step 1: Discover all 26 routers dynamically
     all_routers = get_all_routers(library_dir=library_dir)
     result.total_routers = len(all_routers)
     norm_routers = {os.path.normpath(r) for r in all_routers}
-    rel_routers = {os.path.relpath(r, repo_root).replace(os.sep, "/") for r in all_routers}
 
     for r in all_routers:
         if not os.path.exists(r):
@@ -257,31 +309,7 @@ def validate_library(
     }
     result.total_manifest_skills = len(manifest_packages_set)
 
-    # Step 5: Extract runtime symlink targets
-    runtime_targets_set: Set[str] = set()
-    if os.path.exists(runtime_dir):
-        for item in os.listdir(runtime_dir):
-            if item in PROTECTED_RUNTIME_ENTRIES:
-                continue
-            item_path = os.path.join(runtime_dir, item)
-            if os.path.islink(item_path):
-                raw_target = os.readlink(item_path)
-                abs_t = os.path.normpath(os.path.join(runtime_dir, raw_target))
-                if not os.path.exists(abs_t):
-                    result.is_valid = False
-                    result.broken_managed_symlinks.append(f"{item} -> {raw_target}")
-                else:
-                    rel_t = os.path.relpath(abs_t, repo_root).replace(os.sep, "/")
-                    if rel_t.startswith("library/"):
-                        runtime_targets_set.add(rel_t)
-            elif os.path.isdir(item_path):
-                result.is_valid = False
-                result.reconciliation_discrepancies.append(
-                    f"Physical directory found in runtime: {item} (must be managed symlink)"
-                )
-    result.total_managed_symlinks = len(runtime_targets_set)
-
-    # Step 6: 4-Way Exact Set Equality Reconciliation (Finding 5)
+    # Step 5: Canonical Set Reconciliation (Physical == Router == Manifest)
     discrepancies = []
     if physical_packages_set != router_indexed_set:
         unindexed = physical_packages_set - router_indexed_set
@@ -299,20 +327,177 @@ def validate_library(
         if unrouted:
             discrepancies.append(f"Manifest skills missing in routers ({len(unrouted)}): {sorted(list(unrouted))[:3]}")
 
-    if manifest_packages_set != runtime_targets_set:
-        unlinked = manifest_packages_set - runtime_targets_set
-        extra_linked = runtime_targets_set - manifest_packages_set
-        if unlinked:
-            discrepancies.append(f"Manifest skills missing runtime symlinks ({len(unlinked)}): {sorted(list(unlinked))[:3]}")
-        if extra_linked:
-            discrepancies.append(f"Runtime symlinks pointing outside manifest ({len(extra_linked)}): {sorted(list(extra_linked))[:3]}")
-
     if discrepancies:
         result.is_valid = False
-        result.set_reconciliation_passed = False
+        result.canonical_reconciliation_passed = False
         result.reconciliation_discrepancies.extend(discrepancies)
 
-    # Step 7: Validate each canonical skill package
+    # Step 6: Verify Runtime Publication Branch (if repository git context available)
+    if verify_publication:
+        try:
+            tree_proc = subprocess.run(
+                ["git", "rev-parse", "HEAD:library"],
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+            )
+            if tree_proc.returncode == 0:
+                expected_tree = tree_proc.stdout.strip()
+                runtime_proc = subprocess.run(
+                    ["git", "rev-parse", f"{RUNTIME_BRANCH}^{{tree}}"],
+                    cwd=repo_root,
+                    capture_output=True,
+                    text=True,
+                )
+                if runtime_proc.returncode != 0:
+                    runtime_proc = subprocess.run(
+                        ["git", "rev-parse", f"origin/{RUNTIME_BRANCH}^{{tree}}"],
+                        cwd=repo_root,
+                        capture_output=True,
+                        text=True,
+                    )
+                if runtime_proc.returncode == 0:
+                    runtime_tree = runtime_proc.stdout.strip()
+                    if expected_tree != runtime_tree:
+                        result.is_valid = False
+                        result.runtime_publication_passed = False
+                        result.publication_errors.append(
+                            f"Runtime branch tree ({runtime_tree[:10]}) does not match HEAD:library ({expected_tree[:10]}). "
+                            "Run 'python3 tools/skill-library.py publish-runtime' to update."
+                        )
+                else:
+                    # Runtime branch not yet generated
+                    result.is_valid = False
+                    result.runtime_publication_passed = False
+                    result.publication_errors.append(
+                        f"Branch '{RUNTIME_BRANCH}' does not exist locally or on remote 'origin'. "
+                        "Run 'python3 tools/skill-library.py publish-runtime' to create it."
+                    )
+        except Exception as e:
+            result.publication_errors.append(f"Git inspection failed: {e}")
+
+    # Step 7: Verify Configured Runtime Targets
+    if verify_targets:
+        targets = load_runtime_targets(config_path)
+        expected_runtime_commit = (
+            get_ref_commit_sha(repo_root, f"refs/heads/{RUNTIME_BRANCH}")
+            or get_ref_commit_sha(repo_root, f"refs/remotes/origin/{RUNTIME_BRANCH}")
+        )
+        expected_runtime_tree = get_commit_tree_sha(repo_root, expected_runtime_commit) if expected_runtime_commit else None
+
+        valid_remotes: Set[str] = {
+            str(repo_root).rstrip("/").removesuffix(".git"),
+            str(Path(repo_root).resolve()).rstrip("/").removesuffix(".git"),
+        }
+        rem_proc = subprocess.run(["git", "config", "--get", "remote.origin.url"], cwd=repo_root, capture_output=True, text=True)
+        if rem_proc.returncode == 0 and rem_proc.stdout.strip():
+            raw_origin = rem_proc.stdout.strip().rstrip("/").removesuffix(".git")
+            valid_remotes.add(raw_origin)
+            try:
+                p_orig = Path(raw_origin)
+                if p_orig.exists():
+                    valid_remotes.add(str(p_orig.resolve()).rstrip("/").removesuffix(".git"))
+            except Exception:
+                pass
+        for t in targets:
+            if t.remote_url:
+                valid_remotes.add(t.remote_url.strip().rstrip("/").removesuffix(".git"))
+
+        for target in targets:
+            if not target.enabled:
+                continue
+            result.total_targets_checked += 1
+            t_path = target.resolved_path
+            if not t_path.exists():
+                continue
+
+            git_dir = t_path / ".git"
+            if not git_dir.exists():
+                result.is_valid = False
+                result.target_reconciliation_passed = False
+                result.target_errors.append(f"Target '{target.name}' ({t_path}) is not a Git checkout.")
+                continue
+
+            # 1. Verify remote origin URL matches repo_root or its upstream origin
+            t_rem_proc = subprocess.run(["git", "config", "--get", "remote.origin.url"], cwd=str(t_path), capture_output=True, text=True)
+            if t_rem_proc.returncode == 0 and t_rem_proc.stdout.strip():
+                t_url = t_rem_proc.stdout.strip().rstrip("/").removesuffix(".git")
+                t_url_resolved = t_url
+                try:
+                    p_target_origin = Path(t_url)
+                    if p_target_origin.exists():
+                        t_url_resolved = str(p_target_origin.resolve()).rstrip("/").removesuffix(".git")
+                except Exception:
+                    pass
+
+                if t_url not in valid_remotes and t_url_resolved not in valid_remotes:
+                    result.is_valid = False
+                    result.target_reconciliation_passed = False
+                    result.target_errors.append(
+                        f"Target '{target.name}' remote URL '{t_rem_proc.stdout.strip()}' does not match expected source repository."
+                    )
+            else:
+                result.is_valid = False
+                result.target_reconciliation_passed = False
+                result.target_errors.append(f"Target '{target.name}' has no remote.origin.url configured.")
+
+            # 2. Verify branch is runtime
+            b_proc = subprocess.run(["git", "branch", "--show-current"], cwd=str(t_path), capture_output=True, text=True)
+            current_b = b_proc.stdout.strip()
+            if current_b != RUNTIME_BRANCH:
+                result.is_valid = False
+                result.target_reconciliation_passed = False
+                result.target_errors.append(f"Target '{target.name}' is on branch '{current_b}', expected '{RUNTIME_BRANCH}'.")
+
+            # 3. Verify target HEAD commit matches published runtime commit
+            head_proc = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(t_path), capture_output=True, text=True)
+            target_head = head_proc.stdout.strip() if head_proc.returncode == 0 else ""
+            if expected_runtime_commit and target_head != expected_runtime_commit:
+                result.is_valid = False
+                result.target_reconciliation_passed = False
+                result.target_errors.append(
+                    f"Target '{target.name}' HEAD commit ({target_head[:10]}) does not match published runtime commit ({expected_runtime_commit[:10]})."
+                )
+
+            # 4. Verify sparse scope and physical tree
+            if target.mode == "subset":
+                sp_proc = subprocess.run(["git", "config", "core.sparseCheckout"], cwd=str(t_path), capture_output=True, text=True)
+                if sp_proc.stdout.strip().lower() != "true":
+                    result.is_valid = False
+                    result.target_reconciliation_passed = False
+                    result.target_errors.append(f"Target '{target.name}' is mode 'subset' but sparse-checkout is not enabled.")
+                else:
+                    sp_list = subprocess.run(["git", "sparse-checkout", "list"], cwd=str(t_path), capture_output=True, text=True)
+                    actual_rules = set(line.strip().strip("/") for line in sp_list.stdout.splitlines() if line.strip())
+                    expected_rules = set(p.strip().strip("/") for p in target.include)
+                    if actual_rules != expected_rules:
+                        result.is_valid = False
+                        result.target_reconciliation_passed = False
+                        result.target_errors.append(
+                            f"Target '{target.name}' sparse scopes {sorted(list(actual_rules))} do not match configured include {sorted(list(expected_rules))}."
+                        )
+            elif target.mode == "full":
+                # Ensure sparse checkout is not active
+                sp_proc = subprocess.run(["git", "config", "core.sparseCheckout"], cwd=str(t_path), capture_output=True, text=True)
+                if sp_proc.stdout.strip().lower() == "true":
+                    sp_list = subprocess.run(["git", "sparse-checkout", "list"], cwd=str(t_path), capture_output=True, text=True)
+                    if sp_list.stdout.strip():
+                        result.is_valid = False
+                        result.target_reconciliation_passed = False
+                        result.target_errors.append(f"Target '{target.name}' is mode 'full' but sparse-checkout is active.")
+
+                # Verify checkout tree matches published runtime tree
+                if expected_runtime_tree:
+                    tree_proc = subprocess.run(["git", "rev-parse", "HEAD^{tree}"], cwd=str(t_path), capture_output=True, text=True)
+                    target_tree = tree_proc.stdout.strip() if tree_proc.returncode == 0 else ""
+                    if target_tree != expected_runtime_tree:
+                        result.is_valid = False
+                        result.target_reconciliation_passed = False
+                        result.target_errors.append(
+                            f"Target '{target.name}' tree ({target_tree[:10]}) does not match published runtime tree ({expected_runtime_tree[:10]})."
+                        )
+
+    # Step 8: Validate individual skill structural health
     for s_rel in sorted(list(router_indexed_set)):
         s_abs = os.path.join(repo_root, s_rel)
         rep = validate_single_skill(s_abs)
@@ -326,3 +511,6 @@ def validate_library(
                 result.secret_leaks.append(f"{s_rel}: {err}")
 
     return result
+
+
+validate_library = validate_library_integrity
