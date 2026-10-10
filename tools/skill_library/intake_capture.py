@@ -425,22 +425,68 @@ def convert_incoming_to_intake(
         if any(c in runtime_path for c in ("\0", "\\", "..")):
             continue
 
-        dest_pkg_dir = (intake_dir / pkg).resolve()
+        # Resolve runtime_name and canonical target from manifest
+        canonical_path_candidate = f"library/{runtime_path}"
+        manifest_entry = None
+        if manifest:
+            manifest_entry = manifest.find_by_canonical_path(canonical_path_candidate)
+            if not manifest_entry and pkg in manifest.skills:
+                manifest_entry = manifest.skills[pkg]
+
+        if manifest_entry:
+            runtime_name = manifest_entry.get("runtime_name", pkg)
+            target_can_path = manifest_entry.get("canonical_path", canonical_path_candidate)
+            classification = "EXTERNAL_UPDATE"
+            installer_type = "external_update"
+        else:
+            # Check if runtime_path is within library category taxonomy
+            if any(runtime_path.startswith(f"{c}/") for c in CATEGORIES):
+                target_can_path = canonical_path_candidate
+                classification = "EXTERNAL_UPDATE"
+                installer_type = "external_update"
+                # Check for collision with already staged packages
+                parts = Path(runtime_path).parts
+                if len(parts) > 1 and (pkg in packages_staged or (intake_dir / pkg).exists()):
+                    runtime_name = f"{parts[0]}-{pkg}"
+                else:
+                    runtime_name = pkg
+            else:
+                target_can_path = ""
+                classification = "EXTERNAL_PHYSICAL"
+                installer_type = "external_install"
+                runtime_name = pkg
+
+        # Disambiguate runtime_name if still colliding with already staged candidates
+        if runtime_name in packages_staged or (intake_dir / runtime_name).exists():
+            parts = Path(runtime_path).parts
+            if len(parts) > 2:
+                candidate = f"{parts[0]}-{parts[1]}-{pkg}"
+                if candidate not in packages_staged and not (intake_dir / candidate).exists():
+                    runtime_name = candidate
+            elif len(parts) > 1:
+                candidate = f"{parts[0]}-{pkg}"
+                if candidate not in packages_staged and not (intake_dir / candidate).exists():
+                    runtime_name = candidate
+
+        if any(c in runtime_name for c in ("\0", "/", "\\", "..")) or runtime_name in (".git", ".DS_Store", "SKILL.md", ".incoming-metadata.json"):
+            continue
+
+        dest_pkg_dir = (intake_dir / runtime_name).resolve()
         try:
             dest_pkg_dir.relative_to(intake_dir)
         except ValueError:
-            raise ValueError(f"Path traversal detected: package '{pkg}' escapes intake directory.")
+            raise ValueError(f"Path traversal detected: package '{runtime_name}' escapes intake directory.")
 
         dest_pkg_dir.mkdir(parents=True, exist_ok=True)
 
-        # Checkout files from incoming branch into intake/<pkg> using git archive scoped to runtime_path
+        # Checkout files from incoming branch into intake/<runtime_name> using git archive scoped to runtime_path
         archive_target = f"{incoming_commit}:{runtime_path}" if runtime_path not in ("", ".") else incoming_commit
         tree_check = run_git(["rev-parse", "--verify", archive_target], cwd=repo_path, check=False)
         if tree_check.returncode != 0:
             continue
 
         archive_proc = subprocess.Popen(
-            ["git", "archive", f"--prefix={pkg}/", archive_target],
+            ["git", "archive", f"--prefix={runtime_name}/", archive_target],
             cwd=repo_path,
             stdout=subprocess.PIPE,
         )
@@ -453,24 +499,7 @@ def convert_incoming_to_intake(
         tar_proc.communicate()
         archive_proc.wait()
 
-        # Classify as external update if package exists in canonical manifest
-        is_existing = bool(manifest and pkg in manifest.skills)
-        if is_existing:
-            target_can_path = manifest.skills[pkg].get("canonical_path", f"library/{runtime_path}")
-            classification = "EXTERNAL_UPDATE"
-            installer_type = "external_update"
-        else:
-            # Check if runtime_path is within library category taxonomy
-            if any(runtime_path.startswith(f"{c}/") for c in CATEGORIES):
-                target_can_path = f"library/{runtime_path}"
-                classification = "EXTERNAL_UPDATE"
-                installer_type = "external_update"
-            else:
-                target_can_path = ""
-                classification = "EXTERNAL_PHYSICAL"
-                installer_type = "external_install"
-
-        # Write provenance info and classification
+        # Write provenance info, canonical path, and classification
         pkg_meta_path = dest_pkg_dir / ".installer-metadata.json"
         with open(pkg_meta_path, "w", encoding="utf-8") as pf:
             json.dump({
@@ -478,6 +507,7 @@ def convert_incoming_to_intake(
                 "type": installer_type,
                 "classification": classification,
                 "package_name": pkg,
+                "runtime_name": runtime_name,
                 "runtime_path": runtime_path,
                 "target_canonical_path": target_can_path,
                 "captured_at": metadata.get("captured_at"),
@@ -485,7 +515,7 @@ def convert_incoming_to_intake(
                 "provenance": metadata.get("provenance", {}),
             }, pf, indent=2)
 
-        packages_staged.append(pkg)
+        packages_staged.append(runtime_name)
 
     # Stage intake changes
     run_git(["add", "intake"], cwd=repo_path)

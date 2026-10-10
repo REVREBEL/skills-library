@@ -780,6 +780,158 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
         self.assertTrue(cap_push_fail.get("retained", False))
         self.assertTrue(extra_file.exists())
 
+        # 4. Test dispatch failure after successful push:
+        # Reset target back to clean runtime state first
+        run_git(["checkout", "runtime"], cwd=target_path)
+        run_git(["reset", "--hard", "origin/runtime"], cwd=target_path)
+        run_git(["clean", "-fd"], cwd=target_path)
+
+        # Dirty a new file for dispatch test
+        dispatch_file = target_path / "community-tool" / "dispatch_test.py"
+        dispatch_file.parent.mkdir(parents=True, exist_ok=True)
+        dispatch_file.write_text("print('test dispatch')\n")
+
+        # remote snapshot branch is preserved, local runtime is restored,
+        # but workflow_error is recorded and workflow_triggered is False.
+        # Push to the valid test repo as remote
+        cap_dispatch = capture_dirty_target(
+            target,
+            remote="origin",
+            push=True,
+            trigger_workflow=True,
+            force=True,
+        )
+        self.assertTrue(cap_dispatch["captured"])
+        self.assertTrue(cap_dispatch["pushed"])
+        self.assertTrue(cap_dispatch["reset"])
+        self.assertFalse(cap_dispatch["workflow_triggered"])
+        self.assertIn("workflow_error", cap_dispatch)
+
+    def test_22_duplicate_leaf_name_intake_collision_resolution(self):
+        """Requirement 22: duplicate leaf skill names in different taxonomy paths
+        resolve deterministically to distinct, collision-safe intake directories
+        without overwriting one another.
+        """
+        # 1. Setup duplicate leaf skills in mock library and manifest
+        dev_ad = self.lib_dir / "development" / "backend" / "ad-creative"
+        dev_ad.mkdir(parents=True, exist_ok=True)
+        (dev_ad / "SKILL.md").write_text("---\nname: ad-creative\ndescription: Backend ad creative generation.\n---\n# Ad Creative Backend\n")
+
+        mkt_ad = self.lib_dir / "marketing-and-seo" / "content-and-campaigns" / "ad-creative"
+        mkt_ad.mkdir(parents=True, exist_ok=True)
+        (mkt_ad / "SKILL.md").write_text("---\nname: ad-creative\ndescription: Marketing campaign ad creative.\n---\n# Ad Creative Marketing\n")
+
+        manifest_file = self.repo_dir / "audit" / "runtime-manifest.json"
+        manifest_file.parent.mkdir(parents=True, exist_ok=True)
+        m = RuntimeManifest(str(manifest_file))
+        m.add_skill(
+            runtime_name="development-ad-creative",
+            canonical_name="ad-creative",
+            canonical_path="library/development/backend/ad-creative",
+            functional_parent="library/development/backend/SKILL.md",
+        )
+        m.add_skill(
+            runtime_name="marketing-and-seo-ad-creative",
+            canonical_name="ad-creative",
+            canonical_path="library/marketing-and-seo/content-and-campaigns/ad-creative",
+            functional_parent="library/marketing-and-seo/content-and-campaigns/SKILL.md",
+        )
+        m.save()
+
+        run_git(["add", "library", "audit"], cwd=self.repo_dir)
+        run_git(["commit", "-m", "Add duplicate leaf skills for collision testing"], cwd=self.repo_dir)
+
+        # 2. Publish runtime branch
+        publish_runtime_branch(str(self.repo_dir), branch_name="runtime", push=False)
+
+        # 3. Set up bare remote standing in for GitHub
+        remote_bare = self.sandbox / "upstream-github-22.git"
+        run_git(["init", "--bare", str(remote_bare)], cwd=self.sandbox)
+        run_git(["push", str(remote_bare), "main:main", "runtime:runtime"], cwd=self.repo_dir)
+        run_git(["symbolic-ref", "HEAD", "refs/heads/main"], cwd=remote_bare)
+
+        # 4. Clone runtime target against bare upstream
+        target_path = self.sandbox / "target-collision-workstation"
+        target = RuntimeTarget(
+            name="collision-workstation",
+            path=str(target_path),
+            mode="full",
+            remote_url=str(remote_bare),
+            accept_external_intake=True,
+            enabled=True,
+        )
+        sync_res = sync_target(target, remote_url=str(remote_bare))
+        self.assertEqual(sync_res.status, "created")
+
+        # 5. Verify both duplicate skills exist in published runtime
+        skill1 = target_path / "development" / "backend" / "ad-creative" / "SKILL.md"
+        skill2 = target_path / "marketing-and-seo" / "content-and-campaigns" / "ad-creative" / "SKILL.md"
+        self.assertTrue(skill1.exists(), "development/backend/ad-creative must exist in runtime")
+        self.assertTrue(skill2.exists(), "marketing-and-seo/.../ad-creative must exist in runtime")
+
+        # 6. Dirty BOTH skills with distinct content
+        skill1.write_text("---\nname: ad-creative\ndescription: Updated dev backend ad-creative.\n---\n# Backend Ad Creative Updated\n")
+        skill2.write_text("---\nname: ad-creative\ndescription: Updated marketing ad-creative.\n---\n# Marketing Ad Creative Updated\n")
+
+        # 7. Capture dirty state into incoming snapshot branch
+        cap = capture_dirty_target(target, remote="origin", push=True, trigger_workflow=False)
+        self.assertTrue(cap["captured"])
+        self.assertTrue(cap["pushed"])
+        self.assertTrue(cap["reset"])
+        self.assertEqual(len(cap["package_details"]), 2)
+        incoming_branch = cap["branch"]
+
+        # Target should now be reset and clean on branch runtime
+        d_state = scan_target_dirty_state(target_path)
+        self.assertFalse(d_state["is_dirty"])
+
+        # 8. Fresh runner clone from bare remote
+        fresh_runner = self.sandbox / "github-runner-fresh-22"
+        run_git(["clone", str(remote_bare), str(fresh_runner)], cwd=self.sandbox)
+
+        # 9. Convert incoming branch to intake on the fresh runner
+        conv_res = convert_incoming_to_intake(
+            repo_path=str(fresh_runner),
+            incoming_branch=incoming_branch,
+            base_branch="main",
+            remote="origin",
+        )
+        self.assertTrue(conv_res["intake_branch"].startswith("intake/"))
+        self.assertEqual(len(conv_res["packages_staged"]), 2)
+        self.assertIn("development-ad-creative", conv_res["packages_staged"])
+        self.assertIn("marketing-and-seo-ad-creative", conv_res["packages_staged"])
+
+        # 10. Verify 2 separate intake directories exist and no files overwrite one another
+        intake_dir = fresh_runner / "intake"
+        dir1 = intake_dir / "development-ad-creative"
+        dir2 = intake_dir / "marketing-and-seo-ad-creative"
+        self.assertTrue(dir1.exists(), "development-ad-creative must exist in intake")
+        self.assertTrue(dir2.exists(), "marketing-and-seo-ad-creative must exist in intake")
+        self.assertFalse((intake_dir / "ad-creative").exists(), "Colliding un-prefixed leaf name must not be used")
+
+        content1 = (dir1 / "SKILL.md").read_text()
+        content2 = (dir2 / "SKILL.md").read_text()
+        self.assertIn("Backend Ad Creative Updated", content1)
+        self.assertIn("Marketing Ad Creative Updated", content2)
+        self.assertNotEqual(content1, content2, "Skills must not overwrite one another")
+
+        # 11. Check metadata: both EXTERNAL_UPDATE with exact canonical paths
+        meta1 = json.loads((dir1 / ".installer-metadata.json").read_text())
+        self.assertEqual(meta1["classification"], "EXTERNAL_UPDATE")
+        self.assertEqual(meta1["type"], "external_update")
+        self.assertEqual(meta1["package_name"], "ad-creative")
+        self.assertEqual(meta1["runtime_name"], "development-ad-creative")
+        self.assertEqual(meta1["runtime_path"], "development/backend/ad-creative")
+        self.assertEqual(meta1["target_canonical_path"], "library/development/backend/ad-creative")
+
+        meta2 = json.loads((dir2 / ".installer-metadata.json").read_text())
+        self.assertEqual(meta2["classification"], "EXTERNAL_UPDATE")
+        self.assertEqual(meta2["type"], "external_update")
+        self.assertEqual(meta2["package_name"], "ad-creative")
+        self.assertEqual(meta2["runtime_name"], "marketing-and-seo-ad-creative")
+        self.assertEqual(meta2["runtime_path"], "marketing-and-seo/content-and-campaigns/ad-creative")
+        self.assertEqual(meta2["target_canonical_path"], "library/marketing-and-seo/content-and-campaigns/ad-creative")
+
 
 if __name__ == "__main__":
     unittest.main()
