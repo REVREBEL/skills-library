@@ -150,16 +150,50 @@ def scan_target_dirty_state(target_path: Path) -> Dict[str, Any]:
 
     res["is_dirty"] = True
 
+    # Detect unstaged renames (e.g., physical directory moves without git mv)
+    renames_map = {}
+    has_untracked = any(line.startswith("??") for line in lines)
+    has_deleted = any("D" in line[:2] for line in lines)
+    if has_untracked and has_deleted and (target_path / ".git").exists():
+        run_git(["add", "-N", "."], cwd=str(target_path), check=False)
+        diff_proc = run_git(["diff", "--name-status", "-M", "HEAD"], cwd=str(target_path), check=False)
+        for dline in diff_proc.stdout.splitlines():
+            dparts = dline.split("\t")
+            if len(dparts) >= 3 and dparts[0].startswith("R"):
+                old_f = dparts[1].strip()
+                new_f = dparts[2].strip()
+                renames_map[new_f] = old_f
+                # Also index by directory prefix if whole directory was renamed
+                old_p = Path(old_f)
+                new_p = Path(new_f)
+                if len(old_p.parts) > 1 and len(new_p.parts) > 1:
+                    renames_map[str(new_p.parent) + "/"] = str(old_p.parent) + "/"
+        # Restore index back to unstaged
+        run_git(["reset"], cwd=str(target_path), check=False)
+
     for line in lines:
         status = line[:2]
         rel_file = line[3:].strip()
         res["raw_entries"].append((status, rel_file))
 
+        matched_rename_old = None
         if " -> " in rel_file:
             old_rel, new_rel = [p.strip() for p in rel_file.split(" -> ", 1)]
-            res["renamed"].append((old_rel, new_rel))
-            old_pkg, old_rt = find_skill_package_root(target_path, old_rel)
-            new_pkg, new_rt = find_skill_package_root(target_path, new_rel)
+            matched_rename_old = old_rel
+            rel_file = new_rel
+        elif rel_file in renames_map:
+            matched_rename_old = renames_map[rel_file]
+        else:
+            # Check prefix matches
+            for new_prefix, old_prefix in renames_map.items():
+                if rel_file.startswith(new_prefix):
+                    matched_rename_old = rel_file.replace(new_prefix, old_prefix, 1)
+                    break
+
+        if matched_rename_old:
+            res["renamed"].append((matched_rename_old, rel_file))
+            old_pkg, old_rt = find_skill_package_root(target_path, matched_rename_old)
+            new_pkg, new_rt = find_skill_package_root(target_path, rel_file)
 
             if new_rt not in res["packages"]:
                 res["packages"][new_rt] = {
@@ -168,12 +202,14 @@ def scan_target_dirty_state(target_path: Path) -> Dict[str, Any]:
                     "files": [],
                     "action": "modify",
                 }
-            res["packages"][new_rt]["files"].append(new_rel)
+            res["packages"][new_rt]["files"].append(rel_file)
 
             if old_rt != new_rt:
                 res["packages"][new_rt]["action"] = "rename"
                 res["packages"][new_rt]["old_runtime_path"] = old_rt
                 res["packages"][new_rt]["new_runtime_path"] = new_rt
+                if old_rt in res["packages"] and res["packages"][old_rt].get("action") != "rename":
+                    del res["packages"][old_rt]
         else:
             if "??" in status:
                 res["untracked"].append(rel_file)
@@ -195,9 +231,13 @@ def scan_target_dirty_state(target_path: Path) -> Dict[str, Any]:
                 }
             res["packages"][runtime_path]["files"].append(rel_file)
 
-    # Detect whole-package deletions
+    # Detect whole-package deletions and purge old rename paths
+    rename_old_paths = {pinfo.get("old_runtime_path") for pinfo in res["packages"].values() if pinfo.get("action") == "rename"}
     for rt, pinfo in list(res["packages"].items()):
         if pinfo.get("action") == "rename":
+            continue
+        if rt in rename_old_paths:
+            del res["packages"][rt]
             continue
         pkg_skill_md = target_path / rt / "SKILL.md"
         if not pkg_skill_md.exists():

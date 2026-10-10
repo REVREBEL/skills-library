@@ -1058,13 +1058,10 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
         sync_res = sync_target(target, remote_url=str(remote_bare))
         self.assertEqual(sync_res.status, "created")
 
-        # 4. Rename skill directory using git mv
+        # 4. Rename skill directory using physical filesystem move (without git mv)
         old_dir = target_path / "quality-and-security" / "debugging" / "bug-hunter"
         new_dir = target_path / "quality-and-security" / "debugging" / "bug-tracker"
-        run_git(
-            ["mv", "quality-and-security/debugging/bug-hunter", "quality-and-security/debugging/bug-tracker"],
-            cwd=target_path,
-        )
+        shutil.move(str(old_dir), str(new_dir))
         self.assertFalse(old_dir.exists())
         self.assertTrue((new_dir / "SKILL.md").exists())
 

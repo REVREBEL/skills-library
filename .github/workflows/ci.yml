@@ -28,9 +28,9 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Track Runtime Branch
+      - name: Generate Local Runtime Publication Ref
         run: |
-          git branch runtime origin/runtime || true
+          python3 tools/skill-library.py publish-runtime
 
       - name: Run Test Suite
         run: |
