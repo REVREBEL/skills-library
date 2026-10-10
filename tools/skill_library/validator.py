@@ -349,6 +349,13 @@ def validate_library_integrity(
                     capture_output=True,
                     text=True,
                 )
+                if runtime_proc.returncode != 0:
+                    runtime_proc = subprocess.run(
+                        ["git", "rev-parse", f"origin/{RUNTIME_BRANCH}^{{tree}}"],
+                        cwd=repo_root,
+                        capture_output=True,
+                        text=True,
+                    )
                 if runtime_proc.returncode == 0:
                     runtime_tree = runtime_proc.stdout.strip()
                     if expected_tree != runtime_tree:
@@ -360,8 +367,10 @@ def validate_library_integrity(
                         )
                 else:
                     # Runtime branch not yet generated
+                    result.is_valid = False
+                    result.runtime_publication_passed = False
                     result.publication_errors.append(
-                        f"Branch '{RUNTIME_BRANCH}' does not exist locally. "
+                        f"Branch '{RUNTIME_BRANCH}' does not exist locally or on remote 'origin'. "
                         "Run 'python3 tools/skill-library.py publish-runtime' to create it."
                     )
         except Exception as e:
@@ -370,7 +379,10 @@ def validate_library_integrity(
     # Step 7: Verify Configured Runtime Targets
     if verify_targets:
         targets = load_runtime_targets(config_path)
-        expected_runtime_commit = get_ref_commit_sha(repo_root, f"refs/heads/{RUNTIME_BRANCH}")
+        expected_runtime_commit = (
+            get_ref_commit_sha(repo_root, f"refs/heads/{RUNTIME_BRANCH}")
+            or get_ref_commit_sha(repo_root, f"refs/remotes/origin/{RUNTIME_BRANCH}")
+        )
         expected_runtime_tree = get_commit_tree_sha(repo_root, expected_runtime_commit) if expected_runtime_commit else None
 
         valid_remotes: Set[str] = {
