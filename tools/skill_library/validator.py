@@ -221,8 +221,9 @@ def validate_single_skill(skill_dir: str) -> SkillValidationReport:
             for pattern in WORKSTATION_PATH_PATTERNS:
                 match = pattern.search(fcontent)
                 if match:
+                    leak_txt = match.group(1) if match.groups() else match.group(0)
                     report.is_valid = False
-                    report.errors.append(f"Workstation path leak in {rel_file}: {match.group(1)}")
+                    report.errors.append(f"Workstation path leak in {rel_file}: {leak_txt}")
                     break
 
             for pattern in SECRET_PATTERNS:

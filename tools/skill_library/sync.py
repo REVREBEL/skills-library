@@ -183,6 +183,7 @@ def sync_target(
     runtime_branch: str = RUNTIME_BRANCH,
     allow_intake_capture: bool = True,
     remote_url: Optional[str] = None,
+    dry_run: bool = False,
 ) -> TargetSyncReport:
     """
     Reconciles an individual runtime target to the published runtime branch.
@@ -192,6 +193,34 @@ def sync_target(
     dest = target.resolved_path
     effective_remote = remote_url or source_repo or target.remote_url or "https://github.com/REVREBEL/skills-library.git"
     report = TargetSyncReport(name=target.name, path=str(dest), status="up_to_date", mode=target.mode)
+
+    if dry_run:
+        state = detect_target_state(dest, expected_branch=runtime_branch)
+        if not state["exists"] or (dest.is_dir() and not list(dest.iterdir())):
+            report.status = "created"
+            report.message = f"[DRY RUN] Would clone {runtime_branch} branch from {effective_remote} ({target.mode} mode)."
+            return report
+        if state["exists"] and not state["is_git"]:
+            if state["has_legacy_symlinks"] and not state["unmanaged_physical_files"]:
+                report.status = "migrated"
+                report.message = f"[DRY RUN] Would remove legacy symlinks and clone {runtime_branch} from {effective_remote}."
+                return report
+            elif state["unmanaged_physical_files"]:
+                report.status = "unmanaged"
+                report.message = "[DRY RUN] Directory contains unmanaged non-symlink items. Would refuse initialization."
+                return report
+        if state["is_git"]:
+            if state["is_dirty"]:
+                report.status = "dirty"
+                report.message = "[DRY RUN] Target is dirty. Would capture changes or refuse destructive overwrite."
+                return report
+            report.status = "up_to_date"
+            report.commit_sha = state["commit_sha"]
+            report.message = f"[DRY RUN] Target is Git clone of {runtime_branch} at {state['commit_sha'][:8] if state['commit_sha'] else 'unknown'}."
+            return report
+        report.status = "dry_run"
+        report.message = f"[DRY RUN] Simulated check for {target.name}."
+        return report
 
     try:
         state = detect_target_state(dest, expected_branch=runtime_branch)
@@ -310,6 +339,7 @@ def sync_all_targets(
     config_path: Optional[str] = None,
     source_repo: Optional[str] = None,
     remote_url: Optional[str] = None,
+    dry_run: bool = False,
 ) -> MultiTargetSyncReport:
     """Loads all runtime targets from configuration and synchronizes all enabled targets."""
     targets = load_runtime_targets(config_path)
@@ -318,7 +348,12 @@ def sync_all_targets(
     for target in targets:
         if not target.enabled:
             continue
-        target_report = sync_target(target=target, source_repo=source_repo, remote_url=remote_url)
+        target_report = sync_target(
+            target=target,
+            source_repo=source_repo,
+            remote_url=remote_url,
+            dry_run=dry_run,
+        )
         report.targets.append(target_report)
 
     return report

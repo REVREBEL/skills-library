@@ -156,8 +156,8 @@ def cmd_publish_runtime(args):
 
 
 def cmd_sync(args):
-    print("Synchronizing configured runtime targets ...")
-    report = sync_all_targets(source_repo=REPO_ROOT)
+    print(f"Synchronizing configured runtime targets {'(DRY RUN) ' if args.dry_run else ''}...")
+    report = sync_all_targets(dry_run=args.dry_run)
     print(report.summary())
     return 1 if report.has_errors else 0
 
