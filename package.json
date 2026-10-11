@@ -1,0 +1,13 @@
+{
+  "name": "agent-skills-library",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Living, multi-provider Agent Skills canonical library and runtime sync infrastructure",
+  "scripts": {
+    "audit:duplicates": "python3 tools/check_duplicate_skills.py",
+    "audit:duplicates:fix": "python3 tools/check_duplicate_skills.py --fix",
+    "validate": "python3 tools/skill-library.py validate",
+    "test": "python3 tools/skill-library.py test",
+    "status": "python3 tools/skill-library.py status"
+  }
+}

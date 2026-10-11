@@ -58,11 +58,11 @@ Use this master router to navigate complex WordPress development tasks across th
 
 | User Goal | Focus Area | Specialized Child Skill |
 |---|---|---|
-| Core setup, multisite config, WP-CLI automation, deployment, security hardening | Core & Admin | [WordPress Core & Admin](./wordpress-core-admin/SKILL.md) |
-| Block themes, `theme.json`, template hierarchy, FSE styling, PHP block registration | Theme Engineering | [WordPress Theme Development](./wordpress-theme-development/SKILL.md) |
-| Custom plugins, action/filter hooks, REST API routes, AI Connectors, Abilities API | Plugin Engineering | [WordPress Plugin Development](./wordpress-plugin-development/SKILL.md) |
-| WooCommerce catalog, custom cart/checkout, payment gateways, product data models | E-Commerce | [WordPress WooCommerce](./wordpress-woocommerce/SKILL.md) |
-| Object caching (Redis), query profiling, asset minification, database indexing | Performance | [WordPress Performance Optimization](./wordpress-performance-optimization/SKILL.md) |
+| Core setup, multisite config, WP-CLI automation, deployment, security hardening | Core & Admin | [WordPress Core & Admin](../wordpress-core-admin/SKILL.md) |
+| Block themes, `theme.json`, template hierarchy, FSE styling, PHP block registration | Theme Engineering | [WordPress Theme Development](../wordpress-theme-development/SKILL.md) |
+| Custom plugins, action/filter hooks, REST API routes, AI Connectors, Abilities API | Plugin Engineering | [WordPress Plugin Development](../wordpress-plugin-development/SKILL.md) |
+| WooCommerce catalog, custom cart/checkout, payment gateways, product data models | E-Commerce | [WordPress WooCommerce](../wordpress-woocommerce/SKILL.md) |
+| Object caching (Redis), query profiling, asset minification, database indexing | Performance | [WordPress Performance Optimization](../wordpress-performance-optimization/SKILL.md) |
 
 ## WordPress-Specific Workflows
 

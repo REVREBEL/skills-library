@@ -36,6 +36,10 @@ jobs:
         run: |
           python3 tools/skill-library.py test
 
+      - name: Audit Duplicate & Nested Skills
+        run: |
+          python3 tools/check_duplicate_skills.py
+
       - name: Run Living Library Validator
         run: |
           python3 tools/skill-library.py validate

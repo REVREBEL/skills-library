@@ -301,6 +301,81 @@ def cmd_test(args):
     return 0 if res.wasSuccessful() else 1
 
 
+def cmd_audit_duplicates(args):
+    from check_duplicate_skills import (
+        audit_duplicate_skills,
+        cleanup_duplicate_skills,
+        print_report,
+    )
+    from dataclasses import asdict
+
+    lib_path = getattr(args, "library_dir", None) or os.path.join(REPO_ROOT, "library")
+    try:
+        report = audit_duplicate_skills(lib_path)
+    except FileNotFoundError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 2
+
+    if getattr(args, "json", False):
+        data = {
+            "summary": report.summary_dict(),
+            "nested_violations": [asdict(v) for v in report.nested_violations],
+            "unconfirmed_nested_skills": [asdict(v) for v in report.unconfirmed_nested_skills],
+            "content_duplicates": [asdict(v) for v in report.content_duplicates],
+            "name_collisions": [asdict(v) for v in report.name_collisions],
+        }
+        print(json.dumps(data, indent=2))
+        return 0 if report.is_clean else 1
+
+    print_report(report, verbose=getattr(args, "verbose", False))
+
+    if getattr(args, "fix", False):
+        if report.is_clean or len(report.nested_violations) == 0:
+            print("\nNo nested duplicate skills to clean up.")
+            return 0
+
+        total_targets = len(report.nested_violations)
+        print(f"\nTargeted for cleanup: {total_targets} confirmed nested child skill directories.")
+
+        if not args.dry_run and not args.yes:
+            try:
+                confirm = input("Are you sure you want to proceed with cleanup? [y/N]: ").strip().lower()
+                if confirm not in ("y", "yes"):
+                    print("Cleanup aborted by user.")
+                    return 1
+            except EOFError:
+                print("Non-interactive session detected. Use --yes to confirm cleanup.", file=sys.stderr)
+                return 1
+
+        result = cleanup_duplicate_skills(report, dry_run=args.dry_run)
+        if args.dry_run:
+            print(f"\n[DRY RUN] Would remove {len(result.cleaned_directories)} directories:")
+            for d in result.cleaned_directories[:10]:
+                print(f"  - {d}")
+            if len(result.cleaned_directories) > 10:
+                print(f"  ... and {len(result.cleaned_directories) - 10} more.")
+        else:
+            print(f"\nSuccessfully removed {len(result.cleaned_directories)} duplicate directories.")
+            if result.errors:
+                print(f"Encountered {len(result.errors)} errors during cleanup:")
+                for err in result.errors:
+                    print(f"  ! {err}")
+
+        if not args.dry_run:
+            post_report = audit_duplicate_skills(lib_path)
+            print("\nPost-cleanup verification:")
+            if post_report.total_nested_count == 0:
+                print("✓ All nested child skill duplicates successfully cleaned up.")
+                return 0
+            else:
+                print(f"Remaining nested duplicates: {post_report.total_nested_count}")
+                return 1
+
+        return 0
+
+    return 0 if report.is_clean else 1
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="skill-library",
@@ -366,6 +441,15 @@ def main():
     # test
     subparsers.add_parser("test", help="Run automated test suite")
 
+    # audit-duplicates
+    p_dup = subparsers.add_parser("audit-duplicates", help="Audit duplicate and nested skill packages in the library")
+    p_dup.add_argument("library_dir", nargs="?", default="library", help="Path to library directory (default: library)")
+    p_dup.add_argument("--fix", action="store_true", help="Safely clean up confirmed nested duplicate skills")
+    p_dup.add_argument("--dry-run", action="store_true", help="Preview cleanup without modifying disk")
+    p_dup.add_argument("-y", "--yes", action="store_true", help="Skip confirmation prompt")
+    p_dup.add_argument("--json", action="store_true", help="Output audit report as JSON")
+    p_dup.add_argument("-v", "--verbose", action="store_true", help="Print full list of violated paths")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -382,6 +466,7 @@ def main():
         "validate": cmd_validate,
         "status": cmd_status,
         "test": cmd_test,
+        "audit-duplicates": cmd_audit_duplicates,
     }
 
     exit_code = dispatch[args.command](args)

@@ -26,10 +26,10 @@ Route secrets management tasks to the appropriate specialized 1Password child sk
 
 | User Goal | Tool / Runtime | Specialized Child Skill |
 |---|---|---|
-| Retrieve single secret (`op read`), run commands with env vars (`op run`), manage items/vaults, configure shell plugins | `op` CLI | [1Password CLI](./1password-cli/SKILL.md) |
-| Manage project environment variables, sync `.env` files, bulk resolve via Python SDK/TypeScript CLI | Bun / Python SDK CLI | [1Password Developer Environments](./1password-developer-environments/SKILL.md) |
-| Inject secrets into Kubernetes pods, configure ExternalSecret or OnePasswordItem CRDs | K8s Operator / ESO | [1Password Kubernetes](./1password-kubernetes/SKILL.md) |
-| CI/CD pipeline automation (GitHub Actions, GitLab CI) with scoped service account tokens | Service Account Token | [1Password Service Accounts](./1password-service-accounts/SKILL.md) |
+| Retrieve single secret (`op read`), run commands with env vars (`op run`), manage items/vaults, configure shell plugins | `op` CLI | [1Password CLI](../1password-cli/SKILL.md) |
+| Manage project environment variables, sync `.env` files, bulk resolve via Python SDK/TypeScript CLI | Bun / Python SDK CLI | [1Password Developer Environments](../1password-developer-environments/SKILL.md) |
+| Inject secrets into Kubernetes pods, configure ExternalSecret or OnePasswordItem CRDs | K8s Operator / ESO | [1Password Kubernetes](../1password-kubernetes/SKILL.md) |
+| CI/CD pipeline automation (GitHub Actions, GitLab CI) with scoped service account tokens | Service Account Token | [1Password Service Accounts](../1password-service-accounts/SKILL.md) |
 
 ## Best Practices
 

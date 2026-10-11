@@ -799,19 +799,27 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
 
         # remote snapshot branch is preserved, local runtime is restored,
         # but workflow_error is recorded and workflow_triggered is False.
-        # Push to the valid test repo as remote
-        cap_dispatch = capture_dirty_target(
-            target,
-            remote="origin",
-            push=True,
-            trigger_workflow=True,
-            force=True,
-        )
-        self.assertTrue(cap_dispatch["captured"])
-        self.assertTrue(cap_dispatch["pushed"])
-        self.assertTrue(cap_dispatch["reset"])
-        self.assertFalse(cap_dispatch["workflow_triggered"])
-        self.assertIn("workflow_error", cap_dispatch)
+        # Mock gh dispatch failure so test does not fire live GitHub Action
+        orig_run = subprocess.run
+        def mock_gh_run(cmd, *a, **kw):
+            if isinstance(cmd, (list, tuple)) and len(cmd) > 0 and cmd[0] == "gh":
+                return subprocess.CompletedProcess(args=cmd, returncode=1, stderr="Simulated gh error", stdout="")
+            return orig_run(cmd, *a, **kw)
+
+        with unittest.mock.patch("skill_library.intake_capture.subprocess.run", side_effect=mock_gh_run):
+            cap_dispatch = capture_dirty_target(
+                target,
+                remote="origin",
+                push=True,
+                trigger_workflow=True,
+                force=True,
+            )
+            self.assertTrue(cap_dispatch["captured"])
+            self.assertTrue(cap_dispatch["pushed"])
+            self.assertTrue(cap_dispatch["reset"])
+            self.assertFalse(cap_dispatch["workflow_triggered"])
+            self.assertIn("workflow_error", cap_dispatch)
+
 
     def test_22_duplicate_leaf_name_intake_collision_resolution(self):
         """Requirement 22: duplicate leaf skill names in different taxonomy paths

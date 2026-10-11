@@ -134,6 +134,23 @@ python3 tools/skill-library.py apply \
   --subcategory observability
 ```
 
+### `audit-duplicates`
+Audits the canonical library for nested child skill directories, subcategory package name collisions, and content duplicates.
+```bash
+python3 tools/skill-library.py audit-duplicates
+python3 tools/skill-library.py audit-duplicates --json
+# Or run standalone permanent tool:
+python3 tools/check_duplicate_skills.py
+# Or via npm task alias:
+npm run audit:duplicates
+```
+To safely clean up confirmed nested duplicates:
+```bash
+python3 tools/skill-library.py audit-duplicates --fix --yes
+# Or:
+npm run audit:duplicates:fix
+```
+
 ### `sync`
 Reconciles runtime symlinks in `~/.agents/skills/` against `audit/runtime-manifest.json`.
 - Creates missing symlinks.
@@ -233,3 +250,11 @@ python3 tools/skill-library.py test
 - **Resolution**:
   - If distinct functionality: supply `--canonical-name` or use a category namespace prefix (e.g. `--canonical-name cloud-observability`).
   - If duplicate: remove candidate from `intake/` and update the existing canonical skill.
+
+### Nested Child Skills Left in Extracted Parent Packages
+- **Symptom**: `python3 tools/check_duplicate_skills.py` or CI reports `Nested Child Skill Duplicates (exit code 1)`.
+- **Cause**: Child skills were extracted or promoted to standalone canonical packages (e.g. Phase 08 Batch 30 `design-it`), but the original parent folder retained nested child directories.
+- **Resolution**:
+  1. Preview cleanup: `python3 tools/check_duplicate_skills.py --fix --dry-run`
+  2. Execute safe cleanup: `python3 tools/check_duplicate_skills.py --fix --yes` (or `npm run audit:duplicates:fix`).
+  3. Validate library: `python3 tools/skill-library.py validate`.
