@@ -8,7 +8,8 @@ This report documents the independent methodology and classification validation 
 - **Authoritative Population & Schema**: Exactly **2,133 unique skills** reconciled 1:1 against the filesystem and manifest with **zero duplicate IDs** (15 colliding IDs disambiguated with scoped canonical identifiers).
 - **Role Vocabulary Alignment**: Full alignment with canonical work-order roles (`independent_capability`, `family_primitive`, `workflow`, `overlay`, `adapter`, `reference_or_support_candidate`, `alias_candidate`, `manual_review`).
 - **Explicit Alias Identification**: **18 alias candidates** documented: 3 self-declared compatibility aliases and 15 duplicate packages whose canonical ownership direction is deferred to REV-128/REV-129.
-- **Stratified Rule Consistency Audit**: Stratified sample audit (N=100) demonstrated **99.0% heuristic rule consistency** across the catalog and catch-all bins.
+- **Automated Heuristic Rule Consistency (N=100)**: Stratified sample audit demonstrated **99.0% heuristic rule consistency** across the catalog and catch-all bins.
+- **Blind Manual Semantic Sample Audit (N=100)**: Independent blind second-pass manual semantic classification across full `SKILL.md` content achieved **74.0% inter-classifier raw agreement** (74/100), with 26 boundary edge cases cataloged across 5 systemic taxonomy boundaries in `audit/taxonomy-census/manual-semantic-sample-audit.md`.
 - **Platform Family Pruning**: False-positive keyword matches were eliminated; the GitHub family was pruned from 49 keyword mentions to **18 consolidated operations** plus 4 specific platform integrations.
 - **Skills Lifecycle Architectural Resolution**: Documented as an explicit **meta-capability family** belonging in `meta-and-agent-skills/skill-lifecycle`, resolving the `tools-and-platforms` contradiction.
 - **Population Token Density Differential**: Workflows average **2207 tokens** versus **1342 tokens** for capabilities (a **39.2% structural differential** across the library population).
@@ -55,12 +56,21 @@ Every census record provides: `canonical_id`, `name`, `current_path`, `current_c
 
 ---
 
-## Check 3: Classification Quality & Stratified Heuristic Consistency
+## Check 3: Dual Classification Quality Audits
 
-A stratified random sample ($N=100$) was selected across all top-level categories and the three large catch-all bins (25 from `development/fullstack`, 20 from `marketing-and-seo/on-page-seo`, 15 from `marketing-and-seo/cro`, and 40 across remaining categories):
+To satisfy the REV-150 review requirements, two distinct audits were conducted across a stratified sample ($N=100$) covering all 8 canonical roles and distributed across catch-all bins and functional domains:
+
+### Check 3A: Automated Heuristic Rule Consistency (N=100)
 - **Sample Size**: 100 skills.
 - **Heuristic Rule Consistency**: **99.0%** (99/100 consistent with heuristic rules).
-- **Ground-Truth Precision Clarification**: This automated check confirms that classified items satisfy structural consistency rules (e.g., capabilities do not contain multi-phase playbook structures; aliases possess verified redirect or candidate duplicate markers). Genuinely independent human-level semantic precision requires manual review and cannot be established solely by automated heuristics.
+- **Purpose & Scope**: Confirms that classified items satisfy structural consistency rules (e.g., capabilities do not contain multi-phase playbook structures; aliases possess verified redirect or candidate duplicate markers). This establishes internal heuristic consistency, but does not substitute for independent manual review.
+
+### Check 3B: Blind Independent Semantic Sample Audit (N=100)
+- **Sample Size**: 100 skills.
+- **Inter-Classifier Raw Agreement**: **74.0%** (74/100 exact role matches).
+- **Discrepancy Count**: **26 packages** (26.0%).
+- **Methodology**: Evaluator performed an independent second-pass deep read of full `SKILL.md` bodies (frontmatter, structure, procedural steps, and line count) blind to the heuristic pipeline's classifications.
+- **Detailed Report & Ledger**: Full analysis of the 5 taxonomy boundary edge-cases and the complete 100-skill ledger is published in **`audit/taxonomy-census/manual-semantic-sample-audit.md`**.
 
 ### Reported Confidence Distribution across 2,133 Skills
 - **High Confidence**: 2101 skills (98.5%) — Unambiguous contract matching deterministic criteria.
@@ -121,8 +131,8 @@ The narrative previously conflated the subcategory count (3) with the top-level 
 ## Readiness for Architectural Decisions
 
 With the completion of REV-150 validation corrections:
-1. **REV-126 is fully validated**: Methodological errors are corrected, heuristic rule consistency is verified on a stratified sample, and confidence distributions are reported.
-2. **REV-127 (Object Model)** has clean empirical boundaries: 8 roles account for 100% of skills.
+1. **REV-126 is fully validated**: Methodological errors are corrected, heuristic rule consistency is verified (99.0%), independent blind manual semantic sample audit is completed (74.0% agreement with 5 boundary analyses), and confidence distributions are reported.
+2. **REV-127 (Object Model)** has clean empirical boundaries: 8 roles account for 100% of skills, with edge cases cataloged.
 3. **REV-128 (Physical Ownership)** is informed by neutral duplicate pair evidence without premature directionality.
 4. **REV-129 (Family Eligibility)** is guided by qualitative architectural principles rather than arbitrary numeric thresholds.
 5. **REV-130 (Registry & Routers)** has deterministic schema inputs from `semantic-role-census.csv`.

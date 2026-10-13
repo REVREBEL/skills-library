@@ -10,17 +10,18 @@ Under Hybrid C/D:
 - **Runtime publication** projects both trees into a unified discovery plane with deterministic routing.
 
 The catalog is evaluated across the project's **authoritative four architectural planes**: **Semantic, Composition, Execution, and Lifecycle**.
+This evaluation provides **empirical evidence and baseline feasibility findings** from the catalog census. It does not declare final architecture contracts closed; contract closures are formally gated under REV-127 through REV-130.
 
 ---
 
-## Four-Plane Evaluation
+## Four-Plane Evaluation Findings
 
 ### 1. Semantic Plane
 The Semantic Plane governs stable identity, canonical naming, taxonomy classification, and contract clarity.
 - **Population Scale**: 2,133 packages classified across 8 canonical roles without ontological gaps.
-- **Stable Identity & Disambiguation**: Scoped canonical IDs (`github-operations:<name>`, `skills-lifecycle:<name>`) disambiguate the 15 duplicate package names without collisions.
+- **Stable Identity & Disambiguation**: Scoped canonical IDs (`github-operations:<name>`, `skills-lifecycle:<name>`) disambiguate duplicate package names without collisions.
 - **Domain Separation**: Clear boundaries established between functional capabilities (e.g. `javascript-mastery`) and platform integrations (e.g. `github-operations:commit`), pruning 27 false-positive brand mentions.
-- **Verdict**: **PASS**. Semantic boundaries are unambiguous and deterministic.
+- **Census Evidence Finding**: Demonstrates baseline feasibility of the 8-role model across 2,133 packages. Scoped identifiers provide collision-free identity. Formal semantic object model specifications and canonical naming rules remain to be closed under **REV-127**.
 
 ### 2. Composition Plane
 The Composition Plane governs how packages assemble: primitives providing low-level operations, overlays specializing base platforms, and workflows orchestrating multi-step pipelines.
@@ -30,7 +31,7 @@ The Composition Plane governs how packages assemble: primitives providing low-le
   - **`overlay`**: 11 domain specializations extending base platform families via `extends` metadata without polluting core vendor tools.
   - **`workflow`**: 383 composite outcome pipelines orchestrating sequential stages.
 - **Dependency Modeling**: The `dependencies_or_extends` schema field captures upstream/downstream relationships cleanly.
-- **Verdict**: **PASS**. Compositional structures support modular reuse without cyclic coupling.
+- **Census Evidence Finding**: Initial composition roles (`workflow`, `overlay`, `family_primitive`, `independent_capability`) reflect catalog package types. The formal acyclic dependency graph, precedence ordering, and `extends` composition contracts remain to be defined and closed under **REV-127** and **REV-130**.
 
 ### 3. Execution Plane
 The Execution Plane governs runtime projections, tool adapters, invocation boundaries, and active context overhead.
@@ -40,14 +41,14 @@ The Execution Plane governs runtime projections, tool adapters, invocation bound
   - Independent capabilities average: **1342 tokens**.
   - Population Density Differential: **39.2%**.
 - **Runtime Context Overhead Clarification**: This token density differential demonstrates a structural size difference across package populations. It is not an active execution benchmark. Real runtime context savings constitute an architectural hypothesis to be tested during runtime execution benchmarking under REV-130.
-- **Verdict**: **PASS**. Execution boundaries are cleanly isolated.
+- **Census Evidence Finding**: Structural token density differential (39.2%) is observed between workflows and capabilities. Tool adapters isolate runtime couplings. Formal execution contracts, runtime projection targets, and active execution context savings remain to be benchmarked and closed under **REV-130**.
 
 ### 4. Lifecycle Plane
 The Lifecycle Plane governs intake validation, continuous drift detection, runtime publication, deprecation, and alias management.
 - **Intake & Verification**: Automated validators catch invalid frontmatter, missing files, and duplicate names before intake.
 - **Continuous Consistency**: Physical tree, router files, and runtime manifest are continuously verified.
 - **Candidate Duplicate Pairs**: 15 duplicate pairs between `library/github-operations` and the main tree are preserved neutrally as `alias_candidate` evidence. Neither side is prematurely declared winner, deferring ownership direction to REV-128/REV-129.
-- **Verdict**: **PASS**. Lifecycle processes preserve non-destructive evidence and clean change control.
+- **Census Evidence Finding**: Reconciled census establishes a reproducible, non-destructive inventory baseline. Duplicate candidate pairs are preserved neutrally without predetermining ownership. Final canonical ownership directions, deprecation/alias resolution, and intake gate contracts remain to be decided under **REV-128**, **REV-129**, and **REV-130**.
 
 ---
 
