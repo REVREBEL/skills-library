@@ -27,9 +27,9 @@ The Semantic Plane governs stable identity, canonical naming, taxonomy classific
 The Composition Plane governs how packages assemble: primitives providing low-level operations, overlays specializing base platforms, and workflows orchestrating multi-step pipelines.
 - **Role Distribution**:
   - **`family_primitive`**: 1 low-level primitives (auth, tokens, parsers).
-  - **`independent_capability`**: 1700 singular reusable building blocks.
+  - **`independent_capability`**: 1701 singular reusable building blocks.
   - **`overlay`**: 6 domain specializations extending base platform families via `extends` metadata without polluting core vendor tools.
-  - **`workflow`**: 377 composite outcome pipelines orchestrating sequential stages.
+  - **`workflow`**: 391 composite outcome pipelines orchestrating sequential stages.
 - **Dependency Modeling**: The `dependencies_or_extends` schema field captures upstream/downstream relationships cleanly.
 - **Census Evidence Finding**: Initial composition roles (`workflow`, `overlay`, `family_primitive`, `independent_capability`) reflect catalog package types. The formal acyclic dependency graph, precedence ordering, and `extends` composition contracts remain to be defined and closed under **REV-127** and **REV-130**.
 
@@ -37,17 +37,17 @@ The Composition Plane governs how packages assemble: primitives providing low-le
 The Execution Plane governs runtime projections, tool adapters, invocation boundaries, and active context overhead.
 - **Tool Adapters**: Provider coupling (CLI, MCP, browser runner) is encapsulated within adapter packages rather than polluting general capabilities.
 - **Population Token Density Differential**:
-  - Workflows average: **2185 tokens**.
+  - Workflows average: **2136 tokens**.
   - Independent capabilities average: **1349 tokens**.
-  - Population Density Differential: **38.3%**.
+  - Population Density Differential: **36.9%**.
 - **Runtime Context Overhead Clarification**: This token density differential demonstrates a structural size difference across package populations. It is not an active execution benchmark. Real runtime context savings constitute an architectural hypothesis to be tested during runtime execution benchmarking under REV-130.
-- **Census Evidence Finding**: Structural token density differential (39.2%) is observed between workflows and capabilities. Tool adapters isolate runtime couplings. Formal execution contracts, runtime projection targets, and active execution context savings remain to be benchmarked and closed under **REV-130**.
+- **Census Evidence Finding**: Structural token density differential (36.9%) is observed between workflows and capabilities. Tool adapters isolate runtime couplings. Formal execution contracts, runtime projection targets, and active execution context savings remain to be benchmarked and closed under **REV-130**.
 
 ### 4. Lifecycle Plane
 The Lifecycle Plane governs intake validation, continuous drift detection, runtime publication, deprecation, and alias management.
 - **Intake & Verification**: Automated validators catch invalid frontmatter, missing files, and duplicate names before intake.
 - **Continuous Consistency**: Physical tree, router files, and runtime manifest are continuously verified.
-- **Candidate Duplicate Pairs**: 15 duplicate pairs between `library/github-operations` and the main tree are preserved neutrally as `alias_candidate` evidence. Neither side is prematurely declared winner, deferring ownership direction to REV-128/REV-129.
+- **Candidate Duplicate Pairs**: 15 duplicate pairs (30 packages) between `library/github-operations` and the main tree are classified by content as capabilities or workflows and preserved direction-neutrally with duplicate candidate pair metadata. Neither side is prematurely declared an alias or canonical winner, deferring canonical ownership direction to REV-128/REV-129.
 - **Census Evidence Finding**: Reconciled census establishes a reproducible, non-destructive inventory baseline. Duplicate candidate pairs are preserved neutrally without predetermining ownership. Final canonical ownership directions, deprecation/alias resolution, and intake gate contracts remain to be decided under **REV-128**, **REV-129**, and **REV-130**.
 
 ---
