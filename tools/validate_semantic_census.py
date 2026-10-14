@@ -1710,14 +1710,14 @@ def write_manual_semantic_sample_audit_report(path: Path, audit_res: Dict[str, A
     ]
 
     boundary_notes = {
-        ROLE_INDEPENDENT_CAPABILITY: "High agreement (92.0%). Discrepancies represent complex capabilities with internal phase headings.",
-        ROLE_WORKFLOW: "68.0% agreement. Boundary with capabilities that define sequential steps without full multi-phase lifecycle.",
-        ROLE_ALIAS: "100.0% agreement. Deterministic duplicate pairs and explicit alias declarations.",
-        ROLE_OVERLAY: "40.0% agreement. Heuristic assigned platform overlays based on family membership; second pass distinguishes independent domain tools.",
-        ROLE_ADAPTER: "0.0% agreement. Heuristic assigned adapter based on provider keywords (MCP/CLI); manual inspection reveals full capabilities calling MCP tools.",
-        ROLE_REFERENCE: "0.0% agreement. Heuristic flagged spec/benchmark names; manual inspection reveals active generators rather than passive references.",
-        ROLE_FAMILY_PRIMITIVE: "0.0% agreement. Heuristic flagged token/auth keywords; manual inspection identifies domain capabilities rather than shared substrate primitives.",
-        ROLE_MANUAL_REVIEW: "100.0% agreement. Personas, empty prompts, and non-standard configurations cleanly identified."
+        ROLE_INDEPENDENT_CAPABILITY: "High agreement. Discrepancies represent complex capabilities with internal phase headings.",
+        ROLE_WORKFLOW: "Substantial agreement. Boundary with capabilities that define sequential steps without full multi-phase lifecycle.",
+        ROLE_ALIAS: "Complete agreement. Deterministic duplicate pairs and explicit alias declarations.",
+        ROLE_OVERLAY: "Systemic boundary divergence. Heuristic assigned platform overlays based on family membership; second pass distinguishes independent domain tools.",
+        ROLE_ADAPTER: "Systemic boundary divergence. Heuristic assigned adapter based on provider keywords (MCP/CLI); manual inspection reveals full capabilities calling MCP tools.",
+        ROLE_REFERENCE: "Systemic boundary divergence. Heuristic flagged spec/benchmark names; manual inspection reveals active generators rather than passive references.",
+        ROLE_FAMILY_PRIMITIVE: "Systemic boundary divergence. Heuristic flagged token/auth keywords; manual inspection identifies domain capabilities rather than shared substrate primitives.",
+        ROLE_MANUAL_REVIEW: "Complete agreement. Personas, empty prompts, and non-standard configurations cleanly identified."
     }
 
     for role, stats in rb.items():

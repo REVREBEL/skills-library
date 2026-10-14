@@ -39,3 +39,9 @@ jobs:
       - name: Run Living Library Validator
         run: |
           python3 tools/skill-library.py validate
+
+      - name: Validate Semantic Census and Freshness
+        run: |
+          python3 tools/catalog_semantic_census.py
+          git diff --exit-code audit/taxonomy-census/
+

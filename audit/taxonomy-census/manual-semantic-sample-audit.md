@@ -27,14 +27,14 @@ To ensure complete transparency and scientific rigor, this audit strictly distin
 
 | Heuristic Census Role | Sampled Count | Second-Pass Agreed | Raw Agreement % | Primary Boundary Dynamics |
 | :--- | :---: | :---: | :---: | :--- |
-| `independent_capability` | 53 | 49 | 92.5% | High agreement (92.0%). Discrepancies represent complex capabilities with internal phase headings. |
-| `workflow` | 25 | 19 | 76.0% | 68.0% agreement. Boundary with capabilities that define sequential steps without full multi-phase lifecycle. |
-| `alias_candidate` | 3 | 3 | 100.0% | 100.0% agreement. Deterministic duplicate pairs and explicit alias declarations. |
-| `overlay` | 5 | 0 | 0.0% | 40.0% agreement. Heuristic assigned platform overlays based on family membership; second pass distinguishes independent domain tools. |
-| `adapter` | 4 | 0 | 0.0% | 0.0% agreement. Heuristic assigned adapter based on provider keywords (MCP/CLI); manual inspection reveals full capabilities calling MCP tools. |
-| `reference_or_support_candidate` | 3 | 0 | 0.0% | 0.0% agreement. Heuristic flagged spec/benchmark names; manual inspection reveals active generators rather than passive references. |
-| `family_primitive` | 4 | 0 | 0.0% | 0.0% agreement. Heuristic flagged token/auth keywords; manual inspection identifies domain capabilities rather than shared substrate primitives. |
-| `manual_review` | 3 | 3 | 100.0% | 100.0% agreement. Personas, empty prompts, and non-standard configurations cleanly identified. |
+| `independent_capability` | 53 | 49 | 92.5% | High agreement. Discrepancies represent complex capabilities with internal phase headings. |
+| `workflow` | 25 | 19 | 76.0% | Substantial agreement. Boundary with capabilities that define sequential steps without full multi-phase lifecycle. |
+| `alias_candidate` | 3 | 3 | 100.0% | Complete agreement. Deterministic duplicate pairs and explicit alias declarations. |
+| `overlay` | 5 | 0 | 0.0% | Systemic boundary divergence. Heuristic assigned platform overlays based on family membership; second pass distinguishes independent domain tools. |
+| `adapter` | 4 | 0 | 0.0% | Systemic boundary divergence. Heuristic assigned adapter based on provider keywords (MCP/CLI); manual inspection reveals full capabilities calling MCP tools. |
+| `reference_or_support_candidate` | 3 | 0 | 0.0% | Systemic boundary divergence. Heuristic flagged spec/benchmark names; manual inspection reveals active generators rather than passive references. |
+| `family_primitive` | 4 | 0 | 0.0% | Systemic boundary divergence. Heuristic flagged token/auth keywords; manual inspection identifies domain capabilities rather than shared substrate primitives. |
+| `manual_review` | 3 | 3 | 100.0% | Complete agreement. Personas, empty prompts, and non-standard configurations cleanly identified. |
 
 ---
 

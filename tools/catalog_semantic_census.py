@@ -27,8 +27,16 @@ Outputs:
 import sys
 from pathlib import Path
 
-# Run the validated engine from validate_semantic_census
-import validate_semantic_census
+# Ensure tools directory is in sys.path for direct or module execution
+_tools_dir = Path(__file__).resolve().parent
+if str(_tools_dir) not in sys.path:
+    sys.path.insert(0, str(_tools_dir))
+
+try:
+    from tools import validate_semantic_census
+except ImportError:
+    import validate_semantic_census
 
 if __name__ == "__main__":
     validate_semantic_census.main()
+
