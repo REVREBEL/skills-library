@@ -2174,7 +2174,7 @@ def main():
             "evidence_rationale", "candidate_family", "family_tier", "target_domain",
             "execution_provider", "dependencies_or_extends", "manual_review_reason", "notes"
         ]
-        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore", lineterminator="\n")
         writer.writeheader()
         writer.writerows(audited_rows)
     print(f"      Wrote: {csv_path} (2,134 lines)")
