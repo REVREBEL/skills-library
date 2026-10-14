@@ -39,3 +39,15 @@ jobs:
       - name: Run Living Library Validator
         run: |
           python3 tools/skill-library.py validate
+
+      - name: Validate Semantic Census and Freshness
+        run: |
+          python3 tools/catalog_semantic_census.py
+          git diff --exit-code audit/taxonomy-census/
+          if [ -n "$(git status --porcelain audit/taxonomy-census/)" ]; then
+            echo "Untracked or uncommitted changes detected in audit/taxonomy-census/:"
+            git status --porcelain audit/taxonomy-census/
+            exit 1
+          fi
+
+
