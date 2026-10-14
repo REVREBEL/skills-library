@@ -9,7 +9,7 @@ The current catalog contains **908 skills** concentrated in three massive catch-
 
 ## Semantic Role Breakdown Across Catch-All Bins
 
-| Catch-All Bin | Total Skills | Independent Capabilities | Workflows | Aliases / Duplicates | Overlays / Adapters | References | Primitives | Manual Review |
+| Catch-All Bin | Total Skills | Independent Capabilities | Workflows | Aliases | Overlays / Adapters | References | Primitives | Manual Review |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | `development/fullstack` | 420 | 326 | 83 | 1 | 0 | 1 | 1 | 8 |
 | `marketing-and-seo/on-page-seo` | 279 | 246 | 30 | 0 | 2 | 0 | 0 | 1 |
@@ -29,7 +29,8 @@ The current catalog contains **908 skills** concentrated in three massive catch-
 
 ### 2. `marketing-and-seo/on-page-seo` (279 skills)
 - Dominated by **246 independent capabilities** and **30 structured audit workflows**.
-- Contains **2 platform CMS overlays** that specialize `tools-and-platforms/webflow` (`publish-blog`, `asset-audit`), and **1 manual review boundary case** (`notebooklm`).
+- Contains **2 platform CMS overlays** (`publish-blog` specializing Webflow, `codebase-to-wordpress-converter` specializing WordPress), and **1 manual review boundary case** (`notebooklm`).
+- Clarification: `asset-audit` is retained as a domain workflow (part of the 30 audit workflows) rather than a platform overlay, consistent with the family register pruning determination.
 - **Recommendation**: Separate into `content-optimization`, `structured-data`, and `editorial-workflows`.
 
 ### 3. `marketing-and-seo/cro` (209 skills)

@@ -1536,7 +1536,7 @@ def write_catch_all_analysis(path: Path, rows: List[Dict[str, Any]]):
         "",
         "## Semantic Role Breakdown Across Catch-All Bins",
         "",
-        "| Catch-All Bin | Total Skills | Independent Capabilities | Workflows | Aliases / Duplicates | Overlays / Adapters | References | Primitives | Manual Review |",
+        "| Catch-All Bin | Total Skills | Independent Capabilities | Workflows | Aliases | Overlays / Adapters | References | Primitives | Manual Review |",
         "| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |",
     ]
 
@@ -1565,7 +1565,8 @@ def write_catch_all_analysis(path: Path, rows: List[Dict[str, Any]]):
         "",
         f"### 2. `marketing-and-seo/on-page-seo` ({len(bins['marketing-and-seo/on-page-seo'])} skills)",
         f"- Dominated by **{rc_seo[ROLE_INDEPENDENT_CAPABILITY]} independent capabilities** and **{rc_seo[ROLE_WORKFLOW]} structured audit workflows**.",
-        f"- Contains **{rc_seo[ROLE_OVERLAY]} platform CMS overlays** that specialize `tools-and-platforms/webflow` (`publish-blog`, `asset-audit`), and **{rc_seo[ROLE_MANUAL_REVIEW]} manual review boundary case** (`notebooklm`).",
+        f"- Contains **{rc_seo[ROLE_OVERLAY]} platform CMS overlays** (`publish-blog` specializing Webflow, `codebase-to-wordpress-converter` specializing WordPress), and **{rc_seo[ROLE_MANUAL_REVIEW]} manual review boundary case** (`notebooklm`).",
+        f"- Clarification: `asset-audit` is retained as a domain workflow (part of the {rc_seo[ROLE_WORKFLOW]} audit workflows) rather than a platform overlay, consistent with the family register pruning determination.",
         "- **Recommendation**: Separate into `content-optimization`, `structured-data`, and `editorial-workflows`.",
         "",
         f"### 3. `marketing-and-seo/cro` ({len(bins['marketing-and-seo/cro'])} skills)",
