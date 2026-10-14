@@ -1,0 +1,288 @@
+# Semantic Object Model and Stable Identity Architecture
+
+- **Author**: REVREBEL Agent Architecture Team
+- **Status**: Formally Specified (Gated under REV-127)
+- **Target Audience**: Platform Engineers, Agent Developers, Tooling Maintainers
+- **Related Issues**: [REV-126](https://linear.app/revrebel/issue/REV-126), [REV-150](https://linear.app/revrebel/issue/REV-150), [REV-127](https://linear.app/revrebel/issue/REV-127), [REV-128](https://linear.app/revrebel/issue/REV-128), [REV-129](https://linear.app/revrebel/issue/REV-129), [REV-130](https://linear.app/revrebel/issue/REV-130)
+- **Normative References**: [ADR-001: Path-Independent Canonical Semantic Identity](file:///Users/garystringham/github-revrebel/skills-library/docs/architecture/decisions/ADR-001-path-independent-canonical-identity.md)
+
+---
+
+## 1. Architectural Overview
+
+The **REVREBEL Semantic Object Model** defines the formal taxonomy, entity types, relationship graphs, and validation invariants governing all agent skills, platform integrations, workflows, and runtime artifacts in the repository.
+
+Historically, skills were treated uniformly as generic markdown files stored in arbitrary directory paths. The **REV-126** catalog census and **REV-150** empirical validation demonstrated that the 2,133-skill catalog naturally partitions into distinct semantic roles with widely differing execution behaviors, token densities (averaging a 36.9% differential between capabilities and workflows), and composition requirements.
+
+```
+       +-----------------------------------------------------------+
+       |                       Family                              |
+       |  (e.g., github, figma, webflow, n8n, wordpress, vercel)   |
+       +-----------------------------------------------------------+
+               |                  |                     |
+               v                  v                     v
+       +---------------+  +---------------+     +---------------+
+       |   Primitive   |  |   Capability  |<----+    Overlay    |
+       | (Token/Config)|  | (Atomic Task) |     |  (Specialized)|
+       +---------------+  +---------------+     +---------------+
+               |                  ^                     |
+               |                  |                     |
+               +--------+---------+                     |
+                        |                               |
+                        v                               v
+       +-----------------------------------------------------------+
+       |                        Workflow                           |
+       |             (Multi-Phase Orchestration)                   |
+       +-----------------------------------------------------------+
+                                |
+                                v
+       +-----------------------------------------------------------+
+       |                         Adapter                           |
+       |             (Protocol / Transport Shim)                   |
+       +-----------------------------------------------------------+
+```
+
+### The Four Architectural Planes
+
+1. **Semantic Plane (REV-127)**: Governs entity definitions, role boundaries, canonical stable identities, and metadata contracts.
+2. **Physical Storage Plane (REV-128)**: Governs filesystem directory structures, ownership models (`tools-and-platforms` vs dominant domain vs registry-first), and duplicate reconciliation.
+3. **Composition & Family Plane (REV-129)**: Governs family eligibility criteria, multi-provider implementations, and overlay attachment.
+4. **Execution & Discovery Plane (REV-130)**: Governs registry schemas, dynamic routers, alias resolution, runtime projection, and dependency closure.
+
+---
+
+## 2. Canonical Identity and Path-Independence
+
+Pursuant to [ADR-001](file:///Users/garystringham/github-revrebel/skills-library/docs/architecture/decisions/ADR-001-path-independent-canonical-identity.md), **canonical identity is strictly path-independent**.
+
+### 2.1 Identity Syntax
+Canonical identities are defined as scoped, lowercase strings:
+- **Canonical URN**: `urn:skill:<scope>:<slug>` (e.g., `urn:skill:github:create-pull-request`)
+- **Compact Scoped ID**: `<scope>:<slug>` (e.g., `github:create-pull-request`)
+
+```text
+       Scope                  Slug
+   [ a-z0-9-]+       :    [ a-z0-9-]+
+  (family / domain)      (capability name)
+```
+
+### 2.2 Invariants
+1. **No Path Separators**: Canonical IDs must never contain `/` or `\`.
+2. **No File Extensions**: Canonical IDs must never contain `.md`, `.json`, or `.yaml`.
+3. **Physical Path Mutability**: The physical storage location (`physical_path`) may be modified during refactoring without altering the canonical ID.
+4. **Relationship Target Exclusivity**: All inter-object references (`composed_of`, `extends`, `depends_on`, `aliased_to`) must reference canonical IDs, never physical paths.
+
+---
+
+## 3. First-Class Object Types
+
+The object model defines ten first-class entity types. Each type possesses an explicit operational contract, structural constraints, and relationship permissions.
+
+### 3.1 `capability` (Independent Capability)
+- **Role**: An atomic, self-contained unit of execution, domain analysis, or code generation. Executes within a single bounded domain context without orchestrating other skills across different domains.
+- **Population Baseline**: Represents 79.7% of the catalog (1,701 skills).
+- **Execution Model**: Single invocation, bounded input/output, stateless or contextually localized. Average token density: ~1,348 tokens.
+- **Attributes**:
+  - `canonical_id`: Required. Scoped ID (e.g., `seo:audit`, `react:component-spec`).
+  - `name`: Required. Leaf slug.
+  - `description`: Required. Must begin with a capitalized summary and contain explicit progressive disclosure triggers (`Use when...`).
+  - `domain`: Primary functional domain (e.g., `development`, `marketing-and-seo`).
+  - `execution_provider`: Optional. Indicates execution engine or protocol requirements (e.g. `mcp`, `bash`, `python`, `prompt`).
+- **Permitted Relationships**:
+  - Outbound: `depends_on` (other capabilities or primitives), `implements` (interface contract), `belongs_to_family` (optional family container).
+  - Inbound: Referenced by `workflow` via `composed_of`, extended by `overlay` via `extends`, targeted by `alias` via `aliased_to`.
+
+### 3.2 `workflow` (Multi-Phase Orchestration)
+- **Role**: A multi-phase procedure or orchestration pipeline coordinating sequential, parallel, or conditional execution of multiple capabilities, tools, or human approval steps.
+- **Population Baseline**: Represents 18.3% of the catalog (391 skills).
+- **Execution Model**: Multi-phase pipeline. Typically $\ge 3$ distinct execution phases or explicit lifecycle stages (e.g., scan -> evaluate -> gate -> apply -> verify). Average token density: ~2,135 tokens (36.9% higher token density than capabilities).
+- **Attributes**:
+  - `canonical_id`: Required. Scoped ID (e.g., `workflow:launch`, `git:branch-pr-lifecycle`).
+  - `steps`: Ordered list of composition elements (`composed_of`), specifying target canonical IDs and execution order.
+  - `approval_gates`: Optional boolean or list of step names requiring human-in-the-loop intervention.
+- **Permitted Relationships**:
+  - Outbound: `composed_of` (ordered references to capabilities, primitives, or nested workflows), `depends_on`, `belongs_to_family`.
+  - Inbound: Targeted by `alias` via `aliased_to`, extended by `overlay` via `extends`.
+
+### 3.3 `family` (Platform / Vendor Container)
+- **Role**: A first-class logical namespace, platform container, and governance boundary grouping capabilities, primitives, overlays, workflows, and adapters around a specific technology ecosystem.
+- **Population Baseline**: 18 recognized catalog families (e.g., `github`, `figma`, `webflow`, `n8n`, `notebooklm`, `wordpress`, `vercel`, `aws`, `stripe`).
+- **Attributes**:
+  - `family_id`: Lowercase identifier (e.g., `github`, `webflow`).
+  - `title`: Human-readable name (e.g., `GitHub Operations`, `Figma Design Platform`).
+  - `description`: Scope and platform domain statement.
+  - `vendor`: Platform provider name.
+  - `members`: Set of member canonical IDs.
+- **Permitted Relationships**:
+  - Contains member objects via `belongs_to_family`.
+
+### 3.4 `primitive` (Family Primitive / Reusable Building Block)
+- **Role**: A minimal, atomic, reusable building block, schema fragment, token set, or configuration snippet designed to be composed into higher-level capabilities or workflows, rather than invoked as a standalone end-to-end user task.
+- **Population Baseline**: Represents atomic building blocks (e.g., `design:design-token`, `auth:nextjs-supabase-auth`, `n8n:expression-syntax`).
+- **Structural Invariant**: Primitives are leaf-level or composition-source components. A primitive **must not** compose workflows.
+- **Attributes**:
+  - `canonical_id`: Required. Scoped ID.
+  - `primitive_type`: Category of primitive (`token`, `schema`, `syntax`, `config_template`).
+- **Permitted Relationships**:
+  - Outbound: `depends_on` (other primitives), `belongs_to_family`.
+  - Inbound: Composed by `capability` or `workflow` via `composed_of` or `depends_on`.
+
+### 3.5 `overlay` (Surface / Host Specialization)
+- **Role**: A platform- or host-specific behavioral specialization that decorates, adapts, or extends a base capability or workflow for a target environment without reinventing core domain logic.
+- **Population Baseline**: 6 recognized catalog overlays (e.g., `figma-implement-motion`, `notebooklm-create`, `figma-swiftui`).
+- **Attributes**:
+  - `canonical_id`: Required. Scoped ID (e.g., `figma:implement-motion`).
+  - `target_id`: Required canonical ID of the extended base capability or workflow.
+  - `platform`: Target surface or host (e.g., `figma`, `webflow`, `notebooklm`).
+- **Structural Invariant (Depth Limit = 1)**: An overlay **must** target an active `capability` or `workflow`. An overlay **must not** extend another overlay.
+- **Permitted Relationships**:
+  - Outbound: `extends` (mandatory, points to base capability/workflow), `depends_on`, `belongs_to_family`.
+
+### 3.6 `adapter` (Protocol / Transport Shim)
+- **Role**: A pure protocol, transport, or execution-mechanism translation shim (such as an MCP server wrapper, CLI invoker, or API client) that translates agent tool calls into external system actions without embedding business workflow logic.
+- **Population Baseline**: 4 pure catalog adapters (e.g., `not-human-search-mcp`, `protect-mcp-governance`).
+- **Attributes**:
+  - `canonical_id`: Required. Scoped ID.
+  - `protocol`: Target protocol (`mcp`, `rest`, `graphql`, `cli`).
+  - `interface_spec`: Tool schema or protocol contract.
+- **Permitted Relationships**:
+  - Outbound: `adapts` (points to protocol or tool definition).
+  - Inbound: Invoked by capabilities via execution provider.
+
+### 3.7 `alias` (Compatibility / Alternative Pointer)
+- **Role**: A non-canonical pointer or redirect record preserving backward compatibility, legacy naming, or alternative search queries, pointing directly to a single canonical target.
+- **Population Baseline**: 3 explicit compatibility aliases in the catalog (`create-pr`, `debugging-toolkit`, `python-development`).
+- **Attributes**:
+  - `canonical_id`: Required. Alias identifier.
+  - `target_id`: Required canonical ID of the active target skill.
+  - `alias_type`: `compatibility_redirect`, `deprecated_name`, or `shorthand`.
+- **Structural Invariant (Single-Hop)**: An alias **must** point directly to an active canonical object (`capability`, `workflow`, `primitive`, `overlay`, `adapter`, `reference`). Alias chaining (`A -> B -> C`) and alias cycles are strictly forbidden.
+
+### 3.8 `reference` (Static Support / Cheatsheet / Rubric)
+- **Role**: Static, passive informational assets (style guides, cheatsheets, syntax references, prompt templates, persona rubrics) providing context or guidelines to an agent, rather than executable action instructions.
+- **Population Baseline**: 5 catalog references (e.g., non-executable style guides and documentation templates).
+- **Attributes**:
+  - `canonical_id`: Required. Scoped ID.
+  - `reference_format`: `cheatsheet`, `styleguide`, `rubric`, `syntax_guide`.
+
+### 3.9 `router` (Hierarchical Navigation Node)
+- **Role**: A navigational directory node (e.g., `category/SKILL.md` or subcategory router) that catalogs, classifies, and directs agent discovery to member skills and sub-routers using progressive disclosure.
+- **Attributes**:
+  - `router_id`: Identifier (e.g., `router:development`, `router:development:backend`).
+  - `route_level`: `category` or `subcategory`.
+  - `managed_skills`: List of registered member skills.
+
+### 3.10 `generated_artifact` (Compiled Runtime Projection)
+- **Role**: Deterministic build or runtime projections created by tooling from the canonical definitions (e.g., `audit/runtime-manifest.json`, symlinks in `~/.agents/skills/`, published `runtime` branch tree, search indices).
+- **Attributes**:
+  - `artifact_type`: `manifest`, `symlink_tree`, `git_branch`, `index`.
+  - `source_commit`: Commit SHA from which the artifact was derived.
+  - `deterministic`: Boolean (true).
+
+---
+
+## 4. Boundary Disambiguation Matrix
+
+Based on the empirical evidence gathered during the REV-126 census and REV-150 validation, the following decision rules adjudicate boundary disputes:
+
+| Object Role | Primary Criteria | Negative Boundary ("NOT this role when...") | Representative Catalog Example |
+| :--- | :--- | :--- | :--- |
+| **`capability`** | Performs a single domain task or self-contained transformation. | NOT if it orchestrates $\ge 3$ distinct phases across multiple domain tools. | `seo:audit`, `css:variables` |
+| **`workflow`** | Coordinates $\ge 3$ sequential or conditional phases, pipelines, or human approval gates. | NOT if it executes a single-pass tool invocation without phase transitions. | `workflow:launch`, `git:branch-pr-lifecycle` |
+| **`primitive`** | Minimal reusable token, configuration fragment, or base syntax not invoked as a standalone user goal. | NOT if it can be invoked standalone to deliver a complete user-facing result. | `design:design-token`, `auth:nextjs-supabase` |
+| **`overlay`** | Platform specialization that injects surface-specific logic into an existing capability/workflow (`extends`). | NOT if it functions independently of any underlying generic capability. | `figma:implement-motion`, `notebooklm:create` |
+| **`adapter`** | Pure protocol/transport translation shim (MCP, CLI) without business logic. | NOT if the package *uses* an external protocol to perform domain work. | `mcp:not-human-search`, `mcp:protect-governance` |
+| **`reference`** | Passive information, cheatsheet, style manual, or evaluation rubric. | NOT if it actively generates code, specs, or designs (those are capabilities). | `ref:component-cheatsheet`, `ref:steve-jobs` |
+| **`alias`** | Lightweight redirection pointer maintaining backward-compatible keys. | NOT if it contains its own distinct instructions, scripts, or execution logic. | `alias:create-pr` -> `github:create-pr` |
+
+---
+
+## 5. Relationship Graph Semantics
+
+The object model defines eight directed relationship types:
+
+```text
+       Source                       Edge Type                      Target
+   +---------------+                                          +---------------+
+   |   Workflow    | ----------->  composed_of  ------------> |  Capability   |
+   +---------------+                                          +---------------+
+   |    Overlay    | ----------->    extends    ------------> |  Capability   |
+   +---------------+                                          +---------------+
+   |  Any Object   | ----------->   depends_on  ------------> |  Any Object   |
+   +---------------+                                          +---------------+
+   |     Alias     | ----------->   aliased_to  ------------> |  Any Target   |
+   +---------------+                                          +---------------+
+   |  Any Object   | -----------> belongs_to_fam -----------> |    Family     |
+   +---------------+                                          +---------------+
+   |    Adapter    | ----------->     adapts    ------------> |   Protocol    |
+   +---------------+                                          +---------------+
+   |  Capability   | ----------->   implements  ------------> |   Interface   |
+   +---------------+                                          +---------------+
+```
+
+1. **`composed_of`**: Ordered composition edges in workflows. Source must be `workflow`. Target must be `capability`, `primitive`, or sub-`workflow`.
+2. **`extends`**: Specialization edge. Source must be `overlay`. Target must be `capability` or `workflow`.
+3. **`depends_on`**: Prerequisite execution or contextual requirement.
+4. **`aliased_to`**: Unidirectional redirect. Source must be `alias`. Target must be an active canonical object.
+5. **`belongs_to_family`**: Namespace membership edge. Target must be a `family`.
+6. **`adapts`**: Protocol bridging edge. Source must be `adapter`. Target is an external protocol/tool specification.
+7. **`implements`**: Contract conformance edge. Source must be `capability` or `adapter`. Target is a standardized capability interface.
+
+---
+
+## 6. Architectural Invariants and Integrity Rules
+
+The object model compiler, validators, and lint tools enforce seven non-negotiable invariants:
+
+### Invariant 1: Directed Acyclic Graph (DAG) for Composition and Dependencies
+The combined graph formed by `composed_of` and `depends_on` **must be strictly acyclic**:
+$$\forall v \in V, \quad v \notin \text{Reachable}(v)$$
+Any cycle ($A \to B \to A$) represents an unresolvable execution loop and fails compilation immediately.
+
+### Invariant 2: Single Canonical Owner
+Every canonical ID resolves to exactly one active definition:
+$$\text{Count}(\text{Owner}(\text{canonical\_id})) = 1$$
+Duplicate IDs or un-namespaced collisions are strictly rejected.
+
+### Invariant 3: Single-Hop Alias Resolution
+Aliases must resolve to a canonical target in exactly one hop:
+$$\text{Type}(\text{Target}(\text{alias})) \neq \text{Alias}$$
+Chained aliases ($A \to B \to C$) and alias loops ($A \to B \to A$) are invalid.
+
+### Invariant 4: Shallow Overlay Specialization
+Overlays cannot extend other overlays:
+$$\text{Type}(\text{Target}(\text{overlay})) \in \{\text{Capability}, \text{Workflow}\}$$
+Overlay extension chains ($O_1 \to O_2$) are forbidden to prevent combinatorial prompt pollution.
+
+### Invariant 5: Leaf Primitives
+Primitives cannot compose workflows:
+$$\forall p \in \text{Primitives}, \quad \text{OutEdges}_{\text{composed\_of}}(p) = \emptyset$$
+
+### Invariant 6: Path Independence
+No canonical ID or reference attribute may contain filesystem separators (`/`, `\`), file extensions, or disk paths. Physical relocation of a skill directory must not change its canonical ID or invalidate any edges.
+
+### Invariant 7: Catalog Non-Destruction
+REV-127 defines schemas, contracts, and validators **without mutating physical skill files** under `library/**`. Physical restructuring and directory movements remain strictly deferred to REV-128 and REV-129.
+
+---
+
+## 7. Resolution of Catalog Disputed Edge Cases
+
+The REV-126/150 audit identified several boundary disputes that were placed in `manual_review` pending REV-127 closure. The semantic object model resolves them as follows:
+
+1. **`launch` (`library/development/backend/launch`)**:
+   - *Resolution*: Classified as a **`workflow`**. It orchestrates cross-domain infrastructure verification, pre-flight safety gates, deployment execution, and post-launch smoke tests across multiple domain boundaries.
+2. **`code-refactoring-tech-debt` (`library/development/software-architecture/code-refactoring-tech-debt`)**:
+   - *Resolution*: Classified as a **`workflow`**. It coordinates a multi-phase inspection pipeline: AST analysis $\to$ debt scoring $\to$ phased surgical refactor $\to$ automated regression test verification.
+3. **`agent-memory-mcp` (`library/development/software-architecture/agent-memory-mcp`)**:
+   - *Resolution*: Classified as a **`capability`** with `execution_provider: "mcp"`. It provides architectural persistent agent memory capabilities using an MCP protocol backend, rather than acting as an empty protocol bridge.
+4. **`not-human-search-mcp` (`library/development/backend/not-human-search-mcp`)**:
+   - *Resolution*: Classified as an **`adapter`**. It is a pure MCP protocol wrapper around an external search service without application business logic.
+5. **`figma-implement-motion` (`library/design-and-experience/motion-and-graphics/figma-implement-motion`)**:
+   - *Resolution*: Classified as an **`overlay`**. It extends the core motion design capability specifically for the Figma animation and prototype player surface.
+6. **`design-token` (`library/design-and-experience/design-systems/design-token`)**:
+   - *Resolution*: Classified as a **`primitive`**. It provides foundational design token schemas and variables intended to be consumed by design system components and workflows.
+7. **`create-pr` (`library/development/fullstack/create-pr`)**:
+   - *Resolution*: Classified as an **`alias`** with `target_id: "github:create-pull-request"`.
+8. **`steve-jobs` (`library/development/fullstack/steve-jobs`)**:
+   - *Resolution*: Classified as a **`reference`** (`rubric` / persona prompt). It provides high-standard product review principles without executable code tasks.
