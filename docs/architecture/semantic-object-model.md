@@ -55,7 +55,7 @@ Historically, skills were treated uniformly as generic markdown files stored in 
 
 Pursuant to [ADR-001](file:///Users/garystringham/github-revrebel/skills-library/docs/architecture/decisions/ADR-001-path-independent-canonical-identity.md), **canonical identity is strictly path-independent**.
 
-### 2.1 Identity Syntax
+### 2.1 Identity Syntax and RFC 8141 Compliance
 Canonical identities are defined as scoped, lowercase strings:
 - **Canonical URN**: `urn:skill:<scope>:<slug>` (e.g., `urn:skill:github:create-pull-request`)
 - **Compact Scoped ID**: `<scope>:<slug>` (e.g., `github:create-pull-request`)
@@ -66,7 +66,26 @@ Canonical identities are defined as scoped, lowercase strings:
   (family / domain)      (capability name)
 ```
 
-### 2.2 Invariants
+**Namespace Clarification**:
+The formal URN representation follows the lexical syntax of RFC 8141 (`urn:<NID>:<NSS>`), where `skill` serves as the private/organization Namespace Identifier (NID) for the skills repository ecosystem. It provides unambiguous URI interoperability and schema referencing without asserting an official IANA-registered namespace.
+
+### 2.2 Collision Prevention and Migration Compatibility
+
+How does path-independent canonical identity survive category moves, family restructuring, duplicate resolution, and alias pointers without collisions?
+
+1. **Category Moves & Storage Relocation (REV-128)**:
+   - Physical filesystem restructuring (such as moving skills between functional bins or into family directories) only mutates the `physical_path` metadata field in the registry.
+   - The canonical identifier `<scope>:<slug>` is an immutable semantic coordinate that remains unchanged across file moves.
+2. **Platform Family Extraction & Multi-Provider Disambiguation (REV-129)**:
+   - Platform ecosystems utilize their family name as scope (e.g., `github:*`, `figma:*`, `webflow:*`, `n8n:*`).
+   - Generic domain capabilities use functional domain scopes (e.g., `software-architecture:*`, `on-page-seo:*`).
+   - When identical leaf names exist across domains (such as the 15 GitHub duplicate pairs like `create-pr`), the scoped namespace guarantees complete collision separation (`github:create-pr` vs `development:create-pr`).
+3. **Duplicate Resolution & Alias Pointers (REV-130)**:
+   - When duplicate pairs are consolidated, one asset is retained as the authoritative owner (`github:create-pull-request`).
+   - The secondary asset is converted to a first-class `alias` object (`development:create-pr` -> `aliased_to: "github:create-pull-request"`).
+   - Because single-hop aliases resolve deterministically, client lookups for either identifier yield the canonical target without collisions or multi-hop chaining.
+
+### 2.3 Identity Invariants
 1. **No Path Separators**: Canonical IDs must never contain `/` or `\`.
 2. **No File Extensions**: Canonical IDs must never contain `.md`, `.json`, or `.yaml`.
 3. **Physical Path Mutability**: The physical storage location (`physical_path`) may be modified during refactoring without altering the canonical ID.
@@ -74,9 +93,24 @@ Canonical identities are defined as scoped, lowercase strings:
 
 ---
 
-## 3. First-Class Object Types
+## 3. First-Class Object Types vs Lifecycle Review Status
 
-The object model defines ten first-class entity types. Each type possesses an explicit operational contract, structural constraints, and relationship permissions.
+### Exact 10 First-Class Object Types
+
+The object model defines **exactly 10 first-class entity types**, partitioned into functional and structural entities:
+- **7 Functional / Leaf Entities**: `capability`, `workflow`, `primitive`, `overlay`, `adapter`, `alias`, `reference`
+- **3 Structural / Navigational Entities**: `family`, `router`, `generated_artifact`
+
+### Governance Lifecycle Review Status (Not an Object Type)
+
+**`manual_review` is NOT a runtime object type.** Rather, it is an analytical census disposition and governance lifecycle state (`ReviewStatus.MANUAL_REVIEW`) assigned to a skill object whose role classification requires human adjudication. A skill in `manual_review` has an underlying candidate object role (such as a disputed `capability` or `workflow`) and will transition to `ReviewStatus.ACTIVE` once reviewed.
+
+Lifecycle review states include:
+- `active`: Fully validated and active in the catalog.
+- `manual_review`: Requires human architectural adjudication.
+- `draft`: Incomplete or provisional skill definition.
+- `deprecated`: Obsolete skill scheduled for sunsetting.
+- `sunset`: Inactive, retained solely for historical audit telemetry.
 
 ### 3.1 `capability` (Independent Capability)
 - **Role**: An atomic, self-contained unit of execution, domain analysis, or code generation. Executes within a single bounded domain context without orchestrating other skills across different domains.
@@ -232,37 +266,51 @@ The object model defines eight directed relationship types:
 
 ## 6. Architectural Invariants and Integrity Rules
 
-The object model compiler, validators, and lint tools enforce seven non-negotiable invariants:
+The object model partitions rules into **Foundational Invariants** (decided and enforced under REV-127) and **Provisional Design Guardrails** (baseline defaults open for refinement in REV-128 through REV-130):
 
-### Invariant 1: Directed Acyclic Graph (DAG) for Composition and Dependencies
+### Part A: Foundational Invariants (Decided in REV-127)
+
+#### Invariant 1: Directed Acyclic Graph (DAG) for Composition and Dependencies
 The combined graph formed by `composed_of` and `depends_on` **must be strictly acyclic**:
 $$\forall v \in V, \quad v \notin \text{Reachable}(v)$$
 Any cycle ($A \to B \to A$) represents an unresolvable execution loop and fails compilation immediately.
 
-### Invariant 2: Single Canonical Owner
+#### Invariant 2: Single Canonical Owner
 Every canonical ID resolves to exactly one active definition:
 $$\text{Count}(\text{Owner}(\text{canonical\_id})) = 1$$
 Duplicate IDs or un-namespaced collisions are strictly rejected.
 
-### Invariant 3: Single-Hop Alias Resolution
+#### Invariant 3: Single-Hop Alias Resolution
 Aliases must resolve to a canonical target in exactly one hop:
 $$\text{Type}(\text{Target}(\text{alias})) \neq \text{Alias}$$
 Chained aliases ($A \to B \to C$) and alias loops ($A \to B \to A$) are invalid.
 
-### Invariant 4: Shallow Overlay Specialization
-Overlays cannot extend other overlays:
-$$\text{Type}(\text{Target}(\text{overlay})) \in \{\text{Capability}, \text{Workflow}\}$$
-Overlay extension chains ($O_1 \to O_2$) are forbidden to prevent combinatorial prompt pollution.
-
-### Invariant 5: Leaf Primitives
-Primitives cannot compose workflows:
-$$\forall p \in \text{Primitives}, \quad \text{OutEdges}_{\text{composed\_of}}(p) = \emptyset$$
-
-### Invariant 6: Path Independence
+#### Invariant 6: Path Independence
 No canonical ID or reference attribute may contain filesystem separators (`/`, `\`), file extensions, or disk paths. Physical relocation of a skill directory must not change its canonical ID or invalidate any edges.
 
-### Invariant 7: Catalog Non-Destruction
+#### Invariant 7: Catalog Non-Destruction
 REV-127 defines schemas, contracts, and validators **without mutating physical skill files** under `library/**`. Physical restructuring and directory movements remain strictly deferred to REV-128 and REV-129.
+
+---
+
+### Part B: Provisional Design Guardrails (Assigned to REV-128 through REV-130)
+
+The following structural rules are implemented as baseline safeguards in the validator but remain explicitly provisional to preserve flexibility for subsequent milestone decisions:
+
+#### Guardrail 4 (Provisional): Shallow Overlay Specialization
+Overlays cannot extend other overlays:
+$$\text{Type}(\text{Target}(\text{overlay})) \in \{\text{Capability}, \text{Workflow}\}$$
+Overlay extension chains ($O_1 \to O_2$) are forbidden as a baseline default to prevent combinatorial prompt pollution. *Subject to review during REV-129 (Family eligibility & provider-adapter rules).*
+
+#### Guardrail 5 (Provisional): Leaf Primitives
+Primitives cannot compose workflows:
+$$\forall p \in \text{Primitives}, \quad \text{OutEdges}_{\text{composed\_of}}(p) = \emptyset$$
+*Subject to review during REV-129 (Family eligibility).*
+
+#### Allocation of Remaining Decisions:
+- **REV-128**: Decides physical storage models (`tools-and-platforms` vs dominant domain vs registry-first) and duplicate-pair file management.
+- **REV-129**: Decides family inclusion criteria, provider-adapter interfaces, and overlay attachment boundaries.
+- **REV-130**: Decides registry manifest schema, router contracts, dynamic alias resolution, and runtime projections.
 
 ---
 

@@ -10,6 +10,7 @@ from .object_model import (
     CanonicalIdentity,
     CanonicalIdentityError,
     SkillRole,
+    ReviewStatus,
     RelationshipType,
     Relationship,
     SkillObject,
@@ -26,3 +27,25 @@ from .object_model import (
     ObjectGraph,
     InvariantViolationError,
 )
+
+__all__ = [
+    "CanonicalIdentity",
+    "CanonicalIdentityError",
+    "SkillRole",
+    "ReviewStatus",
+    "RelationshipType",
+    "Relationship",
+    "SkillObject",
+    "CapabilityObject",
+    "WorkflowObject",
+    "FamilyObject",
+    "PrimitiveObject",
+    "OverlayObject",
+    "AdapterObject",
+    "AliasObject",
+    "ReferenceObject",
+    "RouterObject",
+    "GeneratedArtifactObject",
+    "ObjectGraph",
+    "InvariantViolationError",
+]

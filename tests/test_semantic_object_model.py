@@ -30,6 +30,7 @@ from skill_library.object_model import (
     PrimitiveObject,
     ReferenceObject,
     RelationshipType,
+    ReviewStatus,
     RouterObject,
     SkillObject,
     SkillRole,
@@ -103,23 +104,46 @@ class TestFirstClassObjectTypes(unittest.TestCase):
     """Validation of all 10 first-class semantic object types."""
 
     def test_all_ten_first_class_roles_exist_and_normalize(self):
-        """Verify role enum includes all 10 roles and census aliases normalize correctly."""
-        self.assertEqual(SkillRole.CAPABILITY.value, "capability")
-        self.assertEqual(SkillRole.WORKFLOW.value, "workflow")
-        self.assertEqual(SkillRole.FAMILY.value, "family")
-        self.assertEqual(SkillRole.PRIMITIVE.value, "primitive")
-        self.assertEqual(SkillRole.OVERLAY.value, "overlay")
-        self.assertEqual(SkillRole.ADAPTER.value, "adapter")
-        self.assertEqual(SkillRole.ALIAS.value, "alias")
-        self.assertEqual(SkillRole.REFERENCE.value, "reference")
-        self.assertEqual(SkillRole.ROUTER.value, "router")
-        self.assertEqual(SkillRole.GENERATED_ARTIFACT.value, "generated_artifact")
+        """Verify role enum includes exactly 10 roles and census aliases normalize correctly."""
+        expected_roles = {
+            "capability",
+            "workflow",
+            "family",
+            "primitive",
+            "overlay",
+            "adapter",
+            "alias",
+            "reference",
+            "router",
+            "generated_artifact",
+        }
+        actual_roles = {role.value for role in SkillRole}
+        self.assertEqual(actual_roles, expected_roles)
+        self.assertEqual(len(SkillRole), 10)
 
         # Census string normalization
         self.assertEqual(SkillRole.normalize_role("independent_capability"), SkillRole.CAPABILITY)
         self.assertEqual(SkillRole.normalize_role("family_primitive"), SkillRole.PRIMITIVE)
         self.assertEqual(SkillRole.normalize_role("reference_or_support_candidate"), SkillRole.REFERENCE)
         self.assertEqual(SkillRole.normalize_role("alias_candidate"), SkillRole.ALIAS)
+
+    def test_manual_review_is_review_status_not_object_type(self):
+        """Verify manual_review is an analytical lifecycle ReviewStatus, not a SkillRole."""
+        self.assertNotIn("manual_review", [r.value for r in SkillRole])
+        self.assertEqual(ReviewStatus.MANUAL_REVIEW.value, "manual_review")
+        self.assertEqual(ReviewStatus.ACTIVE.value, "active")
+
+        # An ambiguous skill object has a concrete object role (e.g. capability) with status=manual_review
+        disputed_cap = CapabilityObject(
+            canonical_id="dev:unsettled-boundary-tool",
+            name="unsettled-boundary-tool",
+            description="Tool under boundary review.",
+            domain="development",
+            status=ReviewStatus.MANUAL_REVIEW,
+        )
+        self.assertEqual(disputed_cap.role, SkillRole.CAPABILITY)
+        self.assertEqual(disputed_cap.status, ReviewStatus.MANUAL_REVIEW)
+        self.assertEqual(disputed_cap.to_dict()["status"], "manual_review")
 
     def test_capability_instantiation(self):
         """Capability attributes and serialization."""
@@ -558,6 +582,42 @@ class TestCatalogBoundaryCaseStudies(unittest.TestCase):
         self.assertEqual(ov.role, SkillRole.OVERLAY)
         self.assertEqual(ov.relationships[0].rel_type, RelationshipType.EXTENDS)
         self.assertEqual(ov.relationships[0].target_id, "motion:implement-motion")
+
+    def test_duplicate_name_scope_separation_prevents_collision(self):
+        """
+        Verify that duplicate leaf names across domains (e.g. create-pr) survive
+        without collision due to scoped path-independent identity.
+        """
+        graph = ObjectGraph()
+        gh_pr = CapabilityObject(
+            canonical_id="github:create-pr",
+            name="create-pr",
+            description="GitHub CLI create PR capability.",
+            domain="workflow-and-automation",
+        )
+        dev_pr = CapabilityObject(
+            canonical_id="development:create-pr",
+            name="create-pr",
+            description="Legacy development PR capability.",
+            domain="development",
+        )
+        graph.add_object(gh_pr)
+        graph.add_object(dev_pr)
+        self.assertEqual(len(graph.objects), 2)
+        self.assertIsNotNone(graph.get_object("github:create-pr"))
+        self.assertIsNotNone(graph.get_object("development:create-pr"))
+        self.assertEqual(graph.validate_invariants(), [])
+
+    def test_rfc8141_urn_syntax_structure(self):
+        """Verify URN syntax follows RFC 8141 structure urn:<NID>:<NSS>."""
+        cid = CanonicalIdentity.parse("urn:skill:software-architecture:tech-debt")
+        self.assertEqual(cid.urn, "urn:skill:software-architecture:tech-debt")
+        self.assertEqual(cid.compact, "software-architecture:tech-debt")
+        # Ensure NID is 'skill' and NSS is 'software-architecture:tech-debt'
+        urn_parts = cid.urn.split(":", 2)
+        self.assertEqual(urn_parts[0], "urn")
+        self.assertEqual(urn_parts[1], "skill")
+        self.assertEqual(urn_parts[2], "software-architecture:tech-debt")
 
 
 if __name__ == "__main__":

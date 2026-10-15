@@ -99,8 +99,27 @@ class CanonicalIdentity:
         return self.compact
 
 
+class ReviewStatus(str, Enum):
+    """
+    Analytical and governance lifecycle review status.
+    Distinguishes review states (such as manual_review) from first-class semantic object types.
+    """
+    ACTIVE = "active"
+    MANUAL_REVIEW = "manual_review"
+    DEPRECATED = "deprecated"
+    DRAFT = "draft"
+    SUNSET = "sunset"
+
+
 class SkillRole(str, Enum):
-    """First-class semantic roles in the object model."""
+    """
+    Exactly 10 first-class semantic object types in the object model:
+      - 7 Leaf / Functional entities: capability, workflow, primitive, overlay, adapter, alias, reference
+      - 3 Structural entities: family, router, generated_artifact
+
+    Note: 'manual_review' is an analytical and governance lifecycle review status
+    (represented via ReviewStatus), NOT a runtime object type.
+    """
     CAPABILITY = "capability"
     WORKFLOW = "workflow"
     FAMILY = "family"
@@ -175,7 +194,7 @@ class SkillObject:
     domain: str
     physical_path: Optional[str] = None
     version: str = "1.0.0"
-    status: str = "active"  # active, deprecated, draft, sunset
+    status: Union[ReviewStatus, str] = ReviewStatus.ACTIVE
     tags: List[str] = field(default_factory=list)
     relationships: List[Relationship] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -183,6 +202,11 @@ class SkillObject:
     def __post_init__(self):
         # Validate canonical ID
         self._parsed_id = CanonicalIdentity.parse(self.canonical_id)
+        if isinstance(self.status, str):
+            try:
+                self.status = ReviewStatus(self.status.lower().strip())
+            except ValueError:
+                pass  # Allow custom status strings if needed
 
     @property
     def id_object(self) -> CanonicalIdentity:
@@ -206,6 +230,7 @@ class SkillObject:
         return rel
 
     def to_dict(self) -> Dict[str, Any]:
+        status_val = self.status.value if isinstance(self.status, ReviewStatus) else str(self.status)
         d = {
             "canonical_id": self.canonical_id,
             "urn": self.id_object.urn,
@@ -215,7 +240,7 @@ class SkillObject:
             "domain": self.domain,
             "physical_path": self.physical_path,
             "version": self.version,
-            "status": self.status,
+            "status": status_val,
             "tags": self.tags,
             "relationships": [r.to_dict() for r in self.relationships],
             "metadata": self.metadata,
@@ -487,12 +512,23 @@ class ObjectGraph:
 
     def validate_invariants(self) -> List[str]:
         """
-        Validate all architectural invariants across the registered graph.
+        Validate architectural invariants across the registered graph.
+        
+        Distinguishes between:
+          - Foundational Invariants (REV-127 core contracts):
+              * Invariant 1: Directed Acyclic Graph (DAG) for composition and dependencies
+              * Invariant 2: Single Canonical Owner (unique canonical_id)
+              * Invariant 3: Single-Hop Alias Resolution (no multi-hop alias chains)
+              * Invariant 6: Path-Independent Identity (zero filesystem path syntax in IDs)
+          - Provisional Design Guardrails (baseline defaults subject to refinement in REV-128 - REV-130):
+              * Invariant 4: Shallow Overlay Specialization (provisional rule against overlay nesting)
+              * Invariant 5: Leaf Primitives (provisional rule restricting primitive composition)
+        
         Returns empty list if fully valid, or raises InvariantViolationError.
         """
         errors = []
 
-        # 1. Single-Hop Aliases & Target Existence
+        # 1. Foundational Invariant 3: Single-Hop Aliases & Target Existence
         for cid, obj in self.objects.items():
             if obj.role == SkillRole.ALIAS:
                 alias_obj: AliasObject = obj  # type: ignore
@@ -506,7 +542,7 @@ class ObjectGraph:
                         f"Invariant 3 Violation: Alias '{cid}' chains to another alias '{target.canonical_id}'."
                     )
 
-        # 2. Overlay Target Invariants (Depth Limit = 1, must target Capability or Workflow)
+        # 2. Provisional Guardrail 4: Overlay Target Invariants (Depth Limit = 1, must target Capability or Workflow)
         for cid, obj in self.objects.items():
             if obj.role == SkillRole.OVERLAY:
                 overlay_obj: OverlayObject = obj  # type: ignore
@@ -517,23 +553,23 @@ class ObjectGraph:
                     )
                 elif target.role == SkillRole.OVERLAY:
                     errors.append(
-                        f"Invariant 4 Violation: Overlay '{cid}' extends another overlay '{target.canonical_id}'. Overlays cannot extend overlays."
+                        f"Invariant 4 Violation (Provisional): Overlay '{cid}' extends another overlay '{target.canonical_id}'. Overlays cannot extend overlays."
                     )
                 elif target.role not in (SkillRole.CAPABILITY, SkillRole.WORKFLOW):
                     errors.append(
-                        f"Invariant 4 Violation: Overlay '{cid}' targets role '{target.role.value}', must target capability or workflow."
+                        f"Invariant 4 Violation (Provisional): Overlay '{cid}' targets role '{target.role.value}', must target capability or workflow."
                     )
 
-        # 3. Primitive Purity Invariants (Primitives cannot compose workflows)
+        # 3. Provisional Guardrail 5: Primitive Purity Invariants (Primitives cannot compose workflows)
         for cid, obj in self.objects.items():
             if obj.role == SkillRole.PRIMITIVE:
                 for rel in obj.relationships:
                     if rel.rel_type == RelationshipType.COMPOSED_OF:
                         errors.append(
-                            f"Invariant 5 Violation: Primitive '{cid}' declares 'composed_of' relationship. Primitives cannot compose workflows."
+                            f"Invariant 5 Violation (Provisional): Primitive '{cid}' declares 'composed_of' relationship. Primitives cannot compose workflows."
                         )
 
-        # 4. DAG Acyclicity for Composition and Dependencies
+        # 4. Foundational Invariant 1: DAG Acyclicity for Composition and Dependencies
         cycle_error = self._check_composition_and_dependency_cycles()
         if cycle_error:
             errors.append(f"Invariant 1 Violation (DAG Acyclicity): {cycle_error}")

@@ -38,32 +38,59 @@ Canonical identities adhere to the following specification:
    ```text
    urn:skill:<scope>:<slug>
    ```
-   Conforms to RFC 8141 syntax.
-   - Example: `urn:skill:github:create-pull-request`
-   - Example: `urn:skill:architecture:code-refactoring-tech-debt`
-   - Example: `urn:skill:seo:audit`
+   Follows the lexical syntax rules of RFC 8141 for Uniform Resource Names (`urn:<NID>:<NSS>`):
+   - `urn:`: Standard scheme prefix (case-insensitive, normalized lowercase).
+   - `skill`: The repository's internal/organization Namespace Identifier (NID). *(Note: As an internal/private organization namespace within the skills library ecosystem, it implements RFC 8141 lexical structure without claiming formal IANA registry reservation).*
+   - `<scope>:<slug>`: The Namespace Specific String (NSS), containing colon-separated sub-namespaces.
+   - Examples:
+     * `urn:skill:github:create-pull-request`
+     * `urn:skill:software-architecture:code-refactoring-tech-debt`
+     * `urn:skill:on-page-seo:audit`
 
 2. **Compact Scoped Representation**:
    ```text
    <scope>:<slug>
    ```
    Used in manifests, dependency references, CLI parameters, and workflow step declarations.
-   - `<scope>`: Lowercase alphanumeric string matching `^[a-z0-9-]+$`. Represents the owning domain, platform family, or namespace (e.g. `github`, `figma`, `webflow`, `development`, `quality`, `architecture`, `cro`, `seo`). Singletons not belonging to a specific family or sub-domain use their top-level functional domain or `global`.
+   - `<scope>`: Lowercase alphanumeric string matching `^[a-z0-9-]+$`. Represents the owning domain, platform family, or namespace (e.g. `github`, `figma`, `webflow`, `development`, `quality`, `software-architecture`, `on-page-seo`, `cro`).
    - `<slug>`: Lowercase alphanumeric kebab-case string matching `^[a-z0-9-]+$`. Represents the distinct capability name.
 
-### 2.2 Invariants
+### 2.2 Collision Prevention and Identity Stability Analysis
 
-1. **Zero Path Syntax in Identifiers**:
-   A canonical identifier MUST NOT contain forward slashes (`/`), backward slashes (`\`), directory traversals (`..`), file extensions (`.md`, `.json`, `.yaml`), or drive letters (`C:`).
-2. **Immutability Under Relocation**:
-   Moving a skill directory from `library/development/backend/foo` to `library/tools-and-platforms/foo` or any future physical layout:
-   - **MUST** update `storage.physical_path` in the registry.
-   - **MUST NOT** mutate the skill's `canonical_id`.
-   - **MUST NOT** break any inbound `depends_on`, `composed_of`, `extends`, or `aliased_to` references.
-3. **Reference Exclusivity**:
-   All internal relationships and inter-skill references in the object model (`depends_on`, `composed_of`, `extends`, `aliased_to`) **MUST** use canonical identifiers, never physical paths.
-4. **Collision-Free Uniqueness**:
-   Every canonical ID within the library must be globally unique across all categories and families. Exactly one active object owns a given canonical ID.
+How does path-independent canonical identity survive category moves, family restructuring, duplicate resolution, and alias pointers without collisions?
+
+1. **Category Moves & Storage Restructuring (REV-128)**:
+   - A physical filesystem relocation (e.g., moving `library/development/backend/launch` to `library/workflows/launch` or `library/tools-and-platforms/github/create-pr`) updates solely the registry mapping metadata (`physical_path`).
+   - The canonical ID (`<scope>:<slug>`) is an immutable semantic coordinate. Moving a folder across disk directories does not change its scope or slug.
+2. **Platform Family Extraction & Multi-Provider Disambiguation (REV-129)**:
+   - Platform ecosystems utilize their family namespace as their scope (`github:*`, `figma:*`, `webflow:*`, `n8n:*`).
+   - Generic domain capabilities use functional domain scopes (`software-architecture:*`, `on-page-seo:*`, `frontend:*`).
+   - When resolving identical leaf names (such as the 15 GitHub duplicate pairs discovered in REV-126/150 like `create-pr`), the two assets occupy distinct scopes (`github:create-pr` vs `development:create-pr`), completely preventing namespace collisions.
+3. **Duplicate Resolution & Alias Pointers (REV-130)**:
+   - When a duplicate pair is consolidated, one canonical asset is chosen as the authoritative owner (`github:create-pull-request`).
+   - The retired or legacy identifier is registered as a first-class `alias` object (`alias:create-pr` or `development:create-pr`) with `aliased_to: "github:create-pull-request"`.
+   - The single-hop alias invariant guarantees that consumers querying either identity resolve to the exact same canonical target without namespace collisions or circular redirections.
+4. **Collision Rule**:
+   Every registered canonical ID must be globally unique across all scopes and slugs:
+   $$\text{Count}(\text{Owner}(\text{canonical\_id})) = 1$$
+   No two active objects may share the same `<scope>:<slug>`.
+
+### 2.3 Foundational Invariants vs Provisional Guardrails
+
+To prevent REV-127 from prematurely closing decisions assigned to subsequent work orders, contracts are partitioned as follows:
+
+1. **Foundational Invariants (Decided in REV-127)**:
+   - **Zero Path Syntax in Identifiers**: Canonical IDs MUST NOT contain forward slashes (`/`), backward slashes (`\`), directory traversals (`..`), file extensions (`.md`, `.json`, `.yaml`), or drive letters (`C:`).
+   - **Path Independence**: Moving a skill directory updates `storage.physical_path` in the registry and MUST NOT mutate the skill's `canonical_id`.
+   - **Reference Exclusivity**: Inter-skill relationships (`depends_on`, `composed_of`, `extends`, `aliased_to`) MUST use canonical identifiers, never physical paths.
+   - **DAG Acyclicity**: Composition and dependency graphs must be strictly acyclic.
+   - **Single-Hop Alias Resolution**: Aliases point directly to a canonical target; chained aliases are rejected.
+
+2. **Provisional Design Guardrails (Assigned to REV-128 – REV-130)**:
+   - *Physical Directory Layout & Ownership Models*: Evaluated and decided under **REV-128**.
+   - *Family Eligibility Criteria & Multi-Provider Rules*: Evaluated and finalized under **REV-129**.
+   - *Registry Router Schemas, Alias Lifecycles, and Runtime Projection*: Evaluated and finalized under **REV-130**.
+   - *Shallow Overlay Specialization & Primitive Leaf Boundaries*: Established as baseline provisional constraints in REV-127 to ensure safe graph validation; subject to domain refinement in REV-129.
 
 ---
 
@@ -86,7 +113,7 @@ The decoupling operates through an explicit two-layer architecture:
 +-----------------------------+   +-----------------------------+
 |    Physical Storage Layer   |   |    Runtime Projection Layer |
 |  path: library/...          |   |  symlink: ~/.agents/skills/ |
-|  (managed, movable)         |   |  (flat, namespaced on clash)|
+|  (managed, movable in 128)  |   |  (flat, namespaced on clash)|
 +-----------------------------+   +-----------------------------+
 ```
 
