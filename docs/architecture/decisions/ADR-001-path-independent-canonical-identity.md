@@ -52,25 +52,33 @@ Canonical identities adhere to the following specification:
    <scope>:<slug>
    ```
    Used in manifests, dependency references, CLI parameters, and workflow step declarations.
-   - `<scope>`: Lowercase alphanumeric string matching `^[a-z0-9-]+$`. Represents the owning domain, platform family, or namespace (e.g. `github`, `figma`, `webflow`, `development`, `quality`, `software-architecture`, `on-page-seo`, `cro`).
-   - `<slug>`: Lowercase alphanumeric kebab-case string matching `^[a-z0-9-]+$`. Represents the distinct capability name.
+   - `<scope>`: Lowercase alphanumeric string matching `^[a-z0-9-]+$`. Represents the **immutable provenance identity namespace** assigned at minting (e.g. `github`, `figma`, `webflow`, `development`, `quality`, `software-architecture`, `on-page-seo`, `cro`). It is strictly decoupled from mutable functional domain ownership (`domain`), physical location (`physical_path`), and family memberships (`families`).
+   - `<slug>`: Lowercase alphanumeric kebab-case string matching `^[a-z0-9-]+$`. Represents the distinct capability name within that provenance namespace.
 
 ### 2.2 Collision Prevention and Identity Stability Analysis
 
-How does path-independent canonical identity survive category moves, family restructuring, duplicate resolution, and alias pointers without collisions?
+How does path-independent canonical identity survive category moves, family restructuring, duplicate resolution, semantic reownership, and alias pointers without collisions?
 
 1. **Category Moves & Storage Restructuring (REV-128)**:
    - A physical filesystem relocation (e.g., moving `library/development/backend/launch` to `library/workflows/launch` or `library/tools-and-platforms/github/create-pr`) updates solely the registry mapping metadata (`physical_path`).
    - The canonical ID (`<scope>:<slug>`) is an immutable semantic coordinate. Moving a folder across disk directories does not change its scope or slug.
 2. **Platform Family Extraction & Multi-Provider Disambiguation (REV-129)**:
-   - Platform ecosystems utilize their family namespace as their scope (`github:*`, `figma:*`, `webflow:*`, `n8n:*`).
+   - Platform ecosystems utilize their family namespace as their provenance scope (`github:*`, `figma:*`, `webflow:*`, `n8n:*`).
    - Generic domain capabilities use functional domain scopes (`software-architecture:*`, `on-page-seo:*`, `frontend:*`).
    - When resolving identical leaf names (such as the 15 GitHub duplicate pairs discovered in REV-126/150 like `create-pr`), the two assets occupy distinct scopes (`github:create-pr` vs `development:create-pr`), completely preventing namespace collisions.
 3. **Duplicate Resolution & Alias Pointers (REV-130)**:
    - When a duplicate pair is consolidated, one canonical asset is chosen as the authoritative owner (`github:create-pull-request`).
    - The retired or legacy identifier is registered as a first-class `alias` object (`alias:create-pr` or `development:create-pr`) with `aliased_to: "github:create-pull-request"`.
    - The single-hop alias invariant guarantees that consumers querying either identity resolve to the exact same canonical target without namespace collisions or circular redirections.
-4. **Collision Rule**:
+4. **Semantic Reownership & Family Realignment**:
+   - The critical test of identity stability is semantic reownership, not merely moving a folder on disk. Consider a capability originally minted in the general development domain (e.g., `development:create-pr`) that is reassigned to a universal platform family.
+   - The four architectural axes remain strictly decoupled:
+     * **Permanent Identity Namespace**: `canonical_id = "development:create-pr"` (strictly immutable).
+     * **Current Semantic Ownership**: `domain = "platform"`, `owner = "core-tooling"` (mutable metadata).
+     * **Current Physical Location**: `physical_path = "library/tools-and-platforms/github/create-pr"` (mutable metadata, REV-128).
+     * **Family Memberships**: `families = ["github", "developer-tools"]` (mutable metadata, REV-129).
+   - Scope is an immutable identity namespace, NOT a live representation of current ownership. Canonical identity survives semantic reownership intact, ensuring existing workflow step invocations and dependency declarations never break.
+5. **Collision Rule**:
    Every registered canonical ID must be globally unique across all scopes and slugs:
    $$\text{Count}(\text{Owner}(\text{canonical\_id})) = 1$$
    No two active objects may share the same `<scope>:<slug>`.
@@ -82,6 +90,7 @@ To prevent REV-127 from prematurely closing decisions assigned to subsequent wor
 1. **Foundational Invariants (Decided in REV-127)**:
    - **Zero Path Syntax in Identifiers**: Canonical IDs MUST NOT contain forward slashes (`/`), backward slashes (`\`), directory traversals (`..`), file extensions (`.md`, `.json`, `.yaml`), or drive letters (`C:`).
    - **Path Independence**: Moving a skill directory updates `storage.physical_path` in the registry and MUST NOT mutate the skill's `canonical_id`.
+   - **Decoupled Scope Immutability**: Canonical `<scope>` is an immutable provenance coordinate; semantic reownership updates `domain`, `owner`, or `families` metadata without mutating `canonical_id`.
    - **Reference Exclusivity**: Inter-skill relationships (`depends_on`, `composed_of`, `extends`, `aliased_to`) MUST use canonical identifiers, never physical paths.
    - **DAG Acyclicity**: Composition and dependency graphs must be strictly acyclic.
    - **Single-Hop Alias Resolution**: Aliases point directly to a canonical target; chained aliases are rejected.

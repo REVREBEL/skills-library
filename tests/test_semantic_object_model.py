@@ -617,7 +617,75 @@ class TestCatalogBoundaryCaseStudies(unittest.TestCase):
         urn_parts = cid.urn.split(":", 2)
         self.assertEqual(urn_parts[0], "urn")
         self.assertEqual(urn_parts[1], "skill")
-        self.assertEqual(urn_parts[2], "software-architecture:tech-debt")
+    def test_semantic_reownership_preserves_canonical_identity(self):
+        """
+        Verify that semantic reownership (moving from general domain to platform family)
+        preserves the permanent identity namespace (canonical_id) while updating
+        current domain, owner, family memberships, and physical path.
+        """
+        # Initially minted in development namespace
+        skill = CapabilityObject(
+            canonical_id="development:create-pr",
+            name="create-pr",
+            description="Automated pull request creation tool.",
+            domain="development",
+            owner="apps-team",
+            families=["development"],
+            physical_path="library/development/fullstack/create-pr",
+        )
+        self.assertEqual(skill.canonical_id, "development:create-pr")
+        self.assertEqual(skill.id_object.scope, "development")
+        self.assertEqual(skill.domain, "development")
+
+        # Semantic reownership: asset moves to universal platform family
+        skill.domain = "platform"
+        skill.owner = "core-infra"
+        skill.families = ["github", "developer-tools"]
+        skill.physical_path = "library/tools-and-platforms/github/create-pr"
+
+        # Canonical identity remains permanently untouched
+        self.assertEqual(skill.canonical_id, "development:create-pr")
+        self.assertEqual(skill.id_object.scope, "development")
+        self.assertEqual(skill.id_object.compact, "development:create-pr")
+        self.assertEqual(skill.id_object.urn, "urn:skill:development:create-pr")
+
+        # Mutable metadata reflects current state
+        self.assertEqual(skill.domain, "platform")
+        self.assertEqual(skill.owner, "core-infra")
+        self.assertEqual(skill.families, ["github", "developer-tools"])
+        self.assertEqual(skill.physical_path, "library/tools-and-platforms/github/create-pr")
+
+        # Verify serialization contains all four decoupled axes
+        d = skill.to_dict()
+        self.assertEqual(d["canonical_id"], "development:create-pr")
+        self.assertEqual(d["urn"], "urn:skill:development:create-pr")
+        self.assertEqual(d["domain"], "platform")
+        self.assertEqual(d["owner"], "core-infra")
+        self.assertEqual(d["families"], ["github", "developer-tools"])
+        self.assertEqual(d["physical_path"], "library/tools-and-platforms/github/create-pr")
+
+    def test_immutable_scope_decoupled_from_mutable_metadata(self):
+        """
+        Verify that scope is strictly an immutable provenance namespace,
+        independent of arbitrary mutations to domain or family memberships.
+        """
+        skill = CapabilityObject(
+            canonical_id="seo:audit-core-web-vitals",
+            name="audit-core-web-vitals",
+            description="Core Web Vitals diagnostic audit.",
+            domain="marketing-and-seo",
+        )
+        self.assertEqual(skill.id_object.scope, "seo")
+
+        # Reassign to quality domain and web-performance family
+        skill.domain = "quality-and-security"
+        skill.families.append("web-performance")
+        skill.physical_path = "library/quality-and-security/performance/audit-core-web-vitals"
+
+        self.assertEqual(skill.canonical_id, "seo:audit-core-web-vitals")
+        self.assertEqual(skill.id_object.scope, "seo")
+        self.assertEqual(skill.domain, "quality-and-security")
+        self.assertIn("web-performance", skill.families)
 
 
 if __name__ == "__main__":

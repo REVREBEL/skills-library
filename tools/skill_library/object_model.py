@@ -29,6 +29,12 @@ class CanonicalIdentity:
     """
     Path-independent, scoped canonical identifier conforming to ADR-001.
     Syntax: <scope>:<slug> or urn:skill:<scope>:<slug>
+
+    ARCHITECTURAL INVARIANT:
+    'scope' is an immutable identity namespace / provenance scope assigned at minting.
+    It is NOT a live representation of current semantic ownership (domain), physical location (path),
+    or family membership. When an object undergoes semantic reownership or family restructuring,
+    its canonical identity remains permanently unchanged.
     """
     scope: str
     slug: str
@@ -186,12 +192,26 @@ class Relationship:
 
 @dataclass
 class SkillObject:
-    """Base class for all first-class entities in the Semantic Object Model."""
+    """
+    Base class for all first-class entities in the Semantic Object Model.
+
+    The model formally decouples four distinct axes:
+      1. Permanent Identity Namespace (canonical_id: <scope>:<slug>):
+         Immutable identity coordinate assigned at minting. Never mutates upon semantic reownership.
+      2. Current Semantic Ownership (domain, owner):
+         Mutable metadata reflecting the current functional domain or team responsible for the asset.
+      3. Current Physical Location (physical_path):
+         Mutable storage location on disk (governed by REV-128).
+      4. Family Memberships (families):
+         Mutable list of platform/vendor family affiliations (governed by REV-129).
+    """
     canonical_id: str
     name: str
     role: SkillRole
-    description: str
-    domain: str
+    description: str = ""
+    domain: str = ""
+    owner: Optional[str] = None
+    families: List[str] = field(default_factory=list)
     physical_path: Optional[str] = None
     version: str = "1.0.0"
     status: Union[ReviewStatus, str] = ReviewStatus.ACTIVE
@@ -238,6 +258,8 @@ class SkillObject:
             "role": self.role.value,
             "description": self.description,
             "domain": self.domain,
+            "owner": self.owner,
+            "families": self.families,
             "physical_path": self.physical_path,
             "version": self.version,
             "status": status_val,

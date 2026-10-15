@@ -61,13 +61,15 @@ Canonical identities are defined as scoped, lowercase strings:
 - **Compact Scoped ID**: `<scope>:<slug>` (e.g., `github:create-pull-request`)
 
 ```text
-       Scope                  Slug
-   [ a-z0-9-]+       :    [ a-z0-9-]+
-  (family / domain)      (capability name)
+           Scope                     Slug
+        [a-z0-9-]+         :      [a-z0-9-]+
+  (provenance namespace)       (capability name)
 ```
 
 **Namespace Clarification**:
-The formal URN representation follows the lexical syntax of RFC 8141 (`urn:<NID>:<NSS>`), where `skill` serves as the private/organization Namespace Identifier (NID) for the skills repository ecosystem. It provides unambiguous URI interoperability and schema referencing without asserting an official IANA-registered namespace.
+- `<scope>`: Represents the **permanent provenance identity namespace** assigned when the skill is minted (e.g., `github`, `development`, `figma`, `on-page-seo`). It is **immutable** and decoupled from mutable functional domain ownership (`domain`), physical storage path (`physical_path`), or platform family affiliations (`families`).
+- `<slug>`: The unique capability name within that provenance scope.
+- The formal URN representation follows the lexical syntax of RFC 8141 (`urn:<NID>:<NSS>`), where `skill` serves as the private/organization Namespace Identifier (NID) for the skills repository ecosystem. It provides unambiguous URI interoperability and schema referencing without asserting an official IANA-registered namespace.
 
 ### 2.2 Collision Prevention and Migration Compatibility
 
@@ -85,11 +87,31 @@ How does path-independent canonical identity survive category moves, family rest
    - The secondary asset is converted to a first-class `alias` object (`development:create-pr` -> `aliased_to: "github:create-pull-request"`).
    - Because single-hop aliases resolve deterministically, client lookups for either identifier yield the canonical target without collisions or multi-hop chaining.
 
-### 2.3 Identity Invariants
+### 2.3 The Four Decoupled Axes of Identity, Ownership, Location, and Membership
+
+A critical invariant established in REV-127 is that **immutable identity is decoupled from mutable semantic ownership, physical location, and family grouping**. A catalog asset exists across four independent axes:
+
+| Architectural Axis | Field / Representation | Mutability | Role & Governance |
+| :--- | :--- | :--- | :--- |
+| **1. Permanent Identity Namespace** | `canonical_id` (`<scope>:<slug>`), `urn` (`urn:skill:<scope>:<slug>`) | **Strictly Immutable** | Permanent identity coordinate assigned at minting (provenance namespace). Never changes across the lifecycle of the object. |
+| **2. Current Semantic Ownership** | `domain`, `owner` | **Mutable Metadata** | The functional domain (e.g. `platform`, `development`, `quality-and-security`) or team/subsystem currently responsible for maintaining the asset. |
+| **3. Current Physical Location** | `physical_path` | **Mutable Metadata** | Filesystem storage path (e.g. `library/tools-and-platforms/github/create-pr/SKILL.md`), managed by compilers and registry manifests (REV-128). |
+| **4. Family Memberships** | `families` | **Mutable Metadata** | Set of platform, vendor, or cross-cutting family groupings (e.g. `["github", "developer-tools"]`), governed by REV-129. |
+
+#### Scenario: Semantic Reownership into a Platform Family
+Consider what occurs when an existing capability originally minted in the general development domain (e.g., `development:create-pr`) is transferred into a universal platform family:
+- **Permanent Canonical Identity**: Remains `development:create-pr` (`urn:skill:development:create-pr`). Existing dependency graphs, workflow step references, and external links remain intact without breaking changes.
+- **Current Semantic Ownership**: Updates to `domain: "platform"`, `owner: "core-tooling"`.
+- **Family Memberships**: Updates to `families: ["github", "developer-tools"]`.
+- **Physical Location**: Updates to `physical_path: "library/tools-and-platforms/github/create-pr"`.
+- **Alias / Router Resolution (REV-130)**: If users query `github:create-pr`, an alias or platform router resolves deterministically to `development:create-pr`. The canonical object does not need to be renamed or reminted.
+
+### 2.4 Identity Invariants
 1. **No Path Separators**: Canonical IDs must never contain `/` or `\`.
 2. **No File Extensions**: Canonical IDs must never contain `.md`, `.json`, or `.yaml`.
 3. **Physical Path Mutability**: The physical storage location (`physical_path`) may be modified during refactoring without altering the canonical ID.
 4. **Relationship Target Exclusivity**: All inter-object references (`composed_of`, `extends`, `depends_on`, `aliased_to`) must reference canonical IDs, never physical paths.
+5. **Decoupled Scope Immutability**: The canonical `<scope>` is an immutable provenance coordinate assigned at creation; it is decoupled from mutable `domain` ownership, `families` membership, and `physical_path` storage.
 
 ---
 
