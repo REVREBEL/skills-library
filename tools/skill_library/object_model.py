@@ -227,6 +227,14 @@ class SkillObject:
                 self.status = ReviewStatus(self.status.lower().strip())
             except ValueError:
                 pass  # Allow custom status strings if needed
+        self._initialized = True
+
+    def __setattr__(self, name: str, value: Any):
+        if getattr(self, "_initialized", False) and name in ("canonical_id", "_parsed_id"):
+            raise InvariantViolationError(
+                f"Invariant 6 Violation (Immutable Identity): Canonical identity is strictly immutable and cannot be overwritten after creation (attempted to reassign '{self.canonical_id}' to '{value}')."
+            )
+        super().__setattr__(name, value)
 
     @property
     def id_object(self) -> CanonicalIdentity:

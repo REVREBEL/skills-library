@@ -617,6 +617,8 @@ class TestCatalogBoundaryCaseStudies(unittest.TestCase):
         urn_parts = cid.urn.split(":", 2)
         self.assertEqual(urn_parts[0], "urn")
         self.assertEqual(urn_parts[1], "skill")
+        self.assertEqual(urn_parts[2], "software-architecture:tech-debt")
+
     def test_semantic_reownership_preserves_canonical_identity(self):
         """
         Verify that semantic reownership (moving from general domain to platform family)
@@ -686,6 +688,45 @@ class TestCatalogBoundaryCaseStudies(unittest.TestCase):
         self.assertEqual(skill.id_object.scope, "seo")
         self.assertEqual(skill.domain, "quality-and-security")
         self.assertIn("web-performance", skill.families)
+
+    def test_negative_canonical_id_mutation_rejected(self):
+        """
+        Verify that canonical identity is strictly immutable after creation.
+        Attempting to overwrite canonical_id or its parsed components raises an error.
+        """
+        skill = CapabilityObject(
+            canonical_id="development:create-pr",
+            name="create-pr",
+            description="Automated PR creator.",
+            domain="development",
+        )
+
+        # Attempting to reassign canonical_id raises InvariantViolationError
+        with self.assertRaises(InvariantViolationError) as ctx:
+            skill.canonical_id = "platform:create-pr"
+        self.assertIn("strictly immutable", str(ctx.exception))
+
+        # Attempting to overwrite _parsed_id raises InvariantViolationError
+        with self.assertRaises(InvariantViolationError) as ctx:
+            skill._parsed_id = CanonicalIdentity.parse("platform:create-pr")
+        self.assertIn("strictly immutable", str(ctx.exception))
+
+        # Attempting to mutate fields on CanonicalIdentity directly raises FrozenInstanceError
+        with self.assertRaises(Exception):
+            skill.id_object.scope = "platform"
+
+        # Verify canonical_id remains pristine
+        self.assertEqual(skill.canonical_id, "development:create-pr")
+        self.assertEqual(skill.id_object.scope, "development")
+
+        # But mutable axes (domain, owner, families, physical_path) can still be safely updated
+        skill.domain = "platform"
+        skill.owner = "core-infra"
+        skill.families = ["github"]
+        skill.physical_path = "library/platform/create-pr"
+        self.assertEqual(skill.domain, "platform")
+        self.assertEqual(skill.owner, "core-infra")
+        self.assertEqual(skill.families, ["github"])
 
 
 if __name__ == "__main__":
