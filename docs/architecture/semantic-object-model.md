@@ -1,10 +1,10 @@
 # Semantic Object Model and Stable Identity Architecture
 
 - **Author**: REVREBEL Agent Architecture Team
-- **Status**: Formally Specified (Gated under REV-127)
+- **Status**: Formally Specified (Gated under REV-127 / REV-128)
 - **Target Audience**: Platform Engineers, Agent Developers, Tooling Maintainers
 - **Related Issues**: [REV-126](https://linear.app/revrebel/issue/REV-126), [REV-150](https://linear.app/revrebel/issue/REV-150), [REV-127](https://linear.app/revrebel/issue/REV-127), [REV-128](https://linear.app/revrebel/issue/REV-128), [REV-129](https://linear.app/revrebel/issue/REV-129), [REV-130](https://linear.app/revrebel/issue/REV-130)
-- **Normative References**: [ADR-001: Path-Independent Canonical Semantic Identity](file:///Users/garystringham/github-revrebel/skills-library/docs/architecture/decisions/ADR-001-path-independent-canonical-identity.md)
+- **Normative References**: [ADR-001: Path-Independent Canonical Semantic Identity](decisions/ADR-001-path-independent-canonical-identity.md), [ADR-002: Physical Ownership Model for Families and Overlays](decisions/ADR-002-physical-ownership-model.md)
 
 ---
 
@@ -53,7 +53,7 @@ Historically, skills were treated uniformly as generic markdown files stored in 
 
 ## 2. Canonical Identity and Path-Independence
 
-Pursuant to [ADR-001](file:///Users/garystringham/github-revrebel/skills-library/docs/architecture/decisions/ADR-001-path-independent-canonical-identity.md), **canonical identity is strictly path-independent**.
+Pursuant to [ADR-001](decisions/ADR-001-path-independent-canonical-identity.md), **canonical identity is strictly path-independent**.
 
 ### 2.1 Identity Syntax and RFC 8141 Compliance
 Canonical identities are defined as scoped, lowercase strings:
@@ -330,7 +330,7 @@ $$\forall p \in \text{Primitives}, \quad \text{OutEdges}_{\text{composed\_of}}(p
 *Subject to review during REV-129 (Family eligibility).*
 
 #### Allocation of Remaining Decisions:
-- **REV-128**: Decides physical storage models (`tools-and-platforms` vs dominant domain vs registry-first) and duplicate-pair file management.
+- **REV-128 (Decided & Formally Specified)**: Decides physical storage models (Hybrid Governed Physical Ownership via ADR-002), directory contracts, overlay/adapter placement, and duplicate-pair resolution mappings.
 - **REV-129**: Decides family inclusion criteria, provider-adapter interfaces, and overlay attachment boundaries.
 - **REV-130**: Decides registry manifest schema, router contracts, dynamic alias resolution, and runtime projections.
 
@@ -356,3 +356,83 @@ The REV-126/150 audit identified several boundary disputes that were placed in `
    - *Resolution*: Classified as an **`alias`** with `target_id: "github:create-pull-request"`.
 8. **`steve-jobs` (`library/development/fullstack/steve-jobs`)**:
    - *Resolution*: Classified as a **`reference`** (`rubric` / persona prompt). It provides high-standard product review principles without executable code tasks.
+
+---
+
+## 8. Physical Storage Plane and Migration Architecture (REV-128)
+
+Pursuant to [ADR-002](decisions/ADR-002-physical-ownership-model.md), the repository proposes the **Hybrid Governed Physical Ownership Model** as its candidate physical layout architecture.
+
+### 8.1 Filesystem Directory Planes
+
+The physical filesystem under `library/` is partitioned into three standardized layout structures:
+
+```text
+library/
+├── tools-and-platforms/                # [Plane 1: Platform Hubs]
+│   └── <family-slug>/                  # github, webflow, figma, n8n, hugging-face...
+│       ├── primitives/                 # Platform-wide auth, config, token primitives
+│       ├── adapters/                   # Platform-specific protocol/CLI/MCP shims
+│       ├── overlays/                   # Surface-specialized overlays targeting external skills
+│       └── <skill-slug>/               # Native operational workflows and capabilities
+├── <category-slug>/                    # [Plane 2: Domain-Centric Trees] (10 Categories)
+│   └── <subcategory-slug>/
+│       ├── overlays/                   # Domain-hosted workflow specializations
+│       └── <skill-slug>/               # Domain-general capabilities and workflows
+└── meta-and-agent-skills/              # [Plane 3: Meta & Internal Tooling]
+    ├── skill-lifecycle/                # Former skills-create-manage-update
+    └── adapters/                       # Shared platform-agnostic protocol shims
+```
+
+### 8.2 Physical Directory Contracts for Overlays and Adapters
+
+1. **Overlays (`extends`)**:
+   - **Platform-Hosted**: When an overlay specializes a capability for an external platform host (e.g., `figma-implement-motion`), it resides in `library/tools-and-platforms/<family-slug>/overlays/<skill-slug>/`.
+   - **Domain-Hosted**: When an overlay specializes a domain-specific workflow (e.g., high-security variants of a deployment pipeline), it resides in `library/<category>/<subcategory>/overlays/<skill-slug>/`.
+   - **Nesting Invariant**: Physical directory nesting of overlays is strictly forbidden. A path cannot contain more than one `overlays/` directory segment.
+2. **Adapters (`adapts`)**:
+   - **Platform-Specific Adapters**: Reside in `library/tools-and-platforms/<family-slug>/adapters/<skill-slug>/`.
+   - **Platform-Agnostic Adapters**: Reside in `library/meta-and-agent-skills/adapters/<skill-slug>/`.
+   - **Encapsulation Invariant**: Adapters are pure protocol translation shims (CLI, MCP, REST) and must not contain application domain workflows.
+
+### 8.3 Direction-Neutral Candidate Collision Evaluation (The 15 GitHub Duplicate Pairs)
+
+The 15 duplicate leaf names identified during the census between `library/github-operations/*` and the main category tree are treated as **unresolved candidate collision pairs**.
+
+In accordance with approved census principles, REV-128 establishes candidate evaluation hypotheses without making premature or irreversible final adjudications:
+
+| Candidate Leaf Name | Main-Tree Path | Candidate Platform Path | Candidate Canonical ID Hypotheses | Candidate Evaluation Hypotheses |
+| :--- | :--- | :--- | :--- | :--- |
+| `actions-debugger` | `infrastructure-and-ops/ci-cd` | `tools-and-platforms/github/actions-debugger` | `infrastructure-and-ops:actions-debugger` vs `github:actions-debugger` | **Hypothesis A**: Platform operational workflow owned by GitHub hub; main-tree path aliased.<br>**Hypothesis B**: Retained in CI/CD domain if tool generalizes across multiple runners. |
+| `advanced-workflows` | `workflow-and-automation/git-and-vcs` | `tools-and-platforms/github/advanced-workflows` | `workflow-and-automation:advanced-workflows` vs `github:advanced-workflows` | **Hypothesis A**: Platform operational workflow owned by GitHub hub.<br>**Hypothesis B**: Generic Git recovery/rebase workflow retained in git-and-vcs with platform overlay. |
+| `commit` | `development/systems` | `tools-and-platforms/github/commit` | `development:commit` and `github:commit` | **Hypothesis A (Dual-Retention)**: Distinct functional semantics: `development:commit` provides generic Git staging/commit primitives; `github:commit` handles PR review commit integration and issue linking.<br>**Hypothesis B**: Merge into single generic commit capability with GitHub adapter. |
+| `create-branch` | `development/systems` | `tools-and-platforms/github/create-branch` | `development:create-branch` and `github:create-branch` | **Hypothesis A (Dual-Retention)**: Distinct functional semantics: `development:create-branch` provides generic VCS branch creation; `github:create-branch` enforces repo-level branch-naming rules, issue linking, and remote tracking.<br>**Hypothesis B**: Generalize into single branch workflow with platform config. |
+| `create-issue-gate` | `business-and-operations/product-management` | `tools-and-platforms/github/create-issue-gate` | `business-and-operations:create-issue-gate` vs `github:create-issue-gate` | **Hypothesis A**: Consolidate into GitHub hub as issue-first delivery workflow.<br>**Hypothesis B**: Retain in product-management as vendor-neutral requirement gate interfacing via adapters. |
+| `feature-tracking` | `business-and-operations/product-management` | `tools-and-platforms/github/feature-tracking` | `business-and-operations:feature-tracking` vs `github:feature-tracking` | **Hypothesis A**: Consolidate into GitHub hub as repo-native project/issue tracking workflow.<br>**Hypothesis B**: Retain in product-management as generic feature memory capability. |
+| `github` | `development/fullstack` | `tools-and-platforms/github/general-operations` | `development:github` vs `github:general-operations` | **Hypothesis A**: Rename leaf to `general-operations` to eliminate package root collision (`github:general-operations`).<br>**Hypothesis B**: Split into atomic capability components distributed across platform hub. |
+| `hooks-automation` | `infrastructure-and-ops/ci-cd` | `tools-and-platforms/github/hooks-automation` | `infrastructure-and-ops:hooks-automation` vs `github:hooks-automation` | **Hypothesis A**: Consolidate into GitHub hub as Actions/webhook automation workflow.<br>**Hypothesis B**: Retain in CI/CD as local/server Git hooks orchestrator. |
+| `issue-creator` | `business-and-operations/product-management` | `tools-and-platforms/github/issue-creator` | `business-and-operations:issue-creator` vs `github:issue-creator` | **Hypothesis A**: Consolidate into GitHub hub with main-tree alias.<br>**Hypothesis B**: Retain in product-management with issue tracker adapter interface. |
+| `pr-merge-champion` | `development/fullstack` | `tools-and-platforms/github/pr-merge-champion` | `development:pr-merge-champion` vs `github:pr-merge-champion` | **Hypothesis A**: Consolidate into GitHub hub as platform PR merge workflow.<br>**Hypothesis B**: Retain in development/fullstack as generic code review champion. |
+| `pr-review` | `quality-and-security/code-review` | `tools-and-platforms/github/pr-review` | `quality-and-security:pr-review` vs `github:pr-review` | **Hypothesis A**: Consolidate into GitHub hub with alias in code-review.<br>**Hypothesis B**: Retain in quality-and-security as core code review capability, using GitHub adapter for API transport. |
+| `pr-writer` | `development/fullstack` | `tools-and-platforms/github/pr-writer` | `development:pr-writer` vs `github:pr-writer` | **Hypothesis A**: Consolidate into GitHub hub as PR description authoring workflow.<br>**Hypothesis B**: Retain in development as generic changeset documentation generator. |
+| `presence` | `marketing-and-seo/cro` | `tools-and-platforms/github/presence` | `marketing-and-seo:presence` vs `github:presence` | **Hypothesis A**: Consolidate into GitHub hub as repository README/discoverability workflow.<br>**Hypothesis B**: Retain in marketing-and-seo as digital footprint optimization skill. |
+| `review-requests` | `development/fullstack` | `tools-and-platforms/github/review-requests` | `development:review-requests` vs `github:review-requests` | **Hypothesis A**: Consolidate into GitHub hub as PR review assignment workflow.<br>**Hypothesis B**: Retain in development as peer review routing workflow. |
+| `security-review` | `quality-and-security/security` | `tools-and-platforms/github/security-review` | `quality-and-security:security-review` and `github:security-review` | **Hypothesis A (Dual-Retention)**: Distinct functional semantics: `quality-and-security:security-review` provides deep static application code audit; `github:security-review` audits GitHub Actions workflow exploit vectors and repository permission postures.<br>**Hypothesis B**: Generalize security audit into single workflow with platform-specific checklists. |
+
+> [!NOTE]
+> **Programmatic Legacy Compatibility Aliases**:
+> To support transition across codebase tools and regression test harnesses without breakage, `skill_library.physical_layout` maintains full backward compatibility aliases:
+> - `DuplicateResolutionRegistry` aliases `DuplicateCandidateRegistry`
+> - `DuplicatePairResolution` aliases `DuplicateCandidateHypothesis`
+> - Legacy methods (`get_resolution`, `is_duplicate_leaf`, `get_all_pairs`) and attributes (`target_physical_home`, `canonical_id`, `resolution_type`, `description`) transparently delegate to their direction-neutral equivalents.
+
+### 8.4 Proposed Root Directory Migration Roadmap [Provisional]
+
+1. **`library/github-operations/` -> `library/tools-and-platforms/github/`**:
+   - The 18 consolidated workflows are planned to transition to the platform hub upon approval of REV-129/130.
+   - Backward-compatible router references and alias manifests guarantee zero runtime breakage.
+2. **`library/skills-create-manage-update/` -> `library/meta-and-agent-skills/skill-lifecycle/`**:
+   - Internal meta-capabilities are planned to relocate under the `meta-and-agent-skills` category.
+3. **Execution Phasing & Catalog Protection**:
+   - In accordance with **Invariant 7 (Catalog Non-Destruction)**, disk moves are deferred until compilation and migration tooling in REV-129/130.
+   - REV-128 establishes layout specifications, validators, and candidate hypotheses without modifying existing skill directories.
