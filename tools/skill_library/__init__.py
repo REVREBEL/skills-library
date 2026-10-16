@@ -27,6 +27,15 @@ from .object_model import (
     ObjectGraph,
     InvariantViolationError,
 )
+from .family_contract import (
+    FamilyTier,
+    ProviderType,
+    FamilyEligibilityError,
+    FamilyQualificationGate,
+    ExecutionProviderBinding,
+    FamilyCandidateEvaluator,
+    ExecutionProviderContract,
+)
 
 __all__ = [
     "CanonicalIdentity",
@@ -48,4 +57,11 @@ __all__ = [
     "GeneratedArtifactObject",
     "ObjectGraph",
     "InvariantViolationError",
+    "FamilyTier",
+    "ProviderType",
+    "FamilyEligibilityError",
+    "FamilyQualificationGate",
+    "ExecutionProviderBinding",
+    "FamilyCandidateEvaluator",
+    "ExecutionProviderContract",
 ]
