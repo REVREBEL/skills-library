@@ -273,29 +273,40 @@ class DuplicateCandidateHypothesis:
     candidate_canonical_id: str
     hypothesis_type: str  # e.g., "platform_consolidation_hypothesis", "dual_retention_hypothesis", "rename_collision_hypothesis"
     evaluation_notes: str
+    # -------------------------------------------------------------------------
+    # Legacy Compatibility Aliases (REV-128 Invariant Safeguard)
+    # -------------------------------------------------------------------------
+    # The following properties and aliases ensure backward compatibility for
+    # existing callers and test suites while transitioning to direction-neutral
+    # candidate evaluation semantics:
+    #   - target_physical_home -> candidate_platform_path
+    #   - canonical_id         -> candidate_canonical_id
+    #   - resolution_type      -> hypothesis_type
+    #   - description          -> evaluation_notes
+    # -------------------------------------------------------------------------
 
     @property
     def target_physical_home(self) -> str:
-        """Backward-compatible alias for candidate_platform_path."""
+        """Legacy compatibility alias for candidate_platform_path."""
         return self.candidate_platform_path
 
     @property
     def canonical_id(self) -> str:
-        """Backward-compatible alias for candidate_canonical_id."""
+        """Legacy compatibility alias for candidate_canonical_id."""
         return self.candidate_canonical_id
 
     @property
     def resolution_type(self) -> str:
-        """Backward-compatible alias for hypothesis_type."""
+        """Legacy compatibility alias for hypothesis_type."""
         return self.hypothesis_type
 
     @property
     def description(self) -> str:
-        """Backward-compatible alias for evaluation_notes."""
+        """Legacy compatibility alias for evaluation_notes."""
         return self.evaluation_notes
 
 
-# Backward-compatible type alias
+# Legacy compatibility type alias for existing test suites and consumers
 DuplicatePairResolution = DuplicateCandidateHypothesis
 
 
@@ -432,7 +443,17 @@ class DuplicateCandidateRegistry:
         ),
     }
 
-    # Backward-compatible dictionary reference
+    # -------------------------------------------------------------------------
+    # Legacy Compatibility Class & Method Aliases
+    # -------------------------------------------------------------------------
+    # Provides full backward compatibility for pre-reconciliation interfaces:
+    #   - RESOLUTIONS -> CANDIDATE_HYPOTHESES dictionary
+    #   - is_duplicate_leaf(...) -> is_candidate_leaf(...)
+    #   - get_resolution(...)    -> get_candidate_hypothesis(...)
+    #   - get_all_pairs(...)     -> get_all_candidates(...)
+    #   - DuplicateResolutionRegistry -> DuplicateCandidateRegistry
+    # -------------------------------------------------------------------------
+
     RESOLUTIONS = CANDIDATE_HYPOTHESES
 
     @classmethod
@@ -450,21 +471,23 @@ class DuplicateCandidateRegistry:
         """Return all 15 candidate duplicate evaluation records."""
         return list(cls.CANDIDATE_HYPOTHESES.values())
 
-    # Backward-compatible helper methods
     @classmethod
     def is_duplicate_leaf(cls, leaf_name: str) -> bool:
+        """Legacy compatibility alias for is_candidate_leaf."""
         return cls.is_candidate_leaf(leaf_name)
 
     @classmethod
     def get_resolution(cls, leaf_name: str) -> Optional[DuplicateCandidateHypothesis]:
+        """Legacy compatibility alias for get_candidate_hypothesis."""
         return cls.get_candidate_hypothesis(leaf_name)
 
     @classmethod
     def get_all_pairs(cls) -> List[DuplicateCandidateHypothesis]:
+        """Legacy compatibility alias for get_all_candidates."""
         return cls.get_all_candidates()
 
 
-# Backward-compatible class alias
+# Legacy compatibility class alias for existing callers and test suites
 DuplicateResolutionRegistry = DuplicateCandidateRegistry
 
 

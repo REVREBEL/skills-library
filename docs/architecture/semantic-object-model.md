@@ -419,6 +419,13 @@ In accordance with approved census principles, REV-128 establishes candidate eva
 | `review-requests` | `development/fullstack` | `tools-and-platforms/github/review-requests` | `development:review-requests` vs `github:review-requests` | **Hypothesis A**: Consolidate into GitHub hub as PR review assignment workflow.<br>**Hypothesis B**: Retain in development as peer review routing workflow. |
 | `security-review` | `quality-and-security/security` | `tools-and-platforms/github/security-review` | `quality-and-security:security-review` and `github:security-review` | **Hypothesis A (Dual-Retention)**: Distinct functional semantics: `quality-and-security:security-review` provides deep static application code audit; `github:security-review` audits GitHub Actions workflow exploit vectors and repository permission postures.<br>**Hypothesis B**: Generalize security audit into single workflow with platform-specific checklists. |
 
+> [!NOTE]
+> **Programmatic Legacy Compatibility Aliases**:
+> To support transition across codebase tools and regression test harnesses without breakage, `skill_library.physical_layout` maintains full backward compatibility aliases:
+> - `DuplicateResolutionRegistry` aliases `DuplicateCandidateRegistry`
+> - `DuplicatePairResolution` aliases `DuplicateCandidateHypothesis`
+> - Legacy methods (`get_resolution`, `is_duplicate_leaf`, `get_all_pairs`) and attributes (`target_physical_home`, `canonical_id`, `resolution_type`, `description`) transparently delegate to their direction-neutral equivalents.
+
 ### 8.4 Proposed Root Directory Migration Roadmap [Provisional]
 
 1. **`library/github-operations/` -> `library/tools-and-platforms/github/`**:

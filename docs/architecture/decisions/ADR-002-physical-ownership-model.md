@@ -151,6 +151,13 @@ The 15 candidate collision pairs and their evaluation hypotheses:
 - No directory moves, alias links, or file renames are executed in REV-128.
 - Downstream adjudication in REV-129/REV-130 will decide each pair on its empirical merits based on source text analysis.
 
+**Programmatic Legacy Compatibility Aliases**:
+To ensure uninterrupted backward compatibility for tooling, test harnesses, and transitional automation that interacted with early draft resolution models:
+- **Registry Aliasing**: `DuplicateResolutionRegistry` is retained as an exact alias for `DuplicateCandidateRegistry`.
+- **Method Aliasing**: `is_duplicate_leaf(...)`, `get_resolution(...)`, and `get_all_pairs(...)` delegate to `is_candidate_leaf(...)`, `get_candidate_hypothesis(...)`, and `get_all_candidates(...)`.
+- **Record & Property Aliasing**: `DuplicatePairResolution` is aliased to `DuplicateCandidateHypothesis`. Within each candidate record, legacy property accessors (`target_physical_home`, `canonical_id`, `resolution_type`, and `description`) map directly to the direction-neutral attributes (`candidate_platform_path`, `candidate_canonical_id`, `hypothesis_type`, and `evaluation_notes`).
+- **Zero Premature Resolution**: All resolution types explicitly reflect candidate hypothesis status (e.g., `platform_consolidation_hypothesis`, `dual_retention_hypothesis`, `rename_collision_hypothesis`) rather than executed physical actions.
+
 ### 2.6 Proposed Migration Path for Anomalous Root Directories
 
 1. **`library/github-operations/` -> `library/tools-and-platforms/github/`**:
