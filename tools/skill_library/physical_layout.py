@@ -259,165 +259,225 @@ class PhysicalPathContract:
 
 
 @dataclass(frozen=True)
-class DuplicatePairResolution:
-    """Defines the authoritative resolution contract for a duplicate leaf name."""
+class DuplicateCandidateHypothesis:
+    """
+    Defines a direction-neutral evaluation hypothesis for a candidate duplicate leaf name.
+    
+    In accordance with REV-128 and REV-126/150 census principles, candidate pairs remain
+    unresolved until source-backed semantic reviews are adjudicated in downstream work orders.
+    No executable migration instructions or irreversible canonical-identity changes are made.
+    """
     leaf_name: str
     legacy_main_path: str
-    target_physical_home: str
-    canonical_id: str
-    resolution_type: str  # "alias_to_platform", "dual_retention", "rename"
-    description: str
+    candidate_platform_path: str
+    candidate_canonical_id: str
+    hypothesis_type: str  # e.g., "platform_consolidation_hypothesis", "dual_retention_hypothesis", "rename_collision_hypothesis"
+    evaluation_notes: str
+
+    @property
+    def target_physical_home(self) -> str:
+        """Backward-compatible alias for candidate_platform_path."""
+        return self.candidate_platform_path
+
+    @property
+    def canonical_id(self) -> str:
+        """Backward-compatible alias for candidate_canonical_id."""
+        return self.candidate_canonical_id
+
+    @property
+    def resolution_type(self) -> str:
+        """Backward-compatible alias for hypothesis_type."""
+        return self.hypothesis_type
+
+    @property
+    def description(self) -> str:
+        """Backward-compatible alias for evaluation_notes."""
+        return self.evaluation_notes
 
 
-class DuplicateResolutionRegistry:
+# Backward-compatible type alias
+DuplicatePairResolution = DuplicateCandidateHypothesis
+
+
+class DuplicateCandidateRegistry:
     """
-    Registry defining the authoritative physical resolution and consolidation
-    mapping for the 15 GitHub duplicate pairs discovered in REV-126/150.
+    Registry defining direction-neutral evaluation hypotheses for the 15 GitHub duplicate
+    pairs identified during the REV-126/150 census.
+
+    Architectural Boundary (REV-128 vs REV-129/130):
+      - REV-128 models candidate filesystem paths and hypothesis types without executing migrations.
+      - Final asset-level adjudications are deferred to downstream work orders upon source-backed reviews.
     """
 
-    RESOLUTIONS: Dict[str, DuplicatePairResolution] = {
-        "actions-debugger": DuplicatePairResolution(
+    CANDIDATE_HYPOTHESES: Dict[str, DuplicateCandidateHypothesis] = {
+        "actions-debugger": DuplicateCandidateHypothesis(
             leaf_name="actions-debugger",
             legacy_main_path="infrastructure-and-ops/ci-cd/actions-debugger",
-            target_physical_home="tools-and-platforms/github/actions-debugger",
-            canonical_id="github:actions-debugger",
-            resolution_type="alias_to_platform",
-            description="GitHub Actions diagnostics workflow. Main-tree instance aliased to canonical platform hub.",
+            candidate_platform_path="tools-and-platforms/github/actions-debugger",
+            candidate_canonical_id="github:actions-debugger",
+            hypothesis_type="platform_consolidation_hypothesis",
+            evaluation_notes="Candidate Hypothesis A: GitHub Actions diagnostics workflow consolidated to platform hub. Hypothesis B: Retain in CI/CD if generalized across runners.",
         ),
-        "advanced-workflows": DuplicatePairResolution(
+        "advanced-workflows": DuplicateCandidateHypothesis(
             leaf_name="advanced-workflows",
             legacy_main_path="workflow-and-automation/git-and-vcs/advanced-workflows",
-            target_physical_home="tools-and-platforms/github/advanced-workflows",
-            canonical_id="github:advanced-workflows",
-            resolution_type="alias_to_platform",
-            description="Advanced Git recovery, rebase, and worktrees workflow owned by GitHub platform hub.",
+            candidate_platform_path="tools-and-platforms/github/advanced-workflows",
+            candidate_canonical_id="github:advanced-workflows",
+            hypothesis_type="platform_consolidation_hypothesis",
+            evaluation_notes="Candidate Hypothesis A: Advanced Git workflow consolidated to platform hub. Hypothesis B: Retain in git-and-vcs with platform overlay.",
         ),
-        "commit": DuplicatePairResolution(
+        "commit": DuplicateCandidateHypothesis(
             leaf_name="commit",
             legacy_main_path="development/systems/commit",
-            target_physical_home="tools-and-platforms/github/commit",
-            canonical_id="github:commit",
-            resolution_type="dual_retention",
-            description="Dual retention: github:commit owns PR/review commit integration; development:commit owns generic Git staging.",
+            candidate_platform_path="tools-and-platforms/github/commit",
+            candidate_canonical_id="github:commit",
+            hypothesis_type="dual_retention_hypothesis",
+            evaluation_notes="Candidate Hypothesis A (Dual-Retention): Distinct functional semantics between github:commit (PR/review commit flow) and development:commit (generic Git staging). Hypothesis B: Merge with adapter.",
         ),
-        "create-branch": DuplicatePairResolution(
+        "create-branch": DuplicateCandidateHypothesis(
             leaf_name="create-branch",
             legacy_main_path="development/systems/create-branch",
-            target_physical_home="tools-and-platforms/github/create-branch",
-            canonical_id="github:create-branch",
-            resolution_type="dual_retention",
-            description="Dual retention: github:create-branch enforces repository issue-branch policy; development:create-branch provides generic VCS branching.",
+            candidate_platform_path="tools-and-platforms/github/create-branch",
+            candidate_canonical_id="github:create-branch",
+            hypothesis_type="dual_retention_hypothesis",
+            evaluation_notes="Candidate Hypothesis A (Dual-Retention): Distinct functional semantics between github:create-branch (repo policy/issue linking) and development:create-branch (generic VCS branching). Hypothesis B: Single branch workflow.",
         ),
-        "create-issue-gate": DuplicatePairResolution(
+        "create-issue-gate": DuplicateCandidateHypothesis(
             leaf_name="create-issue-gate",
             legacy_main_path="business-and-operations/product-management/create-issue-gate",
-            target_physical_home="tools-and-platforms/github/create-issue-gate",
-            canonical_id="github:create-issue-gate",
-            resolution_type="alias_to_platform",
-            description="Issue-first gate workflow owned by GitHub platform hub. Main-tree instance aliased to canonical.",
+            candidate_platform_path="tools-and-platforms/github/create-issue-gate",
+            candidate_canonical_id="github:create-issue-gate",
+            hypothesis_type="platform_consolidation_hypothesis",
+            evaluation_notes="Candidate Hypothesis A: Issue-first gate consolidated to platform hub. Hypothesis B: Retain in product-management with adapter.",
         ),
-        "feature-tracking": DuplicatePairResolution(
+        "feature-tracking": DuplicateCandidateHypothesis(
             leaf_name="feature-tracking",
             legacy_main_path="business-and-operations/product-management/feature-tracking",
-            target_physical_home="tools-and-platforms/github/feature-tracking",
-            canonical_id="github:feature-tracking",
-            resolution_type="alias_to_platform",
-            description="Repository-native long-lived feature memory workflow owned by GitHub platform hub.",
+            candidate_platform_path="tools-and-platforms/github/feature-tracking",
+            candidate_canonical_id="github:feature-tracking",
+            hypothesis_type="platform_consolidation_hypothesis",
+            evaluation_notes="Candidate Hypothesis A: Repo-native issue tracking workflow consolidated to platform hub. Hypothesis B: Retain in product-management as generic feature memory.",
         ),
-        "github": DuplicatePairResolution(
+        "github": DuplicateCandidateHypothesis(
             leaf_name="github",
             legacy_main_path="development/fullstack/github",
-            target_physical_home="tools-and-platforms/github/general-operations",
-            canonical_id="github:general-operations",
-            resolution_type="rename",
-            description="Renamed to general-operations to prevent package root collision. Main-tree instance aliased to canonical.",
+            candidate_platform_path="tools-and-platforms/github/general-operations",
+            candidate_canonical_id="github:general-operations",
+            hypothesis_type="rename_collision_hypothesis",
+            evaluation_notes="Candidate Hypothesis A: Rename leaf to general-operations to prevent package root collision. Hypothesis B: Decompose across platform hub components.",
         ),
-        "hooks-automation": DuplicatePairResolution(
+        "hooks-automation": DuplicateCandidateHypothesis(
             leaf_name="hooks-automation",
             legacy_main_path="infrastructure-and-ops/ci-cd/hooks-automation",
-            target_physical_home="tools-and-platforms/github/hooks-automation",
-            canonical_id="github:hooks-automation",
-            resolution_type="alias_to_platform",
-            description="Git hooks automation workflow owned by GitHub platform hub. Main-tree instance aliased to canonical.",
+            candidate_platform_path="tools-and-platforms/github/hooks-automation",
+            candidate_canonical_id="github:hooks-automation",
+            hypothesis_type="platform_consolidation_hypothesis",
+            evaluation_notes="Candidate Hypothesis A: Git hooks automation consolidated to platform hub. Hypothesis B: Retain in CI/CD as generic hooks orchestrator.",
         ),
-        "issue-creator": DuplicatePairResolution(
+        "issue-creator": DuplicateCandidateHypothesis(
             leaf_name="issue-creator",
             legacy_main_path="business-and-operations/product-management/issue-creator",
-            target_physical_home="tools-and-platforms/github/issue-creator",
-            canonical_id="github:issue-creator",
-            resolution_type="alias_to_platform",
-            description="Actionable issue creator workflow owned by GitHub platform hub. Main-tree instance aliased to canonical.",
+            candidate_platform_path="tools-and-platforms/github/issue-creator",
+            candidate_canonical_id="github:issue-creator",
+            hypothesis_type="platform_consolidation_hypothesis",
+            evaluation_notes="Candidate Hypothesis A: Issue creator consolidated to platform hub. Hypothesis B: Retain in product-management with issue tracker adapter.",
         ),
-        "pr-merge-champion": DuplicatePairResolution(
+        "pr-merge-champion": DuplicateCandidateHypothesis(
             leaf_name="pr-merge-champion",
             legacy_main_path="development/fullstack/pr-merge-champion",
-            target_physical_home="tools-and-platforms/github/pr-merge-champion",
-            canonical_id="github:pr-merge-champion",
-            resolution_type="alias_to_platform",
-            description="Merge gate verification and queueing workflow owned by GitHub platform hub.",
+            candidate_platform_path="tools-and-platforms/github/pr-merge-champion",
+            candidate_canonical_id="github:pr-merge-champion",
+            hypothesis_type="platform_consolidation_hypothesis",
+            evaluation_notes="Candidate Hypothesis A: Merge gate workflow consolidated to platform hub. Hypothesis B: Retain in development/fullstack as generic code review champion.",
         ),
-        "pr-review": DuplicatePairResolution(
+        "pr-review": DuplicateCandidateHypothesis(
             leaf_name="pr-review",
             legacy_main_path="quality-and-security/code-review/pr-review",
-            target_physical_home="tools-and-platforms/github/pr-review",
-            canonical_id="github:pr-review",
-            resolution_type="alias_to_platform",
-            description="Code review and risk assessment workflow owned by GitHub platform hub.",
+            candidate_platform_path="tools-and-platforms/github/pr-review",
+            candidate_canonical_id="github:pr-review",
+            hypothesis_type="platform_consolidation_hypothesis",
+            evaluation_notes="Candidate Hypothesis A: Code review workflow consolidated to platform hub. Hypothesis B: Retain in quality-and-security as core review capability.",
         ),
-        "pr-writer": DuplicatePairResolution(
+        "pr-writer": DuplicateCandidateHypothesis(
             leaf_name="pr-writer",
             legacy_main_path="development/fullstack/pr-writer",
-            target_physical_home="tools-and-platforms/github/pr-writer",
-            canonical_id="github:pr-writer",
-            resolution_type="alias_to_platform",
-            description="PR title and body generator workflow owned by GitHub platform hub.",
+            candidate_platform_path="tools-and-platforms/github/pr-writer",
+            candidate_canonical_id="github:pr-writer",
+            hypothesis_type="platform_consolidation_hypothesis",
+            evaluation_notes="Candidate Hypothesis A: PR writer workflow consolidated to platform hub. Hypothesis B: Retain in development as generic changeset documentation generator.",
         ),
-        "presence": DuplicatePairResolution(
+        "presence": DuplicateCandidateHypothesis(
             leaf_name="presence",
             legacy_main_path="marketing-and-seo/cro/presence",
-            target_physical_home="tools-and-platforms/github/presence",
-            canonical_id="github:presence",
-            resolution_type="alias_to_platform",
-            description="README and repository discoverability workflow owned by GitHub platform hub.",
+            candidate_platform_path="tools-and-platforms/github/presence",
+            candidate_canonical_id="github:presence",
+            hypothesis_type="platform_consolidation_hypothesis",
+            evaluation_notes="Candidate Hypothesis A: Discoverability/README workflow consolidated to platform hub. Hypothesis B: Retain in marketing-and-seo as digital footprint optimization.",
         ),
-        "review-requests": DuplicatePairResolution(
+        "review-requests": DuplicateCandidateHypothesis(
             leaf_name="review-requests",
             legacy_main_path="development/fullstack/review-requests",
-            target_physical_home="tools-and-platforms/github/review-requests",
-            canonical_id="github:review-requests",
-            resolution_type="alias_to_platform",
-            description="PR review request ranking workflow owned by GitHub platform hub.",
+            candidate_platform_path="tools-and-platforms/github/review-requests",
+            candidate_canonical_id="github:review-requests",
+            hypothesis_type="platform_consolidation_hypothesis",
+            evaluation_notes="Candidate Hypothesis A: Review request ranking consolidated to platform hub. Hypothesis B: Retain in development as peer review routing workflow.",
         ),
-        "security-review": DuplicatePairResolution(
+        "security-review": DuplicateCandidateHypothesis(
             leaf_name="security-review",
             legacy_main_path="quality-and-security/security/security-review",
-            target_physical_home="tools-and-platforms/github/security-review",
-            canonical_id="github:security-review",
-            resolution_type="dual_retention",
-            description="Dual retention: github:security-review owns Actions workflow exploit audit; quality-and-security owns general code security.",
+            candidate_platform_path="tools-and-platforms/github/security-review",
+            candidate_canonical_id="github:security-review",
+            hypothesis_type="dual_retention_hypothesis",
+            evaluation_notes="Candidate Hypothesis A (Dual-Retention): Distinct functional semantics between github:security-review (Actions workflow security audit) and quality-and-security:security-review (general static code security). Hypothesis B: Unified security audit.",
         ),
     }
 
+    # Backward-compatible dictionary reference
+    RESOLUTIONS = CANDIDATE_HYPOTHESES
+
+    @classmethod
+    def is_candidate_leaf(cls, leaf_name: str) -> bool:
+        """Check if leaf name is one of the 15 GitHub duplicate collision candidate pairs."""
+        return leaf_name in cls.CANDIDATE_HYPOTHESES
+
+    @classmethod
+    def get_candidate_hypothesis(cls, leaf_name: str) -> Optional[DuplicateCandidateHypothesis]:
+        """Fetch the evaluation hypothesis record for a candidate duplicate leaf name."""
+        return cls.CANDIDATE_HYPOTHESES.get(leaf_name)
+
+    @classmethod
+    def get_all_candidates(cls) -> List[DuplicateCandidateHypothesis]:
+        """Return all 15 candidate duplicate evaluation records."""
+        return list(cls.CANDIDATE_HYPOTHESES.values())
+
+    # Backward-compatible helper methods
     @classmethod
     def is_duplicate_leaf(cls, leaf_name: str) -> bool:
-        """Check if leaf name is one of the 15 GitHub duplicate pairs."""
-        return leaf_name in cls.RESOLUTIONS
+        return cls.is_candidate_leaf(leaf_name)
 
     @classmethod
-    def get_resolution(cls, leaf_name: str) -> Optional[DuplicatePairResolution]:
-        """Fetch the resolution contract for a duplicate leaf name."""
-        return cls.RESOLUTIONS.get(leaf_name)
+    def get_resolution(cls, leaf_name: str) -> Optional[DuplicateCandidateHypothesis]:
+        return cls.get_candidate_hypothesis(leaf_name)
 
     @classmethod
-    def get_all_pairs(cls) -> List[DuplicatePairResolution]:
-        """Return all 15 duplicate pair resolution records."""
-        return list(cls.RESOLUTIONS.values())
+    def get_all_pairs(cls) -> List[DuplicateCandidateHypothesis]:
+        return cls.get_all_candidates()
+
+
+# Backward-compatible class alias
+DuplicateResolutionRegistry = DuplicateCandidateRegistry
 
 
 class PhysicalLayoutValidator:
     """
-    Validates physical storage locations of SkillObjects against the architectural
-    rules of ADR-002 and the Semantic Object Model.
+    Validates physical storage locations of SkillObjects against the provisional layout rules
+    of ADR-002 and the Semantic Object Model.
+
+    Architectural Boundary Warning:
+      - Physical path structure, overlay directory conventions, and adapter placement rules are governed by REV-128.
+      - Platform family qualification thresholds and provider interfaces are governed by REV-129.
+      - Registry manifest schemas and dynamic alias resolution are governed by REV-130.
+      This validator enforces provisional structural layout conformance without preempting downstream work orders.
     """
 
     @classmethod

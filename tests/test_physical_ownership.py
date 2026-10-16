@@ -33,6 +33,7 @@ from skill_library.object_model import (
     WorkflowObject,
 )
 from skill_library.physical_layout import (
+    DuplicateCandidateRegistry,
     DuplicateResolutionRegistry,
     LayoutValidationError,
     ParsedPhysicalPath,
@@ -264,13 +265,13 @@ class TestPhysicalLayoutValidator(unittest.TestCase):
         self.assertEqual(obj.id_object.urn, original_urn)
 
 
-class TestDuplicateResolutionRegistry(unittest.TestCase):
-    """Unit tests verifying the 15 GitHub duplicate pairs resolution architecture."""
+class TestDuplicateCandidateRegistry(unittest.TestCase):
+    """Unit tests verifying the 15 GitHub duplicate pairs direction-neutral candidate evaluation architecture."""
 
     def test_all_15_duplicate_pairs_registered(self):
-        """Registry must contain exactly the 15 verified duplicate pairs from REV-126/150."""
-        pairs = DuplicateResolutionRegistry.get_all_pairs()
-        self.assertEqual(len(pairs), 15)
+        """Registry must contain exactly the 15 verified duplicate candidate pairs from REV-126/150."""
+        candidates = DuplicateCandidateRegistry.get_all_candidates()
+        self.assertEqual(len(candidates), 15)
 
         expected_leaves = {
             "actions-debugger",
@@ -289,33 +290,43 @@ class TestDuplicateResolutionRegistry(unittest.TestCase):
             "review-requests",
             "security-review",
         }
-        registered_leaves = {p.leaf_name for p in pairs}
+        registered_leaves = {c.leaf_name for c in candidates}
         self.assertEqual(registered_leaves, expected_leaves)
 
-    def test_dual_retention_pairs(self):
-        """Dual retention pairs (commit, create-branch, security-review) have distinct scopes."""
+    def test_dual_retention_candidate_hypotheses(self):
+        """Dual retention candidate pairs (commit, create-branch, security-review) have distinct candidate scopes."""
         for leaf in ("commit", "create-branch", "security-review"):
-            res = DuplicateResolutionRegistry.get_resolution(leaf)
-            self.assertIsNotNone(res)
-            self.assertEqual(res.resolution_type, "dual_retention")
-            self.assertTrue(res.canonical_id.startswith("github:"))
+            cand = DuplicateCandidateRegistry.get_candidate_hypothesis(leaf)
+            self.assertIsNotNone(cand)
+            self.assertEqual(cand.hypothesis_type, "dual_retention_hypothesis")
+            self.assertTrue(cand.candidate_canonical_id.startswith("github:"))
 
-    def test_alias_to_platform_pairs(self):
-        """Operational workflows migrating to platform hubs are registered with valid canonical IDs."""
+    def test_platform_consolidation_candidate_hypotheses(self):
+        """Operational candidate workflows evaluated for platform hub consolidation have valid candidate IDs."""
         for leaf in ("actions-debugger", "create-issue-gate", "pr-writer", "pr-review"):
-            res = DuplicateResolutionRegistry.get_resolution(leaf)
-            self.assertIsNotNone(res)
-            self.assertEqual(res.resolution_type, "alias_to_platform")
-            self.assertEqual(res.canonical_id, f"github:{leaf}")
-            self.assertEqual(res.target_physical_home, f"tools-and-platforms/github/{leaf}")
+            cand = DuplicateCandidateRegistry.get_candidate_hypothesis(leaf)
+            self.assertIsNotNone(cand)
+            self.assertEqual(cand.hypothesis_type, "platform_consolidation_hypothesis")
+            self.assertEqual(cand.candidate_canonical_id, f"github:{leaf}")
+            self.assertEqual(cand.candidate_platform_path, f"tools-and-platforms/github/{leaf}")
 
-    def test_rename_resolution_for_root_github_leaf(self):
-        """The 'github' leaf is renamed to 'general-operations' to prevent root package collisions."""
-        res = DuplicateResolutionRegistry.get_resolution("github")
+    def test_rename_collision_candidate_hypothesis_for_root_github_leaf(self):
+        """The 'github' leaf has a rename collision hypothesis to evaluate preventing package root collisions."""
+        cand = DuplicateCandidateRegistry.get_candidate_hypothesis("github")
+        self.assertIsNotNone(cand)
+        self.assertEqual(cand.hypothesis_type, "rename_collision_hypothesis")
+        self.assertEqual(cand.candidate_canonical_id, "github:general-operations")
+        self.assertEqual(cand.candidate_platform_path, "tools-and-platforms/github/general-operations")
+
+    def test_backward_compatibility_aliases(self):
+        """Verify backward compatibility aliases for resolution registry and fields."""
+        pairs = DuplicateResolutionRegistry.get_all_pairs()
+        self.assertEqual(len(pairs), 15)
+        res = DuplicateResolutionRegistry.get_resolution("commit")
         self.assertIsNotNone(res)
-        self.assertEqual(res.resolution_type, "rename")
-        self.assertEqual(res.canonical_id, "github:general-operations")
-        self.assertEqual(res.target_physical_home, "tools-and-platforms/github/general-operations")
+        self.assertEqual(res.resolution_type, "dual_retention_hypothesis")
+        self.assertEqual(res.target_physical_home, "tools-and-platforms/github/commit")
+        self.assertEqual(res.canonical_id, "github:commit")
 
 
 if __name__ == "__main__":
