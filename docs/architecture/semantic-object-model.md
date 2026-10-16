@@ -1,10 +1,10 @@
 # Semantic Object Model and Stable Identity Architecture
 
 - **Author**: REVREBEL Agent Architecture Team
-- **Status**: Formally Specified (Gated under REV-127)
+- **Status**: Formally Specified (Gated under REV-127 / REV-128)
 - **Target Audience**: Platform Engineers, Agent Developers, Tooling Maintainers
 - **Related Issues**: [REV-126](https://linear.app/revrebel/issue/REV-126), [REV-150](https://linear.app/revrebel/issue/REV-150), [REV-127](https://linear.app/revrebel/issue/REV-127), [REV-128](https://linear.app/revrebel/issue/REV-128), [REV-129](https://linear.app/revrebel/issue/REV-129), [REV-130](https://linear.app/revrebel/issue/REV-130)
-- **Normative References**: [ADR-001: Path-Independent Canonical Semantic Identity](file:///Users/garystringham/github-revrebel/skills-library/docs/architecture/decisions/ADR-001-path-independent-canonical-identity.md)
+- **Normative References**: [ADR-001: Path-Independent Canonical Semantic Identity](file:///Users/garystringham/github-revrebel/skills-library/docs/architecture/decisions/ADR-001-path-independent-canonical-identity.md), [ADR-002: Physical Ownership Model for Families and Overlays](file:///Users/garystringham/github-revrebel/skills-library/docs/architecture/decisions/ADR-002-physical-ownership-model.md)
 
 ---
 
@@ -330,7 +330,7 @@ $$\forall p \in \text{Primitives}, \quad \text{OutEdges}_{\text{composed\_of}}(p
 *Subject to review during REV-129 (Family eligibility).*
 
 #### Allocation of Remaining Decisions:
-- **REV-128**: Decides physical storage models (`tools-and-platforms` vs dominant domain vs registry-first) and duplicate-pair file management.
+- **REV-128 (Decided & Formally Specified)**: Decides physical storage models (Hybrid Governed Physical Ownership via ADR-002), directory contracts, overlay/adapter placement, and duplicate-pair resolution mappings.
 - **REV-129**: Decides family inclusion criteria, provider-adapter interfaces, and overlay attachment boundaries.
 - **REV-130**: Decides registry manifest schema, router contracts, dynamic alias resolution, and runtime projections.
 
@@ -356,3 +356,74 @@ The REV-126/150 audit identified several boundary disputes that were placed in `
    - *Resolution*: Classified as an **`alias`** with `target_id: "github:create-pull-request"`.
 8. **`steve-jobs` (`library/development/fullstack/steve-jobs`)**:
    - *Resolution*: Classified as a **`reference`** (`rubric` / persona prompt). It provides high-standard product review principles without executable code tasks.
+
+---
+
+## 8. Physical Storage Plane and Migration Architecture (REV-128)
+
+Pursuant to [ADR-002](file:///Users/garystringham/github-revrebel/skills-library/docs/architecture/decisions/ADR-002-physical-ownership-model.md), the repository adopts the **Hybrid Governed Physical Ownership Model**.
+
+### 8.1 Filesystem Directory Planes
+
+The physical filesystem under `library/` is partitioned into three standardized layout structures:
+
+```text
+library/
+├── tools-and-platforms/                # [Plane 1: Platform Hubs]
+│   └── <family-slug>/                  # github, webflow, figma, n8n, hugging-face...
+│       ├── primitives/                 # Platform-wide auth, config, token primitives
+│       ├── adapters/                   # Platform-specific protocol/CLI/MCP shims
+│       ├── overlays/                   # Surface-specialized overlays targeting external skills
+│       └── <skill-slug>/               # Native operational workflows and capabilities
+├── <category-slug>/                    # [Plane 2: Domain-Centric Trees] (10 Categories)
+│   └── <subcategory-slug>/
+│       ├── overlays/                   # Domain-hosted workflow specializations
+│       └── <skill-slug>/               # Domain-general capabilities and workflows
+└── meta-and-agent-skills/              # [Plane 3: Meta & Internal Tooling]
+    ├── skill-lifecycle/                # Former skills-create-manage-update
+    └── adapters/                       # Shared platform-agnostic protocol shims
+```
+
+### 8.2 Physical Directory Contracts for Overlays and Adapters
+
+1. **Overlays (`extends`)**:
+   - **Platform-Hosted**: When an overlay specializes a capability for an external platform host (e.g., `figma-implement-motion`), it resides in `library/tools-and-platforms/<family-slug>/overlays/<skill-slug>/`.
+   - **Domain-Hosted**: When an overlay specializes a domain-specific workflow (e.g., high-security variants of a deployment pipeline), it resides in `library/<category>/<subcategory>/overlays/<skill-slug>/`.
+   - **Nesting Invariant**: Physical directory nesting of overlays is strictly forbidden. A path cannot contain more than one `overlays/` directory segment.
+2. **Adapters (`adapts`)**:
+   - **Platform-Specific Adapters**: Reside in `library/tools-and-platforms/<family-slug>/adapters/<skill-slug>/`.
+   - **Platform-Agnostic Adapters**: Reside in `library/meta-and-agent-skills/adapters/<skill-slug>/`.
+   - **Encapsulation Invariant**: Adapters are pure protocol translation shims (CLI, MCP, REST) and must not contain application domain workflows.
+
+### 8.3 Physical Duplicate Resolution Strategy (The 15 GitHub Duplicate Pairs)
+
+The 15 duplicate leaf names identified during the census are resolved via the following physical mapping contracts:
+
+| Leaf Name | Legacy Main-Tree Path | Target Physical Home | Canonical Identity | Resolution Action |
+| :--- | :--- | :--- | :--- | :--- |
+| `actions-debugger` | `infrastructure-and-ops/ci-cd` | `tools-and-platforms/github/actions-debugger` | `github:actions-debugger` | Platform operational workflow. Main tree converted to alias. |
+| `advanced-workflows` | `workflow-and-automation/git-and-vcs` | `tools-and-platforms/github/advanced-workflows` | `github:advanced-workflows` | Platform operational workflow. Main tree converted to alias. |
+| `commit` | `development/systems` | `tools-and-platforms/github/commit` & `development/systems/commit` | `github:commit` & `development:commit` | Dual-retention: GitHub PR commit vs generic Git staging. |
+| `create-branch` | `development/systems` | `tools-and-platforms/github/create-branch` & `development/systems/create-branch` | `github:create-branch` & `development:create-branch` | Dual-retention: GitHub issue-branch policy vs generic VCS. |
+| `create-issue-gate` | `business-and-operations/product-management` | `tools-and-platforms/github/create-issue-gate` | `github:create-issue-gate` | Platform operational workflow. Main tree converted to alias. |
+| `feature-tracking` | `business-and-operations/product-management` | `tools-and-platforms/github/feature-tracking` | `github:feature-tracking` | Platform operational workflow. Main tree converted to alias. |
+| `github` | `development/fullstack` | `tools-and-platforms/github/general-operations` | `github:general-operations` | Renamed to prevent collision; main tree converted to alias. |
+| `hooks-automation` | `infrastructure-and-ops/ci-cd` | `tools-and-platforms/github/hooks-automation` | `github:hooks-automation` | Platform operational workflow. Main tree converted to alias. |
+| `issue-creator` | `business-and-operations/product-management` | `tools-and-platforms/github/issue-creator` | `github:issue-creator` | Platform operational workflow. Main tree converted to alias. |
+| `pr-merge-champion` | `development/fullstack` | `tools-and-platforms/github/pr-merge-champion` | `github:pr-merge-champion` | Platform operational workflow. Main tree converted to alias. |
+| `pr-review` | `quality-and-security/code-review` | `tools-and-platforms/github/pr-review` | `github:pr-review` | Platform operational workflow. Main tree converted to alias. |
+| `pr-writer` | `development/fullstack` | `tools-and-platforms/github/pr-writer` | `github:pr-writer` | Platform operational workflow. Main tree converted to alias. |
+| `presence` | `marketing-and-seo/cro` | `tools-and-platforms/github/presence` | `github:presence` | Platform operational workflow. Main tree converted to alias. |
+| `review-requests` | `development/fullstack` | `tools-and-platforms/github/review-requests` | `github:review-requests` | Platform operational workflow. Main tree converted to alias. |
+| `security-review` | `quality-and-security/security` | `tools-and-platforms/github/security-review` | `github:security-review` | Dual-retention: Actions exploit audit vs generic code security. |
+
+### 8.4 Root Directory Migration Roadmap
+
+1. **`library/github-operations/` -> `library/tools-and-platforms/github/`**:
+   - The 18 consolidated workflows transition to the platform hub.
+   - Backward-compatible router references and alias manifests guarantee zero runtime breakage.
+2. **`library/skills-create-manage-update/` -> `library/meta-and-agent-skills/skill-lifecycle/`**:
+   - Internal meta-capabilities are relocated under the `meta-and-agent-skills` category.
+3. **Execution Phasing & Catalog Protection**:
+   - In accordance with **Invariant 7 (Catalog Non-Destruction)**, disk moves are deferred until compilation and migration tooling in REV-129/130.
+   - REV-128 establishes layout specifications, validators, and mapping contracts without modifying existing skill directories.
