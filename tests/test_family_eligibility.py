@@ -42,6 +42,7 @@ from skill_library.family_contract import (
     FamilyCandidateEvaluator,
     FamilyEligibilityError,
     FamilyQualificationGate,
+    FamilyQualificationRecord,
     FamilyTier,
     ProviderType,
 )
@@ -119,24 +120,70 @@ class TestFamilyEligibilityGates(unittest.TestCase):
             "meta-and-agent-skills/skill-lifecycle",
         )
 
-    def test_tier_2_logical_family_sub_critical_mass_notebooklm(self):
-        """NotebookLM has dedicated tools & primitives but sub-critical mass (<5 single domain) -> Tier 2 Logical."""
+    def test_tier_1_platform_qualification_notebooklm_from_census(self):
+        """NotebookLM satisfies all 4 gates on actual census figures (4 members across 2 domains) -> Tier 1 Platform Hub."""
         tier, gate = FamilyCandidateEvaluator.evaluate(
             family_slug="notebooklm",
+            member_count=4,
+            categories_spanned=2,
+            has_tool_surface=True,
+            has_shared_primitives=True,
+            has_coordinated_lifecycle=True,
+        )
+        self.assertEqual(tier, FamilyTier.TIER_1_PLATFORM_HUB)
+        self.assertTrue(gate.is_tier_1_eligible)
+        self.assertEqual(
+            FamilyCandidateEvaluator.get_physical_storage_plane("notebooklm", tier),
+            "tools-and-platforms/notebooklm",
+        )
+
+    def test_tier_1_platform_qualification_notebooklm_deduplicated_scenario(self):
+        """Even under a de-duplicated scenario (3 distinct skills across 2 domains), NotebookLM satisfies Gate 3."""
+        tier, gate = FamilyCandidateEvaluator.evaluate(
+            family_slug="notebooklm",
+            member_count=3,
+            categories_spanned=2,
+            has_tool_surface=True,
+            has_shared_primitives=True,
+            has_coordinated_lifecycle=True,
+        )
+        self.assertEqual(tier, FamilyTier.TIER_1_PLATFORM_HUB)
+        self.assertTrue(gate.is_tier_1_eligible)
+
+    def test_tier_2_logical_family_sub_critical_mass_stripe(self):
+        """Stripe has dedicated tools & primitives but sub-critical mass (2 skills, 1 domain) -> Tier 2 Logical Family."""
+        tier, gate = FamilyCandidateEvaluator.evaluate(
+            family_slug="stripe",
             member_count=2,
             categories_spanned=1,
             has_tool_surface=True,
             has_shared_primitives=True,
-            has_coordinated_lifecycle=False,
+            has_coordinated_lifecycle=True,
         )
         self.assertEqual(tier, FamilyTier.TIER_2_LOGICAL_FAMILY)
         self.assertFalse(gate.is_tier_1_eligible)
         self.assertTrue(gate.is_tier_2_eligible)
-        # Tier 2 is forbidden from creating tools-and-platforms/ directory
         self.assertEqual(
-            FamilyCandidateEvaluator.get_physical_storage_plane("notebooklm", tier),
+            FamilyCandidateEvaluator.get_physical_storage_plane("stripe", tier),
             "<primary_domain>/<subcategory>",
         )
+
+    def test_census_qualification_ledger_all_candidates_match_expected_tiers(self):
+        """Reconcile all candidates in the census-backed evidence ledger against their expected qualification tiers."""
+        ledger = FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER
+        self.assertGreaterEqual(len(ledger), 10)
+
+        for slug, record in ledger.items():
+            with self.subTest(candidate=slug):
+                tier, gate, rec = FamilyCandidateEvaluator.evaluate_from_ledger(slug)
+                self.assertEqual(
+                    tier,
+                    record.expected_tier,
+                    f"Candidate '{slug}' evaluated to {tier} but expected {record.expected_tier}",
+                )
+                self.assertIsNotNone(record.tool_surface_evidence)
+                self.assertIsNotNone(record.shared_primitives_evidence)
+                self.assertIsNotNone(record.coordinated_lifecycle_evidence)
 
     def test_disqualified_vendor_sprawl_generic_curl(self):
         """Generic POSIX utilities (curl, jq) fail tool surface & primitives -> Disqualified."""
@@ -204,20 +251,78 @@ class TestProviderAdapterRules(unittest.TestCase):
         # Should validate without raising an error
         ExecutionProviderContract.validate_capability_providers(cap, providers)
 
-    def test_negative_duplicate_provider_type_rejected(self):
-        """Attaching multiple providers of the same type (e.g. 2 CLI providers) is rejected."""
+    def test_valid_multiple_providers_of_same_type(self):
+        """
+        Positive regression test: A capability can attach multiple execution providers of the same
+        transport type (e.g. two distinct MCP servers, or two distinct CLI binaries for different environments).
+        """
+        cap = CapabilityObject(
+            canonical_id="github:create-pr",
+            name="create-pr",
+            domain="development",
+            description="Create a pull request with structured checklist.",
+        )
+        providers = [
+            # Two MCP providers for different environments/servers
+            ExecutionProviderBinding(
+                name="github_mcp_official",
+                provider_type=ProviderType.MCP,
+                tool_name="create_pull_request",
+                adapter_ref="github:mcp-official-adapter",
+            ),
+            ExecutionProviderBinding(
+                name="github_mcp_enterprise",
+                provider_type=ProviderType.MCP,
+                tool_name="create_pull_request",
+                endpoint="https://github.enterprise.internal/api/mcp",
+            ),
+            # Two CLI providers for different packaging/environments
+            ExecutionProviderBinding(
+                name="gh_cli_brew",
+                provider_type=ProviderType.CLI,
+                command="gh pr create",
+            ),
+            ExecutionProviderBinding(
+                name="gh_cli_nix",
+                provider_type=ProviderType.CLI,
+                command="/nix/var/nix/profiles/default/bin/gh pr create",
+            ),
+        ]
+        # Must validate successfully without error
+        ExecutionProviderContract.validate_capability_providers(cap, providers)
+
+    def test_negative_duplicate_provider_name_rejected(self):
+        """Attaching multiple providers with the same binding name is rejected."""
         cap = CapabilityObject(
             canonical_id="github:create-pr",
             name="create-pr",
             domain="development",
         )
         providers = [
-            ExecutionProviderBinding(name="gh_cli_1", provider_type=ProviderType.CLI),
-            ExecutionProviderBinding(name="gh_cli_2", provider_type=ProviderType.CLI),
+            ExecutionProviderBinding(
+                name="gh_cli",
+                provider_type=ProviderType.CLI,
+                command="gh pr create",
+            ),
+            ExecutionProviderBinding(
+                name="gh_cli",
+                provider_type=ProviderType.MCP,
+                tool_name="gh_pr_create",
+            ),
         ]
         with self.assertRaises(FamilyEligibilityError) as ctx:
             ExecutionProviderContract.validate_capability_providers(cap, providers)
-        self.assertIn("duplicate execution provider for type 'cli'", str(ctx.exception))
+        self.assertIn("duplicate execution provider binding name 'gh_cli'", str(ctx.exception))
+
+    def test_negative_provider_missing_binding_target(self):
+        """A non-PROMPT provider missing all binding targets (command, tool_name, endpoint, adapter_ref) is rejected."""
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            binding = ExecutionProviderBinding(
+                name="empty_cli",
+                provider_type=ProviderType.CLI,
+            )
+            binding.validate()
+        self.assertIn("must specify at least one binding target", str(ctx.exception))
 
     def test_negative_canonical_slug_encoding_mechanism_rejected(self):
         """Creating duplicate skills with mechanism suffixes (e.g. create-pr-via-cli) violates Invariant."""
@@ -227,7 +332,7 @@ class TestProviderAdapterRules(unittest.TestCase):
             domain="development",
         )
         providers = [
-            ExecutionProviderBinding(name="gh_cli", provider_type=ProviderType.CLI)
+            ExecutionProviderBinding(name="gh_cli", provider_type=ProviderType.CLI, command="gh pr create")
         ]
         with self.assertRaises(InvariantViolationError) as ctx:
             ExecutionProviderContract.validate_capability_providers(cap_bad, providers)

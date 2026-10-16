@@ -92,8 +92,8 @@ To establish a dedicated first-class platform hub under `library/tools-and-platf
 
 | Classification Tier | Criteria | Physical Storage Representation | Family Metadata Tagging | Concrete Catalog Examples |
 | :--- | :--- | :--- | :--- | :--- |
-| **Tier 1: First-Class Platform Hub** | Meets **all 4 gates**.<br>$\ge 3$ capabilities across $\ge 2$ domains (or $\ge 5$ complex domain operations). Dedicated primitives and adapters. | Dedicated physical hub:<br>`library/tools-and-platforms/<family-slug>/` | Required in metadata:<br>`families: ["<family-slug>"]` | `github` (22)<br>`webflow` (22)<br>`figma` (14)<br>`n8n` (14)<br>`hugging-face` (19)<br>`wordpress` (7)<br>`1password` (5) |
-| **Tier 2: Domain-Anchored Logical Family** | Meets Gates 1 and 2, but has **sub-critical mass** (<3 skills or <5 single-domain skills). Strong vendor affinity. | Resides in primary functional category:<br>`library/<category>/<subcategory>/<skill>/` | Tagged in metadata:<br>`families: ["<family-slug>"]` | `notebooklm` (4, content/marketing)<br>`stripe` (2, business/e-commerce)<br>`supabase` (2, dev/databases) |
+| **Tier 1: First-Class Platform Hub** | Meets **all 4 gates**.<br>$\ge 3$ capabilities across $\ge 2$ domains (or $\ge 5$ complex domain operations). Dedicated primitives and adapters. | Dedicated physical hub:<br>`library/tools-and-platforms/<family-slug>/` | Required in metadata:<br>`families: ["<family-slug>"]` | `github` (22)<br>`webflow` (22)<br>`figma` (14)<br>`n8n` (14)<br>`hugging-face` (19)<br>`wordpress` (7)<br>`notebooklm` (4)<br>`1password` (5) |
+| **Tier 2: Domain-Anchored Logical Family** | Meets Gates 1 and 2, but has **sub-critical mass** (<3 skills or <5 single-domain skills). Strong vendor affinity. | Resides in primary functional category:<br>`library/<category>/<subcategory>/<skill>/` | Tagged in metadata:<br>`families: ["<family-slug>"]` | `stripe` (2, business/e-commerce)<br>`supabase` (2, dev/databases) |
 | **Disqualified / Vendor Sprawl** | Fails Gate 1 or Gate 2.<br>Incidental API mention, generic CLI wrapper, or arbitrary technology brand. | Resides strictly in functional domain:<br>`library/<category>/<subcategory>/<skill>/` | **Forbidden**.<br>Must NOT create family tags or platform folders. | `docker-basics`<br>`slack-notifier`<br>`curl-helper`<br>`json-formatter` |
 | **Tier 1 Meta-Family** | Universal agent engineering infrastructure internal to the library, not third-party SaaS/vendor tooling. | Dedicated meta infrastructure hub:<br>`library/meta-and-agent-skills/<family-slug>/` | Tagged in metadata:<br>`families: ["<family-slug>"]` | `skill-lifecycle` (13 skills) |
 
@@ -115,14 +115,34 @@ Applying the 4-gate criteria to the REV-126/150 census register yields the follo
 | Figma              |   14   |    2    | PASS (All) | Tier 1 Hub    | tools-and-platforms/figma/     | 14 ops, Plugin |
 | n8n                |   14   |    5    | PASS (All) | Tier 1 Hub    | tools-and-platforms/n8n/       | 14 ops, Nodes  |
 | WordPress          |    7   |    2    | PASS (All) | Tier 1 Hub    | tools-and-platforms/wordpress/ | 7 ops, WP-CLI  |
+| NotebookLM         |    4   |    2    | PASS (All) | Tier 1 Hub    | tools-and-platforms/notebooklm/| 4 ops, Web/CLI |
 | 1Password          |    5   |    1    | PASS (All) | Tier 1 Hub    | tools-and-platforms/1password/ | 5 ops, op CLI  |
 | Skills Lifecycle   |   13   |    1    | PASS (Meta)| Tier 1 Meta   | meta-and-agent-skills/lifecycle/ Internal meta |
-| NotebookLM         |    4   |    2    | PASS (1,2) | Tier 2 Logical| content-and-documentation/...  | Sub-critical   |
 | Stripe             |    2   |    1    | PASS (1,2) | Tier 2 Logical| business-and-operations/...    | Sub-critical   |
 | Supabase           |    2   |    1    | PASS (1,2) | Tier 2 Logical| development/databases/...      | Sub-critical   |
 | Docker / Generic   |    1   |    1    | FAIL (2,3) | Disqualified  | infrastructure-and-ops/...     | Anti-sprawl    |
 +--------------------+--------+---------+------------+---------------+--------------------------------+----------------+
 ```
+
+### 2.4 Census-Backed Qualification Evidence Ledger
+
+To eliminate subjective evaluator inputs, qualification outcomes are grounded in an authoritative evidence ledger derived directly from the catalog census and verified skill packages:
+
+| Candidate Slug | Members | Domains Spanned | Primary Execution Surface | Shared Primitives | Gate Outcomes | Qualified Tier | Boundary Notes & Uncertain Cases |
+| :--- | :---: | :---: | :--- | :--- | :---: | :---: | :--- |
+| `github` | 22 | 3 | `gh` CLI, GitHub MCP, REST/GraphQL APIs | `GH_TOKEN`, repo context, git credentials | G1-4: PASS | Tier 1 Platform Hub | 27 keyword mentions pruned. 15 candidate duplicate pairs remain direction-neutral. |
+| `webflow` | 22 | 4 | `webflow-cli`, Designer API, REST CMS v2 | Site tokens, Designer extension tokens, DevLink React | G1-4: PASS | Tier 1 Platform Hub | 6 generic audit skills pruned. 16 prefix packages + 6 dedicated platform tools. |
+| `figma` | 14 | 2 | Figma Plugin API, Code Connect CLI, REST | Figma access tokens, design tokens, FigJam/Slides context | G1-4: PASS | Tier 1 Platform Hub | 2 broad design methodology skills pruned. |
+| `n8n` | 14 | 5 | n8n Node SDK, Public REST API, Community Nodes | Instance credentials, node expression syntax, webhooks | G1-4: PASS | Tier 1 Platform Hub | Cross-domain members consolidated from 5 domain categories into dedicated platform hub. |
+| `hugging-face` | 19 | 2 | `huggingface_hub` CLI, Python SDK, Inference API | `HF_TOKEN`, model repo schemas, dataset viewer | G1-4: PASS | Tier 1 Platform Hub | 13 `hugging-face-*` and 6 `huggingface-*` skills unified into single platform family. |
+| `wordpress` | 7 | 2 | `WP-CLI`, Core REST API, WooCommerce REST API | Application passwords, site connection configs, DB credentials | G1-4: PASS | Tier 1 Platform Hub | Dedicated WordPress/WooCommerce skills across development and marketing. |
+| `notebooklm` | 4 | 2 | Web client, unofficial `notebooklm-py` CLI, Playwright RPC | Session auth cookies, notebook context, source documents | G1-4: PASS | Tier 1 Platform Hub | Contains 1 duplicate pair and 2 manual reviews; de-duplicates to 3 distinct skills across 2 domains, satisfying Gate 3 under either count. |
+| `1password` | 5 | 1 | `op` CLI binary, Connect API, K8s Operator | Service account tokens, vault profile paths, `op://` refs | G1-4: PASS | Tier 1 Platform Hub | High-density single-domain threshold ($\ge 5$ operations) met in `infrastructure-and-ops`. |
+| `skill-lifecycle` | 13 | 1 | `skill-library` CLI, validate/lint tooling, CI | `skill.json` schemas, census ledgers, ADR contracts | G1-4: PASS | Tier 1 Meta-Family | Internal meta-engineering infrastructure; physical home in `meta-and-agent-skills/`. |
+| `stripe` | 2 | 1 | `stripe` CLI, Stripe Python/Node SDK, REST API | `STRIPE_SECRET_KEY`, webhook signing secrets, customer tokens | G1,2,4: PASS<br>G3: FAIL | Tier 2 Logical Family | Sub-critical mass (2 skills, 1 domain). Anchored in `business-and-operations/finance-and-accounting`. |
+| `supabase` | 2 | 1 | `supabase` CLI, PostgREST HTTP, GoTrue Auth SDK | `SUPABASE_URL`, anon/service keys, project ref | G1,2,4: PASS<br>G3: FAIL | Tier 2 Logical Family | Sub-critical mass (2 skills, 1 domain). Anchored in `development/databases`. |
+| `docker-basics` | 1 | 1 | Local `docker` CLI commands | None (ad-hoc container arguments) | G1: PASS<br>G2-4: FAIL | Disqualified Sprawl | Generic container utility; forbidden from creating platform directory or family tags. |
+| `curl` | 1 | 1 | Generic POSIX `curl` command | None (ad-hoc URLs) | G1-4: FAIL | Disqualified Sprawl | Standard POSIX shell utility; retained as domain capability without family affiliation. |
 
 ---
 
@@ -152,7 +172,9 @@ Applying the 4-gate criteria to the REV-126/150 census register yields the follo
 
 ### 3.2 Provider Types and Contract Definition
 
-Every executable capability defines its supported execution providers in its frontmatter or object model definition:
+Every executable capability defines its supported execution providers in its frontmatter or object model definition. A capability MAY declare multiple execution providers sharing the same transport type (e.g., two `mcp` providers pointing to different MCP servers such as official vs enterprise, or two `cli` providers targeting distinct package managers/environments), provided that each provider binding maintains a unique binding `name` within that capability and binds to a valid target.
+
+The architectural invariant requires **one canonical capability per semantic task**, not an artificial limit of one provider per transport category.
 
 ```yaml
 ---
@@ -168,10 +190,14 @@ execution_provider:
       provider_type: cli
       command: gh pr create
       adapter_ref: github:gh-cli-adapter
-    - name: github_mcp
+    - name: github_mcp_official
       provider_type: mcp
       tool_name: create_pull_request
       adapter_ref: github:mcp-adapter
+    - name: github_mcp_enterprise
+      provider_type: mcp
+      tool_name: create_enterprise_pull_request
+      adapter_ref: github:enterprise-mcp-adapter
     - name: github_rest
       provider_type: rest
       endpoint: POST /repos/{owner}/{repo}/pulls
@@ -181,7 +207,7 @@ execution_provider:
 
 #### Supported `provider_type` Values
 1. **`cli`**: Invokes a local command-line binary (e.g. `gh`, `op`, `wp`, `webflow-cli`). Requires verifying local executable availability.
-2. **`mcp`**: Invokes a tool exposed by an active Model Context Protocol (MCP) server (e.g. `mcp__github__create_pull_request`).
+2. **`mcp`**: Invokes a tool exposed by an active Model Context Protocol (MCP) server (e.g. `mcp__github__create_pull_request`). Multiple MCP bindings (e.g. official vs enterprise server) are explicitly supported.
 3. **`rest`**: Dispatches an HTTP/REST or GraphQL request against a remote platform API endpoint.
 4. **`sdk`**: Executes a programmatic client library invocation in Python, TypeScript, or Go.
 5. **`prompt`**: Natural language reasoning and generative transformation requiring no external tool transport.

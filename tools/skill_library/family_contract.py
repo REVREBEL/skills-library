@@ -78,6 +78,26 @@ class FamilyQualificationGate:
 
 
 @dataclass
+class FamilyQualificationRecord:
+    """Census-backed qualification evidence ledger record for a candidate ecosystem."""
+    family_slug: str
+    candidate_name: str
+    census_member_count: int
+    categories_spanned: List[str]
+    subcategories_spanned: List[str]
+    tool_surface_evidence: str
+    shared_primitives_evidence: str
+    coordinated_lifecycle_evidence: str
+    gate_1_tool_surface_cohesion: bool
+    gate_2_shared_primitives: bool
+    gate_3_critical_mass: bool
+    gate_4_coordinated_lifecycle: bool
+    expected_tier: FamilyTier
+    uncertain_cases_or_boundary_notes: Optional[str] = None
+    is_internal_meta: bool = False
+
+
+@dataclass
 class ExecutionProviderBinding:
     """Execution provider binding for a capability."""
     name: str
@@ -96,6 +116,12 @@ class ExecutionProviderBinding:
             if "/" in self.adapter_ref or "\\" in self.adapter_ref:
                 raise FamilyEligibilityError(
                     f"Invalid adapter_ref '{self.adapter_ref}'. Must be a canonical ID, not a physical path."
+                )
+        if self.provider_type != ProviderType.PROMPT:
+            if not (self.command or self.tool_name or self.endpoint or self.adapter_ref):
+                raise FamilyEligibilityError(
+                    f"Provider binding '{self.name}' ({self.provider_type.value}) must specify at least one binding target "
+                    "(command, tool_name, endpoint, or adapter_ref)."
                 )
 
 
@@ -163,6 +189,14 @@ class FamilyCandidateEvaluator:
             "surface": "op CLI, Connect API, K8s Operator",
             "primitives": ["service-account-token", "vault-profile"],
         },
+        "notebooklm": {
+            "title": "NotebookLM Synthesis & Research",
+            "vendor": "Google",
+            "min_members": 4,
+            "min_categories": 2,
+            "surface": "NotebookLM Web Client, notebooklm-py, Playwright harness, Private RPCs",
+            "primitives": ["session-cookies", "notebook-context", "source-grounding-documents"],
+        },
     }
 
     AUTHORITATIVE_TIER_1_META_FAMILIES: Dict[str, Dict[str, Any]] = {
@@ -176,13 +210,6 @@ class FamilyCandidateEvaluator:
     }
 
     AUTHORITATIVE_TIER_2_LOGICAL_FAMILIES: Dict[str, Dict[str, Any]] = {
-        "notebooklm": {
-            "title": "NotebookLM Synthesis",
-            "vendor": "Google",
-            "members": 4,
-            "primary_domain": "content-and-documentation",
-            "surface": "NotebookLM Web / Private API",
-        },
         "stripe": {
             "title": "Stripe Payments",
             "vendor": "Stripe",
@@ -208,6 +235,225 @@ class FamilyCandidateEvaluator:
         "slack-notifier",
         "json-formatter",
         "generic-webhook",
+    }
+
+    # Authoritative Census-Backed Qualification Evidence Ledger
+    # Derived from REV-126/REV-150 census, family-candidate-register.md, and skill package audits
+    CENSUS_FAMILY_QUALIFICATION_LEDGER: Dict[str, FamilyQualificationRecord] = {
+        "github": FamilyQualificationRecord(
+            family_slug="github",
+            candidate_name="GitHub Operations",
+            census_member_count=22,
+            categories_spanned=["development", "github-operations", "quality-and-security"],
+            subcategories_spanned=["workflow-automation", "security-audit"],
+            tool_surface_evidence="gh CLI, GitHub MCP server, GitHub GraphQL/REST APIs",
+            shared_primitives_evidence="GH_TOKEN, GITHUB_TOKEN, repo context, Git credentials",
+            coordinated_lifecycle_evidence="Actions, issues, PRs, and security scans track GitHub API/CLI changes together in lockstep",
+            gate_1_tool_surface_cohesion=True,
+            gate_2_shared_primitives=True,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            uncertain_cases_or_boundary_notes="27 generic keyword mentions pruned during census. 15 duplicate candidate pairs retained direction-neutral under REV-128.",
+        ),
+        "webflow": FamilyQualificationRecord(
+            family_slug="webflow",
+            candidate_name="Webflow Platform",
+            census_member_count=22,
+            categories_spanned=["design-and-experience", "development", "marketing-and-seo", "quality-and-security"],
+            subcategories_spanned=["cms", "designer-extensions", "devlink", "ui-components"],
+            tool_surface_evidence="webflow-cli, Webflow Designer API, Webflow REST CMS API",
+            shared_primitives_evidence="Site API tokens, Designer extension tokens, DevLink React components",
+            coordinated_lifecycle_evidence="Designer API versions, CMS v2 schema updates, DevLink sync track in lockstep",
+            gate_1_tool_surface_cohesion=True,
+            gate_2_shared_primitives=True,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            uncertain_cases_or_boundary_notes="6 generic audit mentions pruned during census. 16 prefix packages + 6 dedicated tools.",
+        ),
+        "figma": FamilyQualificationRecord(
+            family_slug="figma",
+            candidate_name="Figma Design Platform",
+            census_member_count=14,
+            categories_spanned=["design-and-experience", "development"],
+            subcategories_spanned=["design-systems", "motion-and-graphics", "fullstack"],
+            tool_surface_evidence="Figma Plugin API, Code Connect CLI, REST API",
+            shared_primitives_evidence="Figma access tokens, design tokens, FigJam/Slides context",
+            coordinated_lifecycle_evidence="Plugin manifest schema updates, REST OAuth tokens, Code Connect releases in lockstep",
+            gate_1_tool_surface_cohesion=True,
+            gate_2_shared_primitives=True,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            uncertain_cases_or_boundary_notes="2 broad design methodology skills (design-system-architect, product-design) pruned.",
+        ),
+        "n8n": FamilyQualificationRecord(
+            family_slug="n8n",
+            candidate_name="n8n Workflow Automation",
+            census_member_count=14,
+            categories_spanned=["business-and-operations", "data-and-ai", "marketing-and-seo", "quality-and-security", "workflow-and-automation"],
+            subcategories_spanned=["integrations", "ai-workflows", "campaigns", "error-handling", "automation"],
+            tool_surface_evidence="n8n Node SDK, Public REST API, Community Node interfaces",
+            shared_primitives_evidence="Instance credentials, node expression syntax, webhook triggers",
+            coordinated_lifecycle_evidence="Node versioning contracts, n8n core runtime upgrades in lockstep",
+            gate_1_tool_surface_cohesion=True,
+            gate_2_shared_primitives=True,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            uncertain_cases_or_boundary_notes="Member skills scattered across 5 functional categories, requiring dedicated hub consolidation.",
+        ),
+        "hugging-face": FamilyQualificationRecord(
+            family_slug="hugging-face",
+            candidate_name="Hugging Face Machine Learning",
+            census_member_count=19,
+            categories_spanned=["data-and-ai", "quality-and-security"],
+            subcategories_spanned=["models", "datasets", "spaces", "evaluations"],
+            tool_surface_evidence="huggingface_hub CLI, Python SDK, Inference API, ZeroGPU",
+            shared_primitives_evidence="HF_TOKEN, dataset viewer protocols, model repository schemas",
+            coordinated_lifecycle_evidence="Hub client releases, token permissions, model card schemas in lockstep",
+            gate_1_tool_surface_cohesion=True,
+            gate_2_shared_primitives=True,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            uncertain_cases_or_boundary_notes="13 hugging-face-* packages + 6 huggingface-* packages unified under single family hub.",
+        ),
+        "wordpress": FamilyQualificationRecord(
+            family_slug="wordpress",
+            candidate_name="WordPress / WooCommerce CMS",
+            census_member_count=7,
+            categories_spanned=["development", "marketing-and-seo"],
+            subcategories_spanned=["cms", "ecommerce"],
+            tool_surface_evidence="WP-CLI binary, WordPress Core REST API, WooCommerce REST API",
+            shared_primitives_evidence="Application passwords, site connection configs, DB credentials",
+            coordinated_lifecycle_evidence="WordPress REST API schema, PHP/plugin compatibility, WooCommerce API versions in lockstep",
+            gate_1_tool_surface_cohesion=True,
+            gate_2_shared_primitives=True,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            uncertain_cases_or_boundary_notes="7 validated members across CMS and eCommerce domains.",
+        ),
+        "1password": FamilyQualificationRecord(
+            family_slug="1password",
+            candidate_name="1Password Secret Management",
+            census_member_count=5,
+            categories_spanned=["infrastructure-and-ops"],
+            subcategories_spanned=["secrets-management"],
+            tool_surface_evidence="op CLI binary, 1Password Connect API, Kubernetes operator",
+            shared_primitives_evidence="Service account tokens, vault profile paths, secret references (op://)",
+            coordinated_lifecycle_evidence="op CLI v2 commands, connect server tokens, k8s operator CRDs in lockstep",
+            gate_1_tool_surface_cohesion=True,
+            gate_2_shared_primitives=True,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            uncertain_cases_or_boundary_notes="Satisfies single-domain high-density threshold (>=5 ops) requiring dedicated primitive/adapter harness.",
+        ),
+        "skill-lifecycle": FamilyQualificationRecord(
+            family_slug="skill-lifecycle",
+            candidate_name="Skills Lifecycle & Governance",
+            census_member_count=13,
+            categories_spanned=["skills-create-manage-update"],
+            subcategories_spanned=["lifecycle-management"],
+            tool_surface_evidence="skill-library CLI, validate/lint tooling, CI workflows",
+            shared_primitives_evidence="skill.json schemas, census ledger formats, ADR contracts",
+            coordinated_lifecycle_evidence="Catalog architecture versions (REV-126 -> REV-130) upgrade in lockstep",
+            gate_1_tool_surface_cohesion=True,
+            gate_2_shared_primitives=True,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            expected_tier=FamilyTier.TIER_1_META_FAMILY,
+            uncertain_cases_or_boundary_notes="Internal meta-capability family residing in meta-and-agent-skills/, not a third-party vendor platform.",
+            is_internal_meta=True,
+        ),
+        "notebooklm": FamilyQualificationRecord(
+            family_slug="notebooklm",
+            candidate_name="NotebookLM Synthesis & Research",
+            census_member_count=4,
+            categories_spanned=["content-and-documentation", "marketing-and-seo"],
+            subcategories_spanned=["presentations", "on-page-seo", "technical-writing"],
+            tool_surface_evidence="NotebookLM Web Client, unofficial CLI (notebooklm-py), Playwright automation harness, private Google RPC endpoints",
+            shared_primitives_evidence="Google session authentication cookies, notebook ID context, source grounding documents",
+            coordinated_lifecycle_evidence="Unofficial APIs, session token extraction, and Playwright harnesses break and upgrade in lockstep whenever Google alters NotebookLM web endpoints",
+            gate_1_tool_surface_cohesion=True,
+            gate_2_shared_primitives=True,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            uncertain_cases_or_boundary_notes=(
+                "Census contains 4 packages spanning 2 categories. Includes 1 byte-for-byte duplicate pair "
+                "(library/marketing-and-seo/on-page-seo/notebooklm identical to library/content-and-documentation/presentations/notebooklm) "
+                "and 2 skills in manual_review disposition. Even if de-duplicated to 3 distinct skills, it satisfies Gate 3 (>=3 skills "
+                "spanning 2 categories). Classified as Tier 1 Platform Hub adhering strictly to qualification rules."
+            ),
+        ),
+        "stripe": FamilyQualificationRecord(
+            family_slug="stripe",
+            candidate_name="Stripe Payments",
+            census_member_count=2,
+            categories_spanned=["business-and-operations"],
+            subcategories_spanned=["finance-and-accounting"],
+            tool_surface_evidence="Stripe CLI (stripe), Stripe Python/Node SDK, Stripe REST API",
+            shared_primitives_evidence="STRIPE_SECRET_KEY, webhook signing secrets, customer/charge ID tokens",
+            coordinated_lifecycle_evidence="Tracks Stripe API version dates (e.g. 2024-04-10) in lockstep",
+            gate_1_tool_surface_cohesion=True,
+            gate_2_shared_primitives=True,
+            gate_3_critical_mass=False,
+            gate_4_coordinated_lifecycle=True,
+            expected_tier=FamilyTier.TIER_2_LOGICAL_FAMILY,
+            uncertain_cases_or_boundary_notes="Fails Gate 3 critical mass (2 members < 3 cross-domain, < 5 single-domain). Retained in business-and-operations.",
+        ),
+        "supabase": FamilyQualificationRecord(
+            family_slug="supabase",
+            candidate_name="Supabase BaaS",
+            census_member_count=2,
+            categories_spanned=["development"],
+            subcategories_spanned=["databases"],
+            tool_surface_evidence="supabase CLI, PostgREST HTTP, Supabase GoTrue Auth SDK",
+            shared_primitives_evidence="SUPABASE_URL, anon key, service_role key, project ref",
+            coordinated_lifecycle_evidence="Tracks Supabase platform migrations and PostgREST schema versions in lockstep",
+            gate_1_tool_surface_cohesion=True,
+            gate_2_shared_primitives=True,
+            gate_3_critical_mass=False,
+            gate_4_coordinated_lifecycle=True,
+            expected_tier=FamilyTier.TIER_2_LOGICAL_FAMILY,
+            uncertain_cases_or_boundary_notes="Fails Gate 3 critical mass (2 members < 3 cross-domain, < 5 single-domain). Retained in development/databases.",
+        ),
+        "curl": FamilyQualificationRecord(
+            family_slug="curl",
+            candidate_name="cURL HTTP Utility",
+            census_member_count=1,
+            categories_spanned=["development"],
+            subcategories_spanned=["http-tools"],
+            tool_surface_evidence="Generic POSIX curl binary commands",
+            shared_primitives_evidence="None (ad-hoc URLs and headers)",
+            coordinated_lifecycle_evidence="None (standard POSIX utility)",
+            gate_1_tool_surface_cohesion=False,
+            gate_2_shared_primitives=False,
+            gate_3_critical_mass=False,
+            gate_4_coordinated_lifecycle=False,
+            expected_tier=FamilyTier.DISQUALIFIED_SPRAWL,
+            uncertain_cases_or_boundary_notes="Generic utility failing Gates 1, 2, 3, 4. Strictly forbidden from creating family tags or platform folders.",
+        ),
+        "docker-basics": FamilyQualificationRecord(
+            family_slug="docker-basics",
+            candidate_name="Docker Basics",
+            census_member_count=1,
+            categories_spanned=["infrastructure-and-ops"],
+            subcategories_spanned=["containerization"],
+            tool_surface_evidence="Local docker CLI commands",
+            shared_primitives_evidence="None (ad-hoc container names and flags)",
+            coordinated_lifecycle_evidence="None (isolated utility script)",
+            gate_1_tool_surface_cohesion=True,
+            gate_2_shared_primitives=False,
+            gate_3_critical_mass=False,
+            gate_4_coordinated_lifecycle=False,
+            expected_tier=FamilyTier.DISQUALIFIED_SPRAWL,
+            uncertain_cases_or_boundary_notes="Isolated single capability failing Gates 2, 3, 4. Retained as independent domain capability.",
+        ),
     }
 
     @classmethod
@@ -288,6 +534,33 @@ class FamilyCandidateEvaluator:
                 "from establishing a platform directory."
             )
 
+    @classmethod
+    def evaluate_from_ledger(
+        cls,
+        family_slug: str,
+    ) -> Tuple[FamilyTier, FamilyQualificationGate, FamilyQualificationRecord]:
+        """
+        Evaluate a candidate platform family directly from the census-backed evidence ledger.
+        Ensures qualification decisions are grounded in documented census evidence and inspected skill packages.
+        """
+        slug = family_slug.lower().strip()
+        if slug not in cls.CENSUS_FAMILY_QUALIFICATION_LEDGER:
+            raise FamilyEligibilityError(
+                f"Candidate family '{family_slug}' is not registered in the census qualification ledger."
+            )
+
+        record = cls.CENSUS_FAMILY_QUALIFICATION_LEDGER[slug]
+        tier, gate = cls.evaluate(
+            family_slug=record.family_slug,
+            member_count=record.census_member_count,
+            categories_spanned=len(record.categories_spanned),
+            has_tool_surface=record.gate_1_tool_surface_cohesion,
+            has_shared_primitives=record.gate_2_shared_primitives,
+            has_coordinated_lifecycle=record.gate_4_coordinated_lifecycle,
+            is_internal_meta=record.is_internal_meta,
+        )
+        return tier, gate, record
+
 
 class ExecutionProviderContract:
     """
@@ -304,21 +577,22 @@ class ExecutionProviderContract:
     ) -> None:
         """
         Validate that execution providers attached to a capability adhere to:
-        1. Providers are valid mechanisms.
-        2. Adapter references point to valid canonical IDs, not physical paths.
-        3. No canonical ID fragmentation (e.g. creating foo-via-cli and foo-via-mcp).
+        1. Providers have unique binding identities (name).
+        2. Multiple providers of the same transport type (e.g. 2 MCP servers, 2 CLI tools) are permitted.
+        3. Adapter references point to valid canonical IDs, not physical paths.
+        4. No canonical ID fragmentation (e.g. creating foo-via-cli and foo-via-mcp).
         """
         if not providers:
             return
 
-        seen_types: Set[ProviderType] = set()
+        seen_names: Set[str] = set()
         for prov in providers:
             prov.validate()
-            if prov.provider_type in seen_types:
+            if prov.name in seen_names:
                 raise FamilyEligibilityError(
-                    f"Capability '{capability.canonical_id}' has duplicate execution provider for type '{prov.provider_type.value}'."
+                    f"Capability '{capability.canonical_id}' has duplicate execution provider binding name '{prov.name}'."
                 )
-            seen_types.add(prov.provider_type)
+            seen_names.add(prov.name)
 
         # Invariant: Canonical ID must NOT encode provider mechanisms
         forbidden_suffixes = ["-via-cli", "-via-mcp", "-via-rest", "-via-sdk", "-cli-wrapper", "-mcp-wrapper"]
