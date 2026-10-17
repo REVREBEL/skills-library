@@ -38,6 +38,19 @@ from .family_contract import (
     FamilyCandidateEvaluator,
     ExecutionProviderContract,
 )
+from .registry_contract import (
+    RegistryError,
+    ProjectionMode,
+    SemanticGroupObject,
+    RegistryEntry,
+    CatalogRegistry,
+    DependencyResolver,
+    AliasResolver,
+    MultiViewProjector,
+    ProjectMaterializer,
+    FamilyRouterGenerator,
+    CatalogCompiler,
+)
 
 __all__ = [
     "CanonicalIdentity",
@@ -68,4 +81,15 @@ __all__ = [
     "ExecutionProviderBinding",
     "FamilyCandidateEvaluator",
     "ExecutionProviderContract",
+    "RegistryError",
+    "ProjectionMode",
+    "SemanticGroupObject",
+    "RegistryEntry",
+    "CatalogRegistry",
+    "DependencyResolver",
+    "AliasResolver",
+    "MultiViewProjector",
+    "ProjectMaterializer",
+    "FamilyRouterGenerator",
+    "CatalogCompiler",
 ]
