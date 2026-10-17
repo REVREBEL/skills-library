@@ -436,3 +436,38 @@ In accordance with approved census principles, REV-128 establishes candidate eva
 3. **Execution Phasing & Catalog Protection**:
    - In accordance with **Invariant 7 (Catalog Non-Destruction)**, disk moves are deferred until compilation and migration tooling in REV-129/130.
    - REV-128 establishes layout specifications, validators, and candidate hypotheses without modifying existing skill directories.
+
+---
+
+## 9. Platform Family Eligibility & Provider-Adapter Implementation Rules (REV-129 / ADR-003)
+
+### 9.1 The 4-Gate Family Qualification Framework
+
+To establish a dedicated first-class platform hub under `library/tools-and-platforms/<family-slug>/`, candidate technology ecosystems must satisfy **all 4 qualification gates**:
+
+1. **Gate 1: Tool Surface & Protocol Cohesion**: Must provide a cohesive, dedicated programmatic execution surface (official CLI, MCP server, SDK, or structured REST/GraphQL API). Generic shell tools (`curl`, `jq`, `grep`) fail Gate 1.
+2. **Gate 2: Shared Reusable Primitives**: Must share platform-wide credentials, auth tokens, session profiles, connection configurations, or design token primitives.
+3. **Gate 3: Critical Mass & Cross-Domain Footprint**:
+   - **Cross-Domain Standard**: $\ge 3$ distinct capabilities/workflows spanning $\ge 2$ functional categories.
+   - **Single-Domain High-Density**: $\ge 5$ tightly coupled, distinct operations within a single domain requiring dedicated primitives/adapters.
+4. **Gate 4: Coordinated Lifecycle Maintenance**: Member skills must evolve in lockstep with platform API releases, deprecations, and authentication protocol changes.
+
+### 9.2 Family Classification Tiers
+
+| Tier | Eligibility Criteria | Physical Placement | Metadata Tagging | Validated Catalog Examples |
+| :--- | :--- | :--- | :--- | :--- |
+| **Tier 1: Platform Hub** | Meets **all 4 gates** with verified source evidence | Dedicated hub: `library/tools-and-platforms/<family>/` | `families: ["<family>"]` | `github` (22), `webflow` (22), `hugging-face` (19), `figma` (14), `n8n` (14), `wordpress` (7), `1password` (5) |
+| **Tier 1: Meta-Family** | Universal agent engineering infrastructure internal to the library | Dedicated meta hub: `library/meta-and-agent-skills/<family>/` | `families: ["<family>"]` | `skill-lifecycle` (13) |
+| **Tier 2: Logical Family** | Meets Gates 1 and 2, but sub-critical mass (<3 skills or <5 single-domain skills) | Retained in primary domain: `library/<category>/<subcategory>/<skill>/` | `families: ["<family>"]` | `supabase` (2) |
+| **Pending Adjudication** | Inconclusive critical mass, unverified provisional primitives, or high manual review ratio ($\ge 50\%$) | Retained in domain tree (`<primary_domain>/<subcategory>`) | Provisional only | `notebooklm` (4 packages, 3 distinct in 1 domain, 2 manual reviews) |
+| **Disqualified / Vendor Sprawl** | Fails Gate 1 or Gate 2 (isolated tool or incidental API mention) | Resides strictly in functional domain | **Forbidden** | `docker-basics`, `slack-notifier`, `curl-helper` |
+
+### 9.3 Execution Provider Decoupling & Invariants
+
+> [!IMPORTANT]
+> **Canonical Identity vs Provider Decoupling Invariant**:
+> A capability represents a single abstract operational task. It possesses **exactly ONE canonical identity** (`urn:skill:<scope>:<slug>`).
+> Multiple execution mechanisms (CLI, MCP, REST, SDK, Prompt) **MUST NOT** proliferate duplicate canonical skills.
+> Capabilities MAY bind multiple execution providers of the same transport type (e.g., multiple MCP servers or alternative CLI implementations) provided each binding maintains a unique `name` within the capability.
+
+Capabilities declare execution providers via `execution_provider` bindings. Adapters (`AdapterObject`, `SkillRole.ADAPTER`) act as pure protocol translation shims (`adapts: <protocol>`) containing **zero business or workflow logic**.
