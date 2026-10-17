@@ -41,6 +41,7 @@ from .family_contract import (
 from .registry_contract import (
     RegistryError,
     ProjectionMode,
+    DuplicateAdjudicationOutcome,
     SemanticGroupObject,
     RegistryEntry,
     CatalogRegistry,
@@ -83,6 +84,7 @@ __all__ = [
     "ExecutionProviderContract",
     "RegistryError",
     "ProjectionMode",
+    "DuplicateAdjudicationOutcome",
     "SemanticGroupObject",
     "RegistryEntry",
     "CatalogRegistry",

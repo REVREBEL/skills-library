@@ -46,6 +46,7 @@ from skill_library.registry_contract import (
     CatalogCompiler,
     CatalogRegistry,
     DependencyResolver,
+    DuplicateAdjudicationOutcome,
     FamilyRouterGenerator,
     MultiViewProjector,
     ProjectMaterializer,
@@ -507,7 +508,7 @@ class TestAliasResolverAndInvariants(unittest.TestCase):
         self.assertIn("Please update references", telem["deprecation_notice"])
 
     def test_direction_neutral_duplicate_pair_resolution(self):
-        """Helper produces canonical hub capability and backward-compatible alias."""
+        """Helper produces governed outcomes for duplicate candidates under ADR-004 Section 5.2."""
         hub_cap = RegistryEntry(
             canonical_id="github:list-repos",
             urn="",
@@ -525,12 +526,45 @@ class TestAliasResolverAndInvariants(unittest.TestCase):
             "subcategory": "backend",
             "physical_path": "library/development/backend/list-repos",
         }
-        canonical, alias = AliasResolver.build_direction_neutral_duplicate_pair(hub_cap, legacy_data)
+        # Outcome 1: PLATFORM_CANONICAL (hub is canonical, domain is deprecated alias)
+        canonical, alias = AliasResolver.build_direction_neutral_duplicate_pair(
+            hub_cap, legacy_data, outcome=DuplicateAdjudicationOutcome.PLATFORM_CANONICAL
+        )
         self.assertEqual(canonical.canonical_id, "github:list-repos")
         self.assertEqual(alias.canonical_id, "development:github-list-repos")
         self.assertEqual(alias.role, "alias")
         self.assertEqual(alias.status, "deprecated")
         self.assertEqual(alias.relationships["aliased_to"], "github:list-repos")
+
+        # Outcome 2: DOMAIN_CANONICAL (domain is canonical, hub is platform alias)
+        c_dom, a_hub = AliasResolver.build_direction_neutral_duplicate_pair(
+            hub_cap, legacy_data, outcome=DuplicateAdjudicationOutcome.DOMAIN_CANONICAL
+        )
+        self.assertEqual(c_dom.canonical_id, "development:github-list-repos")
+        self.assertEqual(a_hub.canonical_id, "github:list-repos")
+        self.assertEqual(a_hub.role, "alias")
+        self.assertEqual(a_hub.status, "deprecated")
+        self.assertEqual(a_hub.relationships["aliased_to"], "development:github-list-repos")
+
+        # Outcome 3: DUAL_RETENTION (both canonicals, zero aliases)
+        e1, e2 = AliasResolver.build_direction_neutral_duplicate_pair(
+            hub_cap, legacy_data, outcome=DuplicateAdjudicationOutcome.DUAL_RETENTION
+        )
+        self.assertEqual(e1.canonical_id, "github:list-repos")
+        self.assertEqual(e2.canonical_id, "development:github-list-repos")
+        self.assertNotEqual(e1.role, "alias")
+        self.assertNotEqual(e2.role, "alias")
+        self.assertIsNone(e1.relationships.get("aliased_to"))
+        self.assertIsNone(e2.relationships.get("aliased_to"))
+
+        # Outcome 4: PENDING_ADJUDICATION (direction-neutral provisional baseline)
+        p1, p2 = AliasResolver.build_direction_neutral_duplicate_pair(
+            hub_cap, legacy_data, outcome=DuplicateAdjudicationOutcome.PENDING_ADJUDICATION
+        )
+        self.assertEqual(p1.status, "provisional")
+        self.assertEqual(p2.status, "provisional")
+        self.assertIsNone(p1.relationships.get("aliased_to"))
+        self.assertIsNone(p2.relationships.get("aliased_to"))
 
 
 class TestMultiViewProjector(unittest.TestCase):
@@ -671,6 +705,78 @@ class TestProjectMaterializerAndTransitiveCompleteness(unittest.TestCase):
         self.assertEqual(names["dev:api-caller"], "development-api-caller")
         self.assertEqual(names["marketing:api-caller"], "marketing-api-caller")
 
+    def test_flat_runtime_naming_collision_identical_name_and_category(self):
+        """
+        When two skills share identical leaf name AND identical category,
+        materializer falls back to canonical scope to guarantee collision-free uniqueness.
+        """
+        e1 = RegistryEntry(
+            canonical_id="dev:commit",
+            urn="",
+            name="commit",
+            role="capability",
+            category="development",
+        )
+        e2 = RegistryEntry(
+            canonical_id="github:commit",
+            urn="",
+            name="commit",
+            role="capability",
+            category="development",
+        )
+        reg = CatalogRegistry()
+        reg.add_entry(e1)
+        reg.add_entry(e2)
+        mat = ProjectMaterializer(reg)
+        bundle = mat.materialize_bundle(mode=ProjectionMode.FULL)
+        names = bundle["runtime_names"]
+
+        self.assertEqual(len(set(names.values())), 2, "Runtime names must be globally unique")
+        self.assertNotEqual(names["dev:commit"], names["github:commit"])
+        self.assertIn("commit", names["dev:commit"])
+        self.assertIn("commit", names["github:commit"])
+
+    def test_flat_runtime_naming_collision_with_existing_prefix_name(self):
+        """
+        When a skill's natural name matches another skill's category prefix candidate,
+        materializer prevents prefix collision from stealing the natural name.
+        """
+        e1 = RegistryEntry(
+            canonical_id="tools:development-commit",
+            urn="",
+            name="development-commit",
+            role="capability",
+            category="tools",
+        )
+        e2 = RegistryEntry(
+            canonical_id="dev:commit",
+            urn="",
+            name="commit",
+            role="capability",
+            category="development",
+        )
+        e3 = RegistryEntry(
+            canonical_id="git:commit",
+            urn="",
+            name="commit",
+            role="capability",
+            category="development",
+        )
+        reg = CatalogRegistry()
+        reg.add_entry(e1)
+        reg.add_entry(e2)
+        reg.add_entry(e3)
+        mat = ProjectMaterializer(reg)
+        bundle = mat.materialize_bundle(mode=ProjectionMode.FULL)
+        names = bundle["runtime_names"]
+
+        # e1 has unique natural name 'development-commit' and must keep it
+        self.assertEqual(names["tools:development-commit"], "development-commit")
+        # e2 and e3 must receive distinct names without colliding with e1
+        self.assertNotEqual(names["dev:commit"], "development-commit")
+        self.assertNotEqual(names["git:commit"], "development-commit")
+        self.assertEqual(len(set(names.values())), 3)
+
 
 class TestFamilyRouterGenerator(unittest.TestCase):
     """Verifies Tier 1 and Tier 2 markdown router formatting rules."""
@@ -683,6 +789,7 @@ class TestFamilyRouterGenerator(unittest.TestCase):
                 name="auth-token",
                 role="primitive",
                 description="GitHub authentication token provider.",
+                physical_path="library/tools-and-platforms/github/auth-token",
             ),
             RegistryEntry(
                 canonical_id="github:create-issue",
@@ -690,6 +797,7 @@ class TestFamilyRouterGenerator(unittest.TestCase):
                 name="create-issue",
                 role="capability",
                 description="Creates a GitHub issue.",
+                physical_path="library/tools-and-platforms/github/create-issue",
                 execution_providers=[{"transport": "cli"}],
             ),
         ]
@@ -707,6 +815,35 @@ class TestFamilyRouterGenerator(unittest.TestCase):
         self.assertNotIn("/Users/", router_md)
         self.assertNotIn("/home/", router_md)
 
+    def test_tier_1_hub_router_nested_and_domain_anchored_paths(self):
+        """Derived router links correctly handle nested child directories and domain-anchored paths."""
+        entries = [
+            RegistryEntry(
+                canonical_id="github:deploy-action",
+                urn="",
+                name="deploy-action",
+                role="capability",
+                description="Deploy action workflow.",
+                physical_path="library/tools-and-platforms/github/actions/deploy-action",
+            ),
+            RegistryEntry(
+                canonical_id="dev:gh-sync",
+                urn="",
+                name="gh-sync",
+                role="capability",
+                description="Sync helper anchored in functional domain.",
+                physical_path="library/development/backend/gh-sync",
+            ),
+        ]
+        router_md = FamilyRouterGenerator.generate_tier_1_hub_router(
+            family_slug="github",
+            family_title="GitHub Platform",
+            vendor="GitHub / Microsoft",
+            member_entries=entries,
+        )
+        self.assertIn("- [deploy-action](actions/deploy-action/SKILL.md):", router_md)
+        self.assertIn("- [gh-sync](../../development/backend/gh-sync/SKILL.md):", router_md)
+
     def test_tier_2_virtual_router_generation(self):
         entries = [
             RegistryEntry(
@@ -717,6 +854,7 @@ class TestFamilyRouterGenerator(unittest.TestCase):
                 category="databases",
                 subcategory="sql",
                 description="Executes Supabase SQL queries.",
+                physical_path="library/databases/sql/supabase-query",
             ),
         ]
         router_md = FamilyRouterGenerator.generate_tier_2_virtual_router(
@@ -728,8 +866,46 @@ class TestFamilyRouterGenerator(unittest.TestCase):
         self.assertIn("# Supabase Backend Platform Logical Family Router", router_md)
         self.assertIn("Tier 2 Logical Family", router_md)
         self.assertIn("Databases", router_md)
-        self.assertIn("supabase-query", router_md)
+        self.assertIn("- [supabase-query](../../library/databases/sql/supabase-query/SKILL.md)", router_md)
         self.assertNotIn("/Users/", router_md)
+
+    def test_router_generation_missing_physical_path_raises_registry_error(self):
+        entries = [
+            RegistryEntry(
+                canonical_id="github:missing-path",
+                urn="",
+                name="missing-path",
+                role="capability",
+                physical_path="",
+            )
+        ]
+        with self.assertRaises(RegistryError) as ctx:
+            FamilyRouterGenerator.generate_tier_1_hub_router(
+                family_slug="github",
+                family_title="GitHub",
+                vendor="GitHub",
+                member_entries=entries,
+            )
+        self.assertIn("has no physical_path", str(ctx.exception))
+
+    def test_router_generation_prohibited_absolute_path_raises_registry_error(self):
+        entries = [
+            RegistryEntry(
+                canonical_id="github:abs-path",
+                urn="",
+                name="abs-path",
+                role="capability",
+                physical_path="/Users/user/skills-library/library/tools-and-platforms/github/abs-path",
+            )
+        ]
+        with self.assertRaises(RegistryError) as ctx:
+            FamilyRouterGenerator.generate_tier_1_hub_router(
+                family_slug="github",
+                family_title="GitHub",
+                vendor="GitHub",
+                member_entries=entries,
+            )
+        self.assertIn("Prohibited absolute path", str(ctx.exception))
 
 
 class TestCatalogCompilerAndIdempotency(unittest.TestCase):
@@ -755,6 +931,29 @@ class TestCatalogCompilerAndIdempotency(unittest.TestCase):
         # Projections and search index must also be identical
         self.assertEqual(json.dumps(proj1, sort_keys=True), json.dumps(proj2, sort_keys=True))
         self.assertEqual(json.dumps(idx1, sort_keys=True), json.dumps(idx2, sort_keys=True))
+
+    def test_deterministic_compilation_two_independent_instances_byte_identical(self):
+        """
+        Two separate CatalogCompiler instances with identical inputs and no explicit timestamp
+        must produce byte-for-byte identical output without wall-clock drift.
+        """
+        cap1 = CapabilityObject(canonical_id="tools:curl-fetch", name="curl-fetch", description="HTTP fetch")
+        cap2 = CapabilityObject(canonical_id="tools:json-parse", name="json-parse", description="JSON parser")
+
+        compiler1 = CatalogCompiler()
+        compiler2 = CatalogCompiler()
+
+        reg1, proj1, idx1 = compiler1.compile(skill_objects=[cap1, cap2])
+        reg2, proj2, idx2 = compiler2.compile(skill_objects=[cap1, cap2])
+
+        # Verify byte-for-byte identical serialization across independent instances
+        self.assertEqual(reg1.to_json(), reg2.to_json())
+        self.assertEqual(json.dumps(proj1, sort_keys=True), json.dumps(proj2, sort_keys=True))
+        self.assertEqual(json.dumps(idx1, sort_keys=True), json.dumps(idx2, sort_keys=True))
+
+        # Verify deterministic timestamp (no wall-clock timestamp leak)
+        data = reg1.to_dict()
+        self.assertEqual(data["generated_at"], "1970-01-01T00:00:00Z")
 
 
 if __name__ == "__main__":

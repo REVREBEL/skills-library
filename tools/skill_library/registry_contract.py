@@ -58,6 +58,17 @@ class ProjectionMode(str, Enum):
     STANDALONE_CLOSURE = "standalone_closure"
 
 
+class DuplicateAdjudicationOutcome(str, Enum):
+    """
+    Governed outcomes for duplicate candidate resolution defined under ADR-004 Section 5.2.
+    Supports direction-neutral adjudication of candidate duplicate pairs.
+    """
+    PLATFORM_CANONICAL = "platform_canonical"      # Hub is canonical, domain is alias
+    DOMAIN_CANONICAL = "domain_canonical"          # Domain is canonical, hub is alias
+    DUAL_RETENTION = "dual_retention"              # Both retained as distinct canonicals
+    PENDING_ADJUDICATION = "pending_adjudication"  # Unresolved direction-neutral baseline
+
+
 @dataclass
 class SemanticGroupObject:
     """
@@ -312,10 +323,13 @@ class CatalogRegistry:
     """
     SCHEMA_URI = "https://json-schema.revrebel.io/v1/skills-registry.schema.json"
     VERSION = "1.0.0"
+    DEFAULT_TIMESTAMP = "1970-01-01T00:00:00Z"
 
     def __init__(self, commit_sha: str = "", generated_at: Optional[str] = None):
         self.commit_sha = commit_sha
-        self.generated_at = generated_at or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        # Volatile timestamps are prohibited for deterministic compilation (INV-10).
+        # When generated_at is not explicitly provided, use stable default canonical epoch.
+        self.generated_at = generated_at or self.DEFAULT_TIMESTAMP
         self.skills: Dict[str, RegistryEntry] = {}
         self.semantic_groups: Dict[str, SemanticGroupObject] = {}
 
@@ -683,40 +697,109 @@ class AliasResolver:
         }
 
     @staticmethod
+    def adjudicate_duplicate_pair(
+        hub_entry: RegistryEntry,
+        domain_entry: RegistryEntry,
+        outcome: DuplicateAdjudicationOutcome,
+    ) -> Tuple[RegistryEntry, RegistryEntry]:
+        """
+        Implements ADR-004 Section 5.2: Direction-neutral duplicate resolution protocol.
+        Supports 4 governed outcomes:
+          1. PLATFORM_CANONICAL: Hub entry is canonical capability; domain entry is deprecated alias.
+          2. DOMAIN_CANONICAL: Domain entry is canonical capability; hub entry is platform-facing alias.
+          3. DUAL_RETENTION: Both entries are distinct canonical capabilities (zero aliases).
+          4. PENDING_ADJUDICATION: Both entries remain direction-neutral candidate entries without alias redirection.
+        """
+        if outcome == DuplicateAdjudicationOutcome.PLATFORM_CANONICAL:
+            alias = RegistryEntry(
+                canonical_id=domain_entry.canonical_id,
+                urn=f"urn:skill:{domain_entry.canonical_id}",
+                name=domain_entry.name,
+                role=SkillRole.ALIAS.value,
+                description=f"Backward-compatible redirect to canonical capability '{hub_entry.canonical_id}'.",
+                domain=domain_entry.domain,
+                category=domain_entry.category,
+                subcategory=domain_entry.subcategory,
+                physical_path=domain_entry.physical_path,
+                status="deprecated",
+                confidence="high",
+                relationships={
+                    "composed_of": [],
+                    "extends": None,
+                    "depends_on": [],
+                    "adapts": None,
+                    "aliased_to": hub_entry.canonical_id,
+                    "belongs_to_family": hub_entry.relationships.get("belongs_to_family"),
+                },
+            )
+            return hub_entry, alias
+        elif outcome == DuplicateAdjudicationOutcome.DOMAIN_CANONICAL:
+            alias = RegistryEntry(
+                canonical_id=hub_entry.canonical_id,
+                urn=f"urn:skill:{hub_entry.canonical_id}",
+                name=hub_entry.name,
+                role=SkillRole.ALIAS.value,
+                description=f"Platform-facing alias redirecting to canonical domain capability '{domain_entry.canonical_id}'.",
+                domain=hub_entry.domain,
+                category=hub_entry.category,
+                subcategory=hub_entry.subcategory,
+                physical_path=hub_entry.physical_path,
+                status="deprecated",
+                confidence="high",
+                relationships={
+                    "composed_of": [],
+                    "extends": None,
+                    "depends_on": [],
+                    "adapts": None,
+                    "aliased_to": domain_entry.canonical_id,
+                    "belongs_to_family": hub_entry.relationships.get("belongs_to_family"),
+                },
+            )
+            return domain_entry, alias
+        elif outcome == DuplicateAdjudicationOutcome.DUAL_RETENTION:
+            # Both entries are retained as distinct canonical capabilities
+            return hub_entry, domain_entry
+        elif outcome == DuplicateAdjudicationOutcome.PENDING_ADJUDICATION:
+            # Both entries preserved in direction-neutral status pending human semantic adjudication
+            hub_copy = RegistryEntry.from_dict(hub_entry.to_dict())
+            domain_copy = RegistryEntry.from_dict(domain_entry.to_dict())
+            hub_copy.status = "provisional"
+            domain_copy.status = "provisional"
+            return hub_copy, domain_copy
+        else:
+            raise RegistryError(f"Unsupported DuplicateAdjudicationOutcome: '{outcome}'")
+
+    @staticmethod
     def build_direction_neutral_duplicate_pair(
         canonical_hub_entry: RegistryEntry,
         legacy_path_entry_data: Dict[str, Any],
+        outcome: DuplicateAdjudicationOutcome = DuplicateAdjudicationOutcome.PLATFORM_CANONICAL,
     ) -> Tuple[RegistryEntry, RegistryEntry]:
         """
-        Implements ADR-004 Section 5.2: Direction-neutral duplicate pair resolution.
-        Designates the Tier 1 platform hub capability as the canonical target,
-        and constructs a backward-compatible AliasObject with status 'deprecated'.
+        Convenience wrapper around adjudicate_duplicate_pair using legacy path dictionary.
         """
-        alias_id = legacy_path_entry_data["canonical_id"]
-        alias_name = legacy_path_entry_data.get("name", canonical_hub_entry.name)
-
-        alias_entry = RegistryEntry(
-            canonical_id=alias_id,
-            urn=f"urn:skill:{alias_id}",
-            name=alias_name,
-            role=SkillRole.ALIAS.value,
-            description=f"Backward-compatible redirect to canonical capability '{canonical_hub_entry.canonical_id}'.",
+        domain_entry = RegistryEntry(
+            canonical_id=legacy_path_entry_data["canonical_id"],
+            urn=f"urn:skill:{legacy_path_entry_data['canonical_id']}",
+            name=legacy_path_entry_data.get("name", canonical_hub_entry.name),
+            role=legacy_path_entry_data.get("role", SkillRole.CAPABILITY.value),
+            description=legacy_path_entry_data.get("description", ""),
             domain=legacy_path_entry_data.get("domain", ""),
             category=legacy_path_entry_data.get("category", ""),
             subcategory=legacy_path_entry_data.get("subcategory", ""),
             physical_path=legacy_path_entry_data.get("physical_path"),
-            status="deprecated",
+            status=legacy_path_entry_data.get("status", "active"),
             confidence="high",
             relationships={
                 "composed_of": [],
                 "extends": None,
                 "depends_on": [],
                 "adapts": None,
-                "aliased_to": canonical_hub_entry.canonical_id,
-                "belongs_to_family": canonical_hub_entry.relationships.get("belongs_to_family"),
+                "aliased_to": None,
+                "belongs_to_family": None,
             },
         )
-        return canonical_hub_entry, alias_entry
+        return AliasResolver.adjudicate_duplicate_pair(canonical_hub_entry, domain_entry, outcome)
 
 
 class MultiViewProjector:
@@ -985,26 +1068,84 @@ class ProjectMaterializer:
     def _generate_flat_runtime_names(self, cids: Iterable[str]) -> Dict[str, str]:
         """
         Generate collision-free runtime names according to ADR-004 Section 9.2:
-        Unique leaf slugs remain un-prefixed; colliding leaf slugs are scoped.
+        Guarantees globally unique runtime names within every materialized bundle.
+        Hierarchical resolution ladder:
+          1. Natural leaf name (if strictly unique across all entries in bundle).
+          2. Category prefix (f"{category}-{name}").
+          3. Canonical scope prefix (f"{scope}-{name}").
+          4. Scope + category prefix (f"{scope}-{category}-{name}").
+          5. Canonical ID slug (canonical_id.replace(":", "-")).
+          6. Disambiguated canonical ID slug.
+        Ensures Count(UniqueNames) == Count(cids) with zero silent overwriting.
         """
-        entries = [self.registry.skills[cid] for cid in cids]
-        slug_counts: Dict[str, int] = {}
-        for e in entries:
-            slug = e.name
-            slug_counts[slug] = slug_counts.get(slug, 0) + 1
+        entries = [self.registry.skills[cid] for cid in sorted(cids)]
+        if not entries:
+            return {}
 
-        names: Dict[str, str] = {}
-        for e in entries:
+        raw_names: Dict[str, str] = {e.canonical_id: e.name for e in entries}
+
+        # Count frequencies of natural leaf names across all entries in bundle
+        name_counts: Dict[str, int] = {}
+        for name in raw_names.values():
+            name_counts[name] = name_counts.get(name, 0) + 1
+
+        def candidate_ladder(e: RegistryEntry) -> List[str]:
+            scope = e._parsed_id.scope
+            cat = e.category or e.domain or ""
+            cands = []
+
+            # 1. Natural name (only if unique originally across all entries in bundle)
+            if name_counts[e.name] == 1:
+                cands.append(e.name)
+
+            # 2. Category prefix (if category exists)
+            if cat:
+                cands.append(f"{cat}-{e.name}")
+
+            # 3. Canonical scope fallback
+            cands.append(f"{scope}-{e.name}")
+
+            # 4. Scope + Category prefix (if cat exists and differs from scope)
+            if cat and cat != scope:
+                cands.append(f"{scope}-{cat}-{e.name}")
+
+            # 5. Full canonical ID slug
+            cid_slug = e.canonical_id.replace(":", "-")
+            cands.append(cid_slug)
+
+            # 6. Fallback with bundle disambiguator
+            cands.append(f"{cid_slug}-bundle-unique")
+
+            return cands
+
+        assigned: Dict[str, str] = {}
+        used_names: Set[str] = set()
+
+        for e in sorted(entries, key=lambda x: x.canonical_id):
             cid = e.canonical_id
-            slug = e.name
-            if slug_counts[slug] > 1:
-                # Collision: prefix with category or scope
-                prefix = e.category or e.domain or e._parsed_id.scope
-                names[cid] = f"{prefix}-{slug}"
-            else:
-                names[cid] = slug
+            for cand in candidate_ladder(e):
+                if cand in used_names:
+                    continue
 
-        return dict(sorted(names.items()))
+                # Ensure candidate does not steal the unique natural name of another entry
+                steals_unique_name = False
+                for other in entries:
+                    if other.canonical_id != cid and name_counts[other.name] == 1 and other.name == cand:
+                        steals_unique_name = True
+                        break
+                if steals_unique_name:
+                    continue
+
+                assigned[cid] = cand
+                used_names.add(cand)
+                break
+
+        if len(assigned) != len(entries) or len(used_names) != len(entries):
+            raise RegistryError(
+                f"Runtime name collision could not be resolved: assigned {len(used_names)} unique names for {len(entries)} entries."
+            )
+
+        return dict(sorted(assigned.items()))
 
 
 class FamilyRouterGenerator:
@@ -1020,10 +1161,15 @@ class FamilyRouterGenerator:
         vendor: str,
         member_entries: List[RegistryEntry],
         description: str = "",
+        router_dir: Optional[str] = None,
     ) -> str:
         """
         Generates root markdown router for a Tier 1 Platform Hub (library/tools-and-platforms/<family-slug>/SKILL.md).
+        Derives all member links dynamically from validated physical_path metadata relative to router location.
+        Enforces relative link validity and rejects missing or absolute filesystem paths.
         """
+        base_dir = router_dir or f"library/tools-and-platforms/{family_slug}"
+
         lines = [
             "---",
             f"name: {family_slug}-router",
@@ -1052,13 +1198,32 @@ class FamilyRouterGenerator:
             lines.append(f"## {title}")
             lines.append("")
             for e in sorted(entries, key=lambda x: x.name):
+                if not e.physical_path:
+                    raise RegistryError(
+                        f"Entry '{e.canonical_id}' has no physical_path for router link generation."
+                    )
+                if os.path.isabs(e.physical_path) or e.physical_path.startswith("/"):
+                    raise RegistryError(
+                        f"Prohibited absolute path in physical_path for entry '{e.canonical_id}': '{e.physical_path}'. Absolute paths are strictly forbidden in router links."
+                    )
+
+                target = e.physical_path.strip()
+                if not target.endswith(".md"):
+                    target = os.path.join(target, "SKILL.md")
+
+                rel_link = os.path.relpath(target, base_dir).replace("\\", "/")
+                if rel_link.startswith("/") or os.path.isabs(rel_link):
+                    raise RegistryError(
+                        f"Derived router link for entry '{e.canonical_id}' is absolute: '{rel_link}'"
+                    )
+
                 badges = []
                 for prov in e.execution_providers:
                     t = prov.get("transport", "").upper()
                     if t:
                         badges.append(f"[{t}]")
                 badge_str = " " + " ".join(badges) if badges else ""
-                lines.append(f"- [{e.name}]({e.name}/SKILL.md){badge_str}: {e.description or 'No description provided.'}")
+                lines.append(f"- [{e.name}]({rel_link}){badge_str}: {e.description or 'No description provided.'}")
             lines.append("")
 
         format_section("Platform Primitives & Shared Authentication", primitives)
@@ -1074,10 +1239,15 @@ class FamilyRouterGenerator:
         family_title: str,
         vendor: str,
         member_entries: List[RegistryEntry],
+        router_dir: Optional[str] = None,
     ) -> str:
         """
         Generates virtual projected markdown router for a Tier 2 Logical Family (views/routers/family-<family-slug>.md).
+        Derives all member links dynamically from validated physical_path metadata relative to router location.
+        Enforces relative link validity and rejects missing or absolute filesystem paths.
         """
+        base_dir = router_dir or "views/routers"
+
         lines = [
             f"# {family_title} Logical Family Router",
             "",
@@ -1101,9 +1271,27 @@ class FamilyRouterGenerator:
             lines.append(f"### {cat.title()}")
             lines.append("")
             for e in sorted(entries, key=lambda x: x.name):
-                rel_path = e.physical_path or f"library/{cat}/{e.subcategory}/{e.name}"
-                lines.append(f"- **{e.name}** (`{e.canonical_id}`): {e.description or 'No description'}")
-                lines.append(f"  - Physical Path: `{rel_path}`")
+                if not e.physical_path:
+                    raise RegistryError(
+                        f"Entry '{e.canonical_id}' has no physical_path for router link generation."
+                    )
+                if os.path.isabs(e.physical_path) or e.physical_path.startswith("/"):
+                    raise RegistryError(
+                        f"Prohibited absolute path in physical_path for entry '{e.canonical_id}': '{e.physical_path}'. Absolute paths are strictly forbidden in router links."
+                    )
+
+                target = e.physical_path.strip()
+                if not target.endswith(".md"):
+                    target = os.path.join(target, "SKILL.md")
+
+                rel_link = os.path.relpath(target, base_dir).replace("\\", "/")
+                if rel_link.startswith("/") or os.path.isabs(rel_link):
+                    raise RegistryError(
+                        f"Derived router link for entry '{e.canonical_id}' is absolute: '{rel_link}'"
+                    )
+
+                lines.append(f"- [{e.name}]({rel_link}) (`{e.canonical_id}`): {e.description or 'No description'}")
+                lines.append(f"  - Physical Path: `{e.physical_path}`")
             lines.append("")
 
         return "\n".join(lines)

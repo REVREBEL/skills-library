@@ -221,7 +221,7 @@ The registry and all its projection views must be produced by an idempotent, sin
 ### 4.2 Idempotency and Zero-Drift Invariant
 - **Rule**: Given identical input repository contents, `CatalogCompiler` must emit byte-for-byte identical output files across runs, operating systems, and platforms.
 - **Sorting Requirement**: All dictionary keys, object arrays, dependency lists, and relationship collections must be deterministically sorted by canonical ID.
-- **Timestamp Governance**: Production manifests record git commit SHAs rather than execution wall-clock timestamps for cache keys to prevent spurious diff churn.
+- **Timestamp Governance**: Volatile wall-clock timestamps are strictly prohibited in deterministic artifacts (INV-10). When an explicit timestamp is omitted, production manifests record the git commit SHA and use a stable, deterministic canonical epoch (`1970-01-01T00:00:00Z`). Two independent compiler instances evaluating identical inputs produce byte-for-byte identical outputs.
 
 ---
 
@@ -234,14 +234,27 @@ $$\forall a \in \text{Aliases}, \quad \text{Type}(\text{Target}(a)) \neq \text{A
 - **Zero Chaining**: Chained aliases ($A \to B \to C$) are strictly prohibited.
 - **Zero Cycles**: Alias loops ($A \to B \to A$) fail compilation immediately.
 
-### 5.2 Direction-Neutral Candidate Duplicate Resolution Protocol
+### 5.2 Direction-Neutral Duplicate Resolution Protocol
 Under REV-128 and REV-129, 15 GitHub duplicate pairs (e.g. `library/tools-and-platforms/github/create-pr` vs `library/development/backend/create-pr`) were held direction-neutral.
 
-ADR-004 defines the formal resolution protocol:
-1. **Authoritative Owner Selection**: The canonical identity is assigned to the platform hub capability (`github:create-pull-request`) because GitHub is a validated Tier 1 Platform Family under ADR-003.
-2. **First-Class Alias Creation**: The legacy functional domain path mints an `AliasObject` (`development:create-pr` $\to$ `aliased_to: "github:create-pull-request"`).
-3. **Zero Runtime Disruption**: Clients, workflows, or subagents referencing `development:create-pr` resolve deterministically to `github:create-pull-request` in a single hop.
-4. **Lifecycle Deprecation**: The alias object is flagged as `status: "deprecated"`, warning developers while preserving 100% backward compatibility.
+A Tier 1 platform family qualification establishes physical eligibility for a platform hub directory. **It does not prove that the platform implementation is semantically authoritative for every similarly named skill.** Pre-determining platform ownership before semantic adjudication violates the REV-128 contract.
+
+Therefore, the catalog architecture treats all 15 pairs as **direction-neutral** until each pair undergoes documented semantic adjudication. The architecture supports three distinct governed outcomes upon adjudication:
+
+1. **Platform Ownership with Backward-Compatible Alias (`platform_canonical`)**:
+   - The platform hub capability (`github:<slug>`) is adjudicated as the canonical owner.
+   - The functional domain path mints an `AliasObject` (`development:<slug>` $\to$ `aliased_to: "github:<slug>"`).
+   - The functional domain alias is marked `status: "deprecated"`, warning callers while ensuring single-hop backward compatibility.
+2. **Functional-Domain Ownership with Platform-Facing Alias (`domain_canonical`)**:
+   - The functional domain capability (`development:<slug>`) is adjudicated as the authoritative canonical implementation.
+   - The platform hub path mints an `AliasObject` (`github:<slug>` $\to$ `aliased_to: "development:<slug>"`).
+   - Callers invoking the platform hub route directly to the general-purpose domain capability.
+3. **Dual Retention with Distinct Canonical Identities (`dual_retention`)**:
+   - When the two implementations provide distinct, non-interchangeable capabilities despite sharing a common name (e.g. specialized API-based automation vs generic developer workflow), both skills are retained as distinct canonical capabilities.
+   - Neither skill is designated an alias; both remain active and distinct (`github:<slug>` and `development:<slug>`).
+4. **Pending Adjudication Baseline (`pending_adjudication`)**:
+   - Prior to semantic adjudication, neither skill is forced into a canonical-or-alias hierarchy.
+   - Both skills remain provisional, direction-neutral catalog entries with zero alias redirection.
 
 ### 5.3 Deprecation Lifecycle
 1. **Active**: Fully supported canonical skill or direct alias.
@@ -322,10 +335,11 @@ Navigation across the catalog follows a standardized markdown router contract:
 
 ### 8.2 Markdown Router Formatting Contract
 All generated router markdown documents must conform to strict rules:
-- **Valid Relative Links**: Every referenced child skill must link to its relative `SKILL.md` (e.g. `[create-pull-request](create-pull-request/SKILL.md)`).
+- **Relative Path Derivation**: Router links must never assume physical placement or flat direct-child directory structures matching display names. Every link must be derived dynamically using `os.path.relpath(member_path, router_dir)` against validated `physical_path` metadata. This supports arbitrary nesting, sub-family trees, and domain-anchored physical locations.
+- **Path Validation**: Missing `physical_path` values or attempts to introduce absolute paths (e.g. starting with `/`, `/Users/`, `/home/`) must trigger a `RegistryError`.
 - **Trigger Contract Excerpts**: Include the formal operational trigger sentence from each member skill's frontmatter.
 - **Provider Badge Indicators**: Display icons/badges for supported execution transports (`[CLI]`, `[MCP]`, `[Python]`).
-- **Zero Absolute Paths**: Absolute workstation filesystem paths (`/Users/...`, `/home/...`) are strictly forbidden.
+- **Zero Absolute Paths**: Absolute workstation filesystem paths are strictly forbidden.
 
 ---
 
@@ -339,11 +353,15 @@ When projecting canonical skills into target runtimes or client workspaces, the 
 4. `semantic_group`: Complete task cluster slice (e.g. `database-migrations`).
 5. `standalone_closure`: Specific target skill(s) plus their full transitive dependency closure.
 
-### 9.2 Deterministic Flat Runtime Naming
-In flat runtime target directories (such as `.agents/skills/`), skills cannot share leaf directory names.
-- When two skills share a slug (e.g. `development:ad-creative` and `marketing:ad-creative`), the materializer deterministically prefixes the scope: `development-ad-creative` vs `marketing-ad-creative`.
-- Registered unique slugs remain un-prefixed for brevity.
-- Mappings are published to `audit/runtime-manifest.json`.
+### 9.2 Deterministic Flat Runtime Naming & Collision Guarantee
+In flat runtime target directories (such as `.agents/skills/`), skills cannot share directory names.
+To guarantee globally unique runtime names within every materialized bundle without silent overwrites:
+1. **Unambiguous Base Name**: If a skill's leaf name (`name`) is strictly unique across all skills in the materialized bundle, it is retained un-prefixed for brevity.
+2. **Category Prefix Disambiguation**: When multiple skills share a leaf name, each is initially prefixed with its functional category (`{category}-{name}`).
+3. **Canonical Scope Fallback**: If two skills share both a leaf name AND a category (e.g., `development:commit` and `github:commit`, both in category `development`), category prefixing yields an identical string (`development-commit`). In this scenario, the materializer falls back to prefixing with the canonical scope (`{scope}-{name}` or `{scope}-{category}-{name}`).
+4. **Collision Resistance Against Pre-Existing Prefixes**: If an entry in the bundle already possesses a name matching a generated prefix (e.g., a skill naturally named `development-commit`), the materializer detects the namespace collision and applies the canonical ID fallback (`canonical_id.replace(":", "-")`).
+5. **Global Uniqueness Invariant**: The materializer asserts that the resulting set of runtime names is strictly bijective: $\text{Count}(\text{UniqueNames}) = \text{Count}(\text{Skills})$. Any unresolvable collision triggers a compilation failure (`RegistryError`).
+- Complete mappings are recorded in `audit/runtime-manifest.json`.
 
 ### 9.3 Self-Contained Dependency Guarantee
 - **Rule**: A materialized target directory or branch must **never** contain unresolved relative links or dangling dependencies.
