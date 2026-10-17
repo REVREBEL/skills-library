@@ -8,9 +8,11 @@ Governs the contracts established under REV-129 and ADR-003:
   5. Anti-Sprawl Validation ensuring living catalog integrity
 """
 
+import json
 import re
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from skill_library.object_model import (
@@ -109,6 +111,7 @@ class FamilyQualificationRecord:
     expected_tier: FamilyTier
     distinct_category_coverage: Optional[List[str]] = None
     manual_review_paths: List[str] = field(default_factory=list)
+    resolved_manual_review_paths: List[str] = field(default_factory=list)
     uncertain_cases_or_boundary_notes: Optional[str] = None
     is_internal_meta: bool = False
 
@@ -169,6 +172,90 @@ class ExecutionProviderBinding:
                     f"Provider binding '{self.name}' ({self.provider_type.value}) must specify at least one binding target "
                     "(command, tool_name, endpoint, or adapter_ref)."
                 )
+
+
+class AuthoritativeCensus:
+    """
+    Deterministic, read-only reader for the authoritative REV-126/150 census
+    (audit/taxonomy-census/semantic-role-census.json and family-candidate-register.md).
+    Enforces independent reconciliation between family qualification claims and census truth.
+    """
+    _instance: Optional["AuthoritativeCensus"] = None
+
+    FAMILY_SLUG_TO_CENSUS_NAME: Dict[str, str] = {
+        "github": "GitHub Operations",
+        "webflow": "Webflow",
+        "figma": "Figma",
+        "n8n": "n8n",
+        "hugging-face": "Hugging Face",
+        "wordpress": "WordPress",
+        "1password": "1Password",
+        "skill-lifecycle": "Skills Lifecycle",
+        "notebooklm": "NotebookLM",
+    }
+
+    # Approved duplicate registry:
+    # Only formally approved duplicate relationships reduce distinct membership count.
+    # NotebookLM: 1 byte-for-byte duplicate pair approved -> 3 distinct capabilities.
+    # GitHub: 15 candidate duplicate pairs remain under direction-neutral review in REV-128;
+    # duplicate-adjusted count MUST remain 22 for family eligibility until formal adjudication in REV-130.
+    APPROVED_DUPLICATE_REGISTRY: Dict[str, Dict[str, Any]] = {
+        "notebooklm": {
+            "expected_duplicate_adjusted_count": 3,
+            "duplicate_pairs": [
+                (
+                    "library/marketing-and-seo/on-page-seo/notebooklm",
+                    "library/content-and-documentation/presentations/notebooklm",
+                )
+            ],
+        }
+    }
+
+    def __init__(self, census_file_path: Optional[Path] = None):
+        if census_file_path is None:
+            census_file_path = (
+                Path(__file__).resolve().parent.parent.parent
+                / "audit"
+                / "taxonomy-census"
+                / "semantic-role-census.json"
+            )
+        self.census_file_path = Path(census_file_path)
+        if not self.census_file_path.exists():
+            raise FileNotFoundError(f"Authoritative census file not found at: {self.census_file_path}")
+
+        with open(self.census_file_path, "r", encoding="utf-8") as f:
+            self._raw_records: List[Dict[str, Any]] = json.load(f)
+
+        self.by_path: Dict[str, Dict[str, Any]] = {}
+        self.by_family: Dict[str, List[Dict[str, Any]]] = {}
+
+        for entry in self._raw_records:
+            path = entry.get("current_path")
+            if path:
+                self.by_path[path] = entry
+            fam = entry.get("candidate_family")
+            if fam and fam != "None":
+                self.by_family.setdefault(fam, []).append(entry)
+
+    @classmethod
+    def get_instance(cls, census_file_path: Optional[Path] = None) -> "AuthoritativeCensus":
+        """Singleton accessor for AuthoritativeCensus."""
+        if cls._instance is None or (census_file_path and cls._instance.census_file_path != Path(census_file_path)):
+            cls._instance = cls(census_file_path)
+        return cls._instance
+
+    @classmethod
+    def reset_instance(cls) -> None:
+        """Reset singleton instance (useful in testing)."""
+        cls._instance = None
+
+    def get_family_members(self, family_name: str) -> List[Dict[str, Any]]:
+        """Retrieve all census records assigned to a candidate family."""
+        return list(self.by_family.get(family_name, []))
+
+    def get_record_by_path(self, path: str) -> Optional[Dict[str, Any]]:
+        """Retrieve census record by path."""
+        return self.by_path.get(path)
 
 
 class FamilyCandidateEvaluator:
@@ -654,8 +741,13 @@ class FamilyCandidateEvaluator:
             gate_4_evidence="Tracks Supabase platform migrations and PostgREST schema versions in lockstep",
             gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
             expected_tier=FamilyTier.TIER_2_LOGICAL_FAMILY,
-            manual_review_paths=[],
-            uncertain_cases_or_boundary_notes="Fails Gate 3 critical mass (2 members < 3 cross-domain threshold). Retained in domain trees as logical family.",
+            manual_review_paths=["library/development/frontend/nextjs-supabase-auth"],
+            resolved_manual_review_paths=["library/development/frontend/nextjs-supabase-auth"],
+            uncertain_cases_or_boundary_notes=(
+                "Fails Gate 3 critical mass (2 members < 3 cross-domain threshold). "
+                "Boundary on nextjs-supabase-auth formally resolved under REV-127 as auth primitive "
+                "(auth:nextjs-supabase-auth). Retained in domain trees as logical family."
+            ),
         ),
         "curl": FamilyQualificationRecord(
             family_slug="curl",
@@ -706,7 +798,11 @@ class FamilyCandidateEvaluator:
     }
 
     @classmethod
-    def validate_record_integrity(cls, record: FamilyQualificationRecord) -> None:
+    def validate_record_integrity(
+        cls,
+        record: FamilyQualificationRecord,
+        census: Optional["AuthoritativeCensus"] = None,
+    ) -> None:
         """
         Validate that a candidate's qualification record is independently auditable and grounded in source evidence:
         1. Member count matches len(source_paths) (unless 0 for disqualified sprawl without library members).
@@ -717,6 +813,9 @@ class FamilyCandidateEvaluator:
         6. Authoritative tiers (Tier 1 Hub, Tier 1 Meta, Tier 2 Logical) cannot be asserted on ASSUMPTION_PROVISIONAL,
            UNSUPPORTED, or unresolved manual_review_paths.
         7. Evaluated tier from gates matches expected_tier (or PENDING_ADJUDICATION if uncertain).
+        8. Cross-examination against authoritative census (REV-126/150) rejects invented paths, wrong families,
+           omitted census members, count mismatches, fabricated category/subcategory coverage, unsupported
+           duplicate reductions, and omitted manual-review dispositions.
         """
         # 1. Member count vs source_paths
         if len(record.source_paths) != record.candidate_membership_count:
@@ -824,32 +923,199 @@ class FamilyCandidateEvaluator:
                         "Candidate must be designated PENDING_ADJUDICATION until verified."
                     )
 
-            if record.manual_review_paths and len(record.manual_review_paths) / max(len(record.source_paths), 1) >= 0.5:
+            unresolved_mr = set(record.manual_review_paths) - set(record.resolved_manual_review_paths)
+            if unresolved_mr and len(unresolved_mr) / max(len(record.source_paths), 1) >= 0.5:
                 raise FamilyEligibilityError(
-                    f"Candidate '{record.family_slug}' has {len(record.manual_review_paths)} of "
+                    f"Candidate '{record.family_slug}' has {len(unresolved_mr)} of "
                     f"{len(record.source_paths)} packages under manual_review and cannot claim an authoritative tier. "
                     "Must be designated PENDING_ADJUDICATION."
                 )
 
         # 6. Evaluated tier consistency check
-        if record.expected_tier == FamilyTier.PENDING_ADJUDICATION:
-            return
-
-        evaluated_tier, _ = cls.evaluate(
-            family_slug=record.family_slug,
-            member_count=record.duplicate_adjusted_count,
-            categories_spanned=cat_count,
-            has_tool_surface=record.gate_1_tool_surface_cohesion,
-            has_shared_primitives=record.gate_2_shared_primitives,
-            has_coordinated_lifecycle=record.gate_4_coordinated_lifecycle,
-            is_internal_meta=record.is_internal_meta,
-        )
-
-        if evaluated_tier != record.expected_tier:
-            raise FamilyEligibilityError(
-                f"Contradictory tier assignment for candidate '{record.family_slug}': evaluator yielded "
-                f"'{evaluated_tier.value}' but record expected '{record.expected_tier.value}'."
+        if record.expected_tier != FamilyTier.PENDING_ADJUDICATION:
+            evaluated_tier, _ = cls.evaluate(
+                family_slug=record.family_slug,
+                member_count=record.duplicate_adjusted_count,
+                categories_spanned=cat_count,
+                has_tool_surface=record.gate_1_tool_surface_cohesion,
+                has_shared_primitives=record.gate_2_shared_primitives,
+                has_coordinated_lifecycle=record.gate_4_coordinated_lifecycle,
+                is_internal_meta=record.is_internal_meta,
             )
+
+            if evaluated_tier != record.expected_tier:
+                raise FamilyEligibilityError(
+                    f"Contradictory tier assignment for candidate '{record.family_slug}': evaluator yielded "
+                    f"'{evaluated_tier.value}' but record expected '{record.expected_tier.value}'."
+                )
+
+        # 7. Authoritative Census Cross-Examination
+        census_inst = census or AuthoritativeCensus.get_instance()
+
+        # 7a. Nonexistent / invented source paths
+        for path in record.source_paths:
+            entry = census_inst.get_record_by_path(path)
+            if not entry:
+                raise FamilyEligibilityError(
+                    f"Candidate '{record.family_slug}' references nonexistent census source path '{path}'."
+                )
+
+        # 7b. Candidate family reconciliation
+        census_family_name = census_inst.FAMILY_SLUG_TO_CENSUS_NAME.get(record.family_slug)
+        if census_family_name:
+            census_members = census_inst.get_family_members(census_family_name)
+            census_paths = {m["current_path"] for m in census_members if m.get("current_path")}
+            record_paths = set(record.source_paths)
+
+            # Check that every source path belongs to this census family
+            for path in record.source_paths:
+                entry = census_inst.get_record_by_path(path)
+                actual_fam = entry.get("candidate_family")
+                if actual_fam != census_family_name:
+                    raise FamilyEligibilityError(
+                        f"Candidate '{record.family_slug}' includes source path '{path}' which belongs to "
+                        f"census family '{actual_fam}' instead of expected '{census_family_name}'."
+                    )
+
+            # Check for missing eligible census members
+            missing_members = census_paths - record_paths
+            if missing_members:
+                raise FamilyEligibilityError(
+                    f"Candidate '{record.family_slug}' omitted eligible census members: {sorted(missing_members)}."
+                )
+
+            # Check for extra paths not in census family
+            extra_members = record_paths - census_paths
+            if extra_members:
+                raise FamilyEligibilityError(
+                    f"Candidate '{record.family_slug}' includes paths not assigned to census family '{census_family_name}': {sorted(extra_members)}."
+                )
+
+            # Check membership count against census
+            if record.candidate_membership_count != len(census_paths):
+                raise FamilyEligibilityError(
+                    f"Membership count mismatch for candidate '{record.family_slug}': record claims "
+                    f"{record.candidate_membership_count} but authoritative census contains {len(census_paths)} members."
+                )
+
+            # Check category coverage against census
+            census_cats = {
+                m["current_category"]
+                for m in census_members
+                if m.get("current_category") and m.get("current_category") != "None"
+            }
+            if set(record.category_coverage) != census_cats:
+                raise FamilyEligibilityError(
+                    f"Category coverage mismatch with census for candidate '{record.family_slug}': record claims "
+                    f"{sorted(record.category_coverage)} but authoritative census members span {sorted(census_cats)}."
+                )
+
+            # Check subcategory coverage against census
+            census_subcats = {
+                m["current_subcategory"]
+                for m in census_members
+                if m.get("current_subcategory") and m.get("current_subcategory") != "None"
+            }
+            if set(record.subcategory_coverage) != census_subcats:
+                raise FamilyEligibilityError(
+                    f"Subcategory coverage mismatch with census for candidate '{record.family_slug}': record claims "
+                    f"{sorted(record.subcategory_coverage)} but authoritative census members span {sorted(census_subcats)}."
+                )
+        else:
+            # Candidate slug not in registered census families (e.g. supabase, docker-basics, curl)
+            if record.candidate_membership_count > 0:
+                # Ensure no source path belongs to a registered census family
+                for path in record.source_paths:
+                    entry = census_inst.get_record_by_path(path)
+                    fam = entry.get("candidate_family")
+                    if fam and fam != "None" and fam in census_inst.FAMILY_SLUG_TO_CENSUS_NAME.values():
+                        raise FamilyEligibilityError(
+                            f"Non-family candidate '{record.family_slug}' improperly claims path '{path}' "
+                            f"assigned to registered census family '{fam}'."
+                        )
+
+                # Ensure category and subcategory match census entries
+                census_cats = {
+                    census_inst.get_record_by_path(p)["current_category"]
+                    for p in record.source_paths
+                    if census_inst.get_record_by_path(p).get("current_category")
+                    and census_inst.get_record_by_path(p).get("current_category") != "None"
+                }
+                if set(record.category_coverage) != census_cats:
+                    raise FamilyEligibilityError(
+                        f"Category coverage mismatch with census for candidate '{record.family_slug}': record claims "
+                        f"{sorted(record.category_coverage)} but authoritative census members span {sorted(census_cats)}."
+                    )
+
+                census_subcats = {
+                    census_inst.get_record_by_path(p)["current_subcategory"]
+                    for p in record.source_paths
+                    if census_inst.get_record_by_path(p).get("current_subcategory")
+                    and census_inst.get_record_by_path(p).get("current_subcategory") != "None"
+                }
+                if set(record.subcategory_coverage) != census_subcats:
+                    raise FamilyEligibilityError(
+                        f"Subcategory coverage mismatch with census for candidate '{record.family_slug}': record claims "
+                        f"{sorted(record.subcategory_coverage)} but authoritative census members span {sorted(census_subcats)}."
+                    )
+
+                # Unassigned census paths require documented justification
+                if not record.uncertain_cases_or_boundary_notes or not record.uncertain_cases_or_boundary_notes.strip():
+                    raise FamilyEligibilityError(
+                        f"Candidate '{record.family_slug}' comprises unassigned census paths but lacks documented "
+                        "architectural justification in uncertain_cases_or_boundary_notes."
+                    )
+
+        # 7c. Manual Review Disposition Reconciliation
+        census_mr_paths = {
+            p
+            for p in record.source_paths
+            if census_inst.get_record_by_path(p).get("semantic_role") == "manual_review"
+        }
+        missing_mr = census_mr_paths - set(record.manual_review_paths)
+        if missing_mr:
+            raise FamilyEligibilityError(
+                f"Candidate '{record.family_slug}' omitted census manual_review dispositions: {sorted(missing_mr)}."
+            )
+
+        for p in record.manual_review_paths:
+            if p not in record.source_paths:
+                raise FamilyEligibilityError(
+                    f"Candidate '{record.family_slug}' manual review path '{p}' is not in candidate source_paths."
+                )
+            if census_inst.get_record_by_path(p).get("semantic_role") != "manual_review":
+                raise FamilyEligibilityError(
+                    f"Candidate '{record.family_slug}' claims manual review on path '{p}', but census records its semantic_role as '{census_inst.get_record_by_path(p).get('semantic_role')}'."
+                )
+
+        for p in record.resolved_manual_review_paths:
+            if p not in record.manual_review_paths:
+                raise FamilyEligibilityError(
+                    f"Candidate '{record.family_slug}' resolved manual review path '{p}' is not registered in manual_review_paths."
+                )
+        if record.resolved_manual_review_paths and (
+            not record.uncertain_cases_or_boundary_notes or not record.uncertain_cases_or_boundary_notes.strip()
+        ):
+            raise FamilyEligibilityError(
+                f"Candidate '{record.family_slug}' has resolved manual review paths but lacks documented justification in uncertain_cases_or_boundary_notes."
+            )
+
+        # 7d. Duplicate Adjustment Reconciliation
+        if record.family_slug in census_inst.APPROVED_DUPLICATE_REGISTRY:
+            approved_rule = census_inst.APPROVED_DUPLICATE_REGISTRY[record.family_slug]
+            expected_dup_count = approved_rule["expected_duplicate_adjusted_count"]
+            if record.duplicate_adjusted_count != expected_dup_count:
+                raise FamilyEligibilityError(
+                    f"Candidate '{record.family_slug}' duplicate_adjusted_count mismatch: record claims "
+                    f"{record.duplicate_adjusted_count} but approved duplicate registry establishes {expected_dup_count}."
+                )
+        else:
+            if record.duplicate_adjusted_count != record.candidate_membership_count:
+                raise FamilyEligibilityError(
+                    f"Candidate '{record.family_slug}' specifies duplicate_adjusted_count={record.duplicate_adjusted_count} "
+                    f"which differs from candidate_membership_count={record.candidate_membership_count}, "
+                    "but has no approved duplicate adjustments in registry."
+                )
 
     @classmethod
     def evaluate(
@@ -933,6 +1199,7 @@ class FamilyCandidateEvaluator:
     def evaluate_from_ledger(
         cls,
         family_slug: str,
+        census: Optional["AuthoritativeCensus"] = None,
     ) -> Tuple[FamilyTier, FamilyQualificationGate, FamilyQualificationRecord]:
         """
         Evaluate a candidate platform family directly from the census-backed evidence ledger.
@@ -945,7 +1212,7 @@ class FamilyCandidateEvaluator:
             )
 
         record = cls.CENSUS_FAMILY_QUALIFICATION_LEDGER[slug]
-        cls.validate_record_integrity(record)
+        cls.validate_record_integrity(record, census=census)
 
         if record.expected_tier == FamilyTier.PENDING_ADJUDICATION:
             gate = FamilyQualificationGate(

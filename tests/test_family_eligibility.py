@@ -37,6 +37,7 @@ from skill_library.object_model import (
     WorkflowObject,
 )
 from skill_library.family_contract import (
+    AuthoritativeCensus,
     EvidenceStatus,
     ExecutionProviderBinding,
     ExecutionProviderContract,
@@ -578,6 +579,389 @@ class TestFamilyEvidenceIntegrityNegativeRegression(unittest.TestCase):
             FamilyCandidateEvaluator.evaluate_from_ledger("stripe")
 
 
+class TestCensusBackedEvidenceIntegrity(unittest.TestCase):
+    """
+    Validates independent census-backed evidence integrity for REV-129.
+    Ensures qualification claims are cross-examined against audit/taxonomy-census/semantic-role-census.json
+    and approved duplicate registries, preventing self-certification.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.census = AuthoritativeCensus.get_instance()
+
+    def test_all_registered_ledger_candidates_pass_census_validation(self):
+        """All candidates in the authoritative qualification ledger pass census validation."""
+        for slug in FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER:
+            tier, gate, record = FamilyCandidateEvaluator.evaluate_from_ledger(slug, census=self.census)
+            self.assertEqual(tier, record.expected_tier)
+            self.assertIsNotNone(gate)
+
+    def test_notebooklm_census_adjudication_integrity(self):
+        """NotebookLM strictly evaluates to PENDING_ADJUDICATION due to duplicates, single-domain density, and manual reviews."""
+        tier, gate, record = FamilyCandidateEvaluator.evaluate_from_ledger("notebooklm", census=self.census)
+        self.assertEqual(tier, FamilyTier.PENDING_ADJUDICATION)
+        self.assertEqual(record.candidate_membership_count, 4)
+        self.assertEqual(record.duplicate_adjusted_count, 3)
+        self.assertEqual(len(record.manual_review_paths), 2)
+        # 2 of 4 packages (50%) are under manual review
+        self.assertGreaterEqual(len(record.manual_review_paths) / record.candidate_membership_count, 0.5)
+
+    def test_negative_census_invented_source_path_rejected(self):
+        """A candidate including nonexistent/invented source paths is rejected by census validation."""
+        github_record = FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER["github"]
+        # Tamper by substituting an internal github-operations path with an invented path
+        bad_paths = list(github_record.source_paths)
+        bad_paths[5] = "library/github-operations/invented-fake-tool"
+        tampered = FamilyQualificationRecord(
+            family_slug=github_record.family_slug,
+            candidate_name=github_record.candidate_name,
+            source_paths=bad_paths,
+            candidate_membership_count=len(bad_paths),
+            duplicate_adjusted_count=len(bad_paths),
+            category_coverage=list(github_record.category_coverage),
+            subcategory_coverage=list(github_record.subcategory_coverage),
+            gate_1_tool_surface_cohesion=github_record.gate_1_tool_surface_cohesion,
+            gate_1_evidence=github_record.gate_1_evidence,
+            gate_1_status=github_record.gate_1_status,
+            gate_2_shared_primitives=github_record.gate_2_shared_primitives,
+            gate_2_evidence=github_record.gate_2_evidence,
+            gate_2_status=github_record.gate_2_status,
+            gate_3_critical_mass=github_record.gate_3_critical_mass,
+            gate_4_coordinated_lifecycle=github_record.gate_4_coordinated_lifecycle,
+            gate_4_evidence=github_record.gate_4_evidence,
+            gate_4_status=github_record.gate_4_status,
+            expected_tier=github_record.expected_tier,
+            manual_review_paths=list(github_record.manual_review_paths),
+            uncertain_cases_or_boundary_notes=github_record.uncertain_cases_or_boundary_notes,
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(tampered, census=self.census)
+        self.assertIn("references nonexistent census source path", str(ctx.exception))
+
+    def test_negative_census_wrong_family_source_path_rejected(self):
+        """A candidate including a real census path belonging to a different family is rejected."""
+        github_record = FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER["github"]
+        # Substitute a github-operations path with a Webflow skill path, preserving all existing categories
+        bad_paths = list(github_record.source_paths)
+        bad_paths[5] = "library/design-and-experience/ui-ux/designer-tools"
+        tampered = FamilyQualificationRecord(
+            family_slug="github",
+            candidate_name="GitHub Operations",
+            source_paths=bad_paths,
+            candidate_membership_count=len(bad_paths),
+            duplicate_adjusted_count=len(bad_paths),
+            category_coverage=list(set(github_record.category_coverage) | {"design-and-experience"}),
+            subcategory_coverage=list(set(github_record.subcategory_coverage) | {"ui-ux"}),
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="gh CLI inspected",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence="Tokens inspected",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Releases verified",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(tampered, census=self.census)
+        self.assertIn("belongs to census family 'Webflow' instead of expected 'GitHub Operations'", str(ctx.exception))
+
+    def test_negative_census_omitted_member_rejected(self):
+        """A candidate that omits an eligible census member is rejected."""
+        webflow_record = FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER["webflow"]
+        # Drop one member (21 instead of 22)
+        dropped_paths = list(webflow_record.source_paths[:-1])
+        tampered = FamilyQualificationRecord(
+            family_slug="webflow",
+            candidate_name="Webflow Platform",
+            source_paths=dropped_paths,
+            candidate_membership_count=len(dropped_paths),
+            duplicate_adjusted_count=len(dropped_paths),
+            category_coverage=list(webflow_record.category_coverage),
+            subcategory_coverage=list(webflow_record.subcategory_coverage),
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="CLI inspected",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence="Tokens inspected",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Releases verified",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            manual_review_paths=list(webflow_record.manual_review_paths),
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(tampered, census=self.census)
+        self.assertIn("omitted eligible census members", str(ctx.exception))
+
+    def test_negative_census_membership_count_mismatch_rejected(self):
+        """A candidate whose membership count diverges from census count is rejected."""
+        figma_record = FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER["figma"]
+        # Census has 14 members; claim 15 paths by repeating one or claiming 15 count
+        tampered = FamilyQualificationRecord(
+            family_slug="figma",
+            candidate_name="Figma Design Platform",
+            source_paths=list(figma_record.source_paths),
+            candidate_membership_count=15,  # Mismatch with len(source_paths)
+            duplicate_adjusted_count=14,
+            category_coverage=list(figma_record.category_coverage),
+            subcategory_coverage=list(figma_record.subcategory_coverage),
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="API inspected",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence="Tokens inspected",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Releases verified",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            manual_review_paths=list(figma_record.manual_review_paths),
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(tampered, census=self.census)
+        self.assertIn("Member count mismatch", str(ctx.exception))
+
+    def test_negative_census_fabricated_category_coverage_rejected(self):
+        """A candidate asserting categories discordant with census members is rejected."""
+        wp_record = FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER["wordpress"]
+        tampered = FamilyQualificationRecord(
+            family_slug="wordpress",
+            candidate_name="WordPress CMS",
+            source_paths=list(wp_record.source_paths),
+            candidate_membership_count=len(wp_record.source_paths),
+            duplicate_adjusted_count=len(wp_record.source_paths),
+            category_coverage=["development"],  # Dropped marketing-and-seo
+            subcategory_coverage=list(wp_record.subcategory_coverage),
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="CLI inspected",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence="Config inspected",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Cadence verified",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(tampered, census=self.census)
+        self.assertIn("Category coverage mismatch", str(ctx.exception))
+
+    def test_negative_census_fabricated_subcategory_coverage_rejected(self):
+        """A candidate asserting subcategories discordant with census members is rejected."""
+        wp_record = FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER["wordpress"]
+        tampered = FamilyQualificationRecord(
+            family_slug="wordpress",
+            candidate_name="WordPress CMS",
+            source_paths=list(wp_record.source_paths),
+            candidate_membership_count=len(wp_record.source_paths),
+            duplicate_adjusted_count=len(wp_record.source_paths),
+            category_coverage=list(wp_record.category_coverage),
+            subcategory_coverage=["backend"],  # Dropped on-page-seo
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="CLI inspected",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence="Config inspected",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Cadence verified",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(tampered, census=self.census)
+        self.assertIn("Subcategory coverage mismatch with census", str(ctx.exception))
+
+    def test_negative_census_unsupported_duplicate_adjustment_rejected(self):
+        """A candidate with no approved duplicate registry reducing its distinct count is rejected."""
+        figma_record = FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER["figma"]
+        tampered = FamilyQualificationRecord(
+            family_slug="figma",
+            candidate_name="Figma Design Platform",
+            source_paths=list(figma_record.source_paths),
+            candidate_membership_count=14,
+            duplicate_adjusted_count=10,  # Unsupported reduction from 14 to 10
+            category_coverage=list(figma_record.category_coverage),
+            subcategory_coverage=list(figma_record.subcategory_coverage),
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="API inspected",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence="Tokens inspected",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Releases verified",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            manual_review_paths=list(figma_record.manual_review_paths),
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(tampered, census=self.census)
+        self.assertIn("has no approved duplicate adjustments in registry", str(ctx.exception))
+
+    def test_negative_census_notebooklm_unsupported_duplicate_count_rejected(self):
+        """NotebookLM claiming duplicate_adjusted_count other than approved count (3) is rejected."""
+        nlm_record = FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER["notebooklm"]
+        tampered = FamilyQualificationRecord(
+            family_slug="notebooklm",
+            candidate_name=nlm_record.candidate_name,
+            source_paths=list(nlm_record.source_paths),
+            candidate_membership_count=4,
+            duplicate_adjusted_count=2,  # Claims 2 instead of approved 3
+            category_coverage=list(nlm_record.category_coverage),
+            distinct_category_coverage=list(nlm_record.distinct_category_coverage),
+            subcategory_coverage=list(nlm_record.subcategory_coverage),
+            gate_1_tool_surface_cohesion=False,
+            gate_1_evidence="Unofficial scripts",
+            gate_1_status=EvidenceStatus.ASSUMPTION_PROVISIONAL,
+            gate_2_shared_primitives=False,
+            gate_2_evidence="Ad-hoc cookies",
+            gate_2_status=EvidenceStatus.ASSUMPTION_PROVISIONAL,
+            gate_3_critical_mass=False,
+            gate_4_coordinated_lifecycle=False,
+            gate_4_evidence="No release sync",
+            gate_4_status=EvidenceStatus.ASSUMPTION_PROVISIONAL,
+            expected_tier=FamilyTier.PENDING_ADJUDICATION,
+            manual_review_paths=list(nlm_record.manual_review_paths),
+            uncertain_cases_or_boundary_notes=nlm_record.uncertain_cases_or_boundary_notes,
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(tampered, census=self.census)
+        self.assertIn("duplicate_adjusted_count mismatch", str(ctx.exception))
+
+    def test_negative_census_github_duplicate_reduction_rejected(self):
+        """GitHub attempting premature deduplication before REV-130 adjudication is rejected."""
+        gh_record = FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER["github"]
+        tampered = FamilyQualificationRecord(
+            family_slug="github",
+            candidate_name=gh_record.candidate_name,
+            source_paths=list(gh_record.source_paths),
+            candidate_membership_count=22,
+            duplicate_adjusted_count=7,  # Prematurely assuming 15 pairs deduplicated!
+            category_coverage=list(gh_record.category_coverage),
+            subcategory_coverage=list(gh_record.subcategory_coverage),
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence=gh_record.gate_1_evidence,
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence=gh_record.gate_2_evidence,
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            gate_4_evidence=gh_record.gate_4_evidence,
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            manual_review_paths=list(gh_record.manual_review_paths),
+            uncertain_cases_or_boundary_notes=gh_record.uncertain_cases_or_boundary_notes,
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(tampered, census=self.census)
+        self.assertIn("has no approved duplicate adjustments in registry", str(ctx.exception))
+
+    def test_negative_census_omitted_manual_review_disposition_rejected(self):
+        """A candidate that omits census manual_review dispositions is rejected."""
+        wf_record = FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER["webflow"]
+        tampered = FamilyQualificationRecord(
+            family_slug="webflow",
+            candidate_name=wf_record.candidate_name,
+            source_paths=list(wf_record.source_paths),
+            candidate_membership_count=22,
+            duplicate_adjusted_count=22,
+            category_coverage=list(wf_record.category_coverage),
+            subcategory_coverage=list(wf_record.subcategory_coverage),
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence=wf_record.gate_1_evidence,
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence=wf_record.gate_2_evidence,
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            gate_4_evidence=wf_record.gate_4_evidence,
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            manual_review_paths=[],  # Omitted webflow-cli-cloud manual review!
+            uncertain_cases_or_boundary_notes=wf_record.uncertain_cases_or_boundary_notes,
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(tampered, census=self.census)
+        self.assertIn("omitted census manual_review dispositions", str(ctx.exception))
+
+    def test_negative_census_unassigned_path_without_justification_rejected(self):
+        """A non-family candidate comprising unassigned census paths without documented justification is rejected."""
+        supabase_record = FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER["supabase"]
+        tampered = FamilyQualificationRecord(
+            family_slug="supabase",
+            candidate_name=supabase_record.candidate_name,
+            source_paths=list(supabase_record.source_paths),
+            candidate_membership_count=2,
+            duplicate_adjusted_count=2,
+            category_coverage=list(supabase_record.category_coverage),
+            distinct_category_coverage=list(supabase_record.distinct_category_coverage),
+            subcategory_coverage=list(supabase_record.subcategory_coverage),
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="CLI inspected",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence="Keys inspected",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=False,
+            gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Versions synced",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_2_LOGICAL_FAMILY,
+            manual_review_paths=list(supabase_record.manual_review_paths),
+            resolved_manual_review_paths=list(supabase_record.resolved_manual_review_paths),
+            uncertain_cases_or_boundary_notes="",  # Missing justification!
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(tampered, census=self.census)
+        self.assertIn("lacks documented", str(ctx.exception))
+
+    def test_negative_census_fabricated_internally_consistent_record_rejected(self):
+        """An internally consistent candidate using fabricated paths not in census is rejected."""
+        fabricated_record = FamilyQualificationRecord(
+            family_slug="stripe-platform",
+            candidate_name="Stripe Payments",
+            source_paths=[
+                "library/payments/processing/stripe-charge",
+                "library/payments/subscriptions/stripe-billing",
+                "library/payments/webhooks/stripe-listener",
+            ],
+            candidate_membership_count=3,
+            duplicate_adjusted_count=3,
+            category_coverage=["payments"],
+            subcategory_coverage=["processing", "subscriptions", "webhooks"],
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="stripe-cli and REST API",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence="STRIPE_SECRET_KEY, webhook secrets",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=False,  # 3 skills in 1 category = False
+            gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Stripe API versioning pinned",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_2_LOGICAL_FAMILY,
+            uncertain_cases_or_boundary_notes="Fabricated candidate not in census",
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(fabricated_record, census=self.census)
+        self.assertIn("references nonexistent census source path", str(ctx.exception))
+
+
 if __name__ == "__main__":
     unittest.main()
+
 
