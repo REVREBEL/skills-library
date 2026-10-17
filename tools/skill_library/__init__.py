@@ -52,6 +52,19 @@ from .registry_contract import (
     FamilyRouterGenerator,
     CatalogCompiler,
 )
+from .migration_gates import (
+    GateID,
+    GateStatus,
+    ProvenanceType,
+    GateViolation,
+    GateResult,
+    HistoricalProvenanceRecord,
+    ProvenanceReconciliationReport,
+    MigrationGateReport,
+    HistoricalProvenanceMapper,
+    MigrationGateEvaluator,
+    MigrationGateRunner,
+)
 
 __all__ = [
     "CanonicalIdentity",
@@ -94,4 +107,15 @@ __all__ = [
     "ProjectMaterializer",
     "FamilyRouterGenerator",
     "CatalogCompiler",
+    "GateID",
+    "GateStatus",
+    "ProvenanceType",
+    "GateViolation",
+    "GateResult",
+    "HistoricalProvenanceRecord",
+    "ProvenanceReconciliationReport",
+    "MigrationGateReport",
+    "HistoricalProvenanceMapper",
+    "MigrationGateEvaluator",
+    "MigrationGateRunner",
 ]
