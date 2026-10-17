@@ -37,6 +37,7 @@ from skill_library.object_model import (
     WorkflowObject,
 )
 from skill_library.family_contract import (
+    EvidenceStatus,
     ExecutionProviderBinding,
     ExecutionProviderContract,
     FamilyCandidateEvaluator,
@@ -120,51 +121,33 @@ class TestFamilyEligibilityGates(unittest.TestCase):
             "meta-and-agent-skills/skill-lifecycle",
         )
 
-    def test_tier_1_platform_qualification_notebooklm_from_census(self):
-        """NotebookLM satisfies all 4 gates on actual census figures (4 members across 2 domains) -> Tier 1 Platform Hub."""
-        tier, gate = FamilyCandidateEvaluator.evaluate(
-            family_slug="notebooklm",
-            member_count=4,
-            categories_spanned=2,
-            has_tool_surface=True,
-            has_shared_primitives=True,
-            has_coordinated_lifecycle=True,
-        )
-        self.assertEqual(tier, FamilyTier.TIER_1_PLATFORM_HUB)
-        self.assertTrue(gate.is_tier_1_eligible)
+    def test_notebooklm_pending_adjudication_from_census(self):
+        """
+        NotebookLM has 4 packages in census, 1 duplicate pair, 3 distinct skills all in
+        content-and-documentation (failing single-domain threshold 3 < 5), 2 packages under manual_review
+        (50%), and provisional unverified primitives -> Evaluates to PENDING_ADJUDICATION.
+        """
+        tier, gate, record = FamilyCandidateEvaluator.evaluate_from_ledger("notebooklm")
+        self.assertEqual(tier, FamilyTier.PENDING_ADJUDICATION)
+        self.assertEqual(record.candidate_membership_count, 4)
+        self.assertEqual(record.duplicate_adjusted_count, 3)
+        self.assertEqual(len(record.manual_review_paths), 2)
+        self.assertFalse(gate.gate_3_critical_mass)
+        self.assertFalse(gate.is_tier_1_eligible)
+        self.assertFalse(gate.is_tier_2_eligible)
         self.assertEqual(
             FamilyCandidateEvaluator.get_physical_storage_plane("notebooklm", tier),
-            "tools-and-platforms/notebooklm",
+            "<primary_domain>/<subcategory>",
         )
 
-    def test_tier_1_platform_qualification_notebooklm_deduplicated_scenario(self):
-        """Even under a de-duplicated scenario (3 distinct skills across 2 domains), NotebookLM satisfies Gate 3."""
-        tier, gate = FamilyCandidateEvaluator.evaluate(
-            family_slug="notebooklm",
-            member_count=3,
-            categories_spanned=2,
-            has_tool_surface=True,
-            has_shared_primitives=True,
-            has_coordinated_lifecycle=True,
-        )
-        self.assertEqual(tier, FamilyTier.TIER_1_PLATFORM_HUB)
-        self.assertTrue(gate.is_tier_1_eligible)
-
-    def test_tier_2_logical_family_sub_critical_mass_stripe(self):
-        """Stripe has dedicated tools & primitives but sub-critical mass (2 skills, 1 domain) -> Tier 2 Logical Family."""
-        tier, gate = FamilyCandidateEvaluator.evaluate(
-            family_slug="stripe",
-            member_count=2,
-            categories_spanned=1,
-            has_tool_surface=True,
-            has_shared_primitives=True,
-            has_coordinated_lifecycle=True,
-        )
+    def test_tier_2_logical_family_sub_critical_mass_supabase(self):
+        """Supabase has dedicated tools & primitives but sub-critical mass (2 skills, 2 domains) -> Tier 2 Logical Family."""
+        tier, gate, record = FamilyCandidateEvaluator.evaluate_from_ledger("supabase")
         self.assertEqual(tier, FamilyTier.TIER_2_LOGICAL_FAMILY)
         self.assertFalse(gate.is_tier_1_eligible)
         self.assertTrue(gate.is_tier_2_eligible)
         self.assertEqual(
-            FamilyCandidateEvaluator.get_physical_storage_plane("stripe", tier),
+            FamilyCandidateEvaluator.get_physical_storage_plane("supabase", tier),
             "<primary_domain>/<subcategory>",
         )
 
@@ -381,5 +364,220 @@ class TestProviderAdapterRules(unittest.TestCase):
         self.assertIn("Invariant Violation (Adapter Purity)", str(ctx.exception))
 
 
+class TestFamilyEvidenceIntegrityNegativeRegression(unittest.TestCase):
+    """
+    Negative regression tests enforcing that fabricated counts, unsupported gate assertions,
+    missing source evidence, provisional assumptions claiming authoritative status,
+    and contradictory tier assignments are strictly rejected.
+    """
+
+    def test_negative_fabricated_member_count_rejected(self):
+        """A record claiming a membership count that contradicts its source paths list is rejected."""
+        bad_record = FamilyQualificationRecord(
+            family_slug="fake-platform",
+            candidate_name="Fake Platform",
+            source_paths=["development/git/commit", "development/git/push"],
+            candidate_membership_count=10,  # Fabricated: 10 vs 2 paths
+            duplicate_adjusted_count=2,
+            category_coverage=["development"],
+            subcategory_coverage=["git"],
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="CLI tool inspected",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence="Shared auth inspected",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=False,
+            gate_4_coordinated_lifecycle=False,
+            gate_4_evidence="No release sync",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_2_LOGICAL_FAMILY,
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(bad_record)
+        self.assertIn("Member count mismatch", str(ctx.exception))
+
+    def test_negative_fabricated_category_coverage_rejected(self):
+        """A record asserting category coverage not derived from its source paths is rejected."""
+        bad_record = FamilyQualificationRecord(
+            family_slug="fake-platform",
+            candidate_name="Fake Platform",
+            source_paths=["development/git/commit"],
+            candidate_membership_count=1,
+            duplicate_adjusted_count=1,
+            category_coverage=["development", "security"],  # Fabricated extra category
+            subcategory_coverage=["git"],
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="CLI tool inspected",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence="Shared auth inspected",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=False,
+            gate_4_coordinated_lifecycle=False,
+            gate_4_evidence="No release sync",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_2_LOGICAL_FAMILY,
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(bad_record)
+        self.assertIn("Category coverage mismatch", str(ctx.exception))
+
+    def test_negative_contradictory_gate_3_assertion_rejected(self):
+        """A record asserting Gate 3 True when counts fail threshold is rejected."""
+        bad_record = FamilyQualificationRecord(
+            family_slug="fake-platform",
+            candidate_name="Fake Platform",
+            source_paths=["development/git/commit", "development/git/push"],
+            candidate_membership_count=2,
+            duplicate_adjusted_count=2,
+            category_coverage=["development"],
+            subcategory_coverage=["git"],
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="CLI tool inspected",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence="Shared auth inspected",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=True,  # Contradictory: 2 skills, 1 category fails Gate 3
+            gate_4_coordinated_lifecycle=False,
+            gate_4_evidence="No release sync",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_2_LOGICAL_FAMILY,
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(bad_record)
+        self.assertIn("Contradictory Gate 3 assertion", str(ctx.exception))
+
+    def test_negative_missing_qualitative_source_evidence_rejected(self):
+        """A record asserting a qualitative gate with empty evidence is rejected."""
+        bad_record = FamilyQualificationRecord(
+            family_slug="fake-platform",
+            candidate_name="Fake Platform",
+            source_paths=["development/git/commit", "development/git/push"],
+            candidate_membership_count=2,
+            duplicate_adjusted_count=2,
+            category_coverage=["development"],
+            subcategory_coverage=["git"],
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="",  # Empty evidence
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence="Shared auth inspected",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=False,
+            gate_4_coordinated_lifecycle=False,
+            gate_4_evidence="No release sync",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_2_LOGICAL_FAMILY,
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(bad_record)
+        self.assertIn("asserts Gate 1 (Tool Surface) but provides empty evidence", str(ctx.exception))
+
+    def test_negative_unsupported_assumption_for_authoritative_tier_rejected(self):
+        """An authoritative Tier 1 or Tier 2 cannot be based on provisional assumptions."""
+        bad_record = FamilyQualificationRecord(
+            family_slug="fake-platform",
+            candidate_name="Fake Platform",
+            source_paths=[
+                "development/git/commit",
+                "development/git/push",
+                "cloud-and-infrastructure/git/deploy",
+            ],
+            candidate_membership_count=3,
+            duplicate_adjusted_count=3,
+            category_coverage=["development", "cloud-and-infrastructure"],
+            subcategory_coverage=["git"],
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="Assumed CLI surface without verification",
+            gate_1_status=EvidenceStatus.ASSUMPTION_PROVISIONAL,  # Provisional!
+            gate_2_shared_primitives=True,
+            gate_2_evidence="Shared auth inspected",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Release cadence verified",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,  # Authoritative tier attempted on assumption
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(bad_record)
+        self.assertIn("cannot be asserted on provisional assumptions", str(ctx.exception))
+
+    def test_negative_unresolved_manual_review_claiming_authoritative_tier_rejected(self):
+        """Candidates with >= 50% manual-review packages cannot claim authoritative tier."""
+        bad_record = FamilyQualificationRecord(
+            family_slug="fake-platform",
+            candidate_name="Fake Platform",
+            source_paths=[
+                "development/git/commit",
+                "development/git/push",
+                "cloud-and-infrastructure/git/deploy",
+            ],
+            candidate_membership_count=3,
+            duplicate_adjusted_count=3,
+            category_coverage=["development", "cloud-and-infrastructure"],
+            subcategory_coverage=["git"],
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="CLI tool inspected",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence="Shared auth inspected",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=True,
+            gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Release cadence verified",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            manual_review_paths=[
+                "development/git/commit",
+                "development/git/push",
+            ],  # 2 of 3 (66%) under manual review
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(bad_record)
+        self.assertIn("packages under manual_review and cannot claim an authoritative tier", str(ctx.exception))
+
+    def test_negative_contradictory_tier_assignment_rejected(self):
+        """A record claiming expected_tier Tier 1 when evaluation yields Tier 2 is rejected."""
+        bad_record = FamilyQualificationRecord(
+            family_slug="fake-platform",
+            candidate_name="Fake Platform",
+            source_paths=["development/git/commit", "development/git/push"],
+            candidate_membership_count=2,
+            duplicate_adjusted_count=2,
+            category_coverage=["development"],
+            subcategory_coverage=["git"],
+            gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="CLI tool inspected",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_2_shared_primitives=True,
+            gate_2_evidence="Shared auth inspected",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
+            gate_3_critical_mass=False,
+            gate_4_coordinated_lifecycle=False,
+            gate_4_evidence="No release sync",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
+            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,  # Contradicts evaluation (Tier 2)
+        )
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.validate_record_integrity(bad_record)
+        self.assertIn("Contradictory tier assignment", str(ctx.exception))
+
+    def test_negative_unregistered_candidate_lookup_rejected(self):
+        """Looking up a candidate not registered in the census ledger raises FamilyEligibilityError."""
+        with self.assertRaises(FamilyEligibilityError) as ctx:
+            FamilyCandidateEvaluator.evaluate_from_ledger("nonexistent-vendor")
+        self.assertIn("is not registered in the census qualification ledger", str(ctx.exception))
+
+    def test_negative_fabricated_stripe_in_census_ledger_rejected(self):
+        """Stripe (0 packages in census) is rejected and must not be present in authoritative ledger."""
+        self.assertNotIn("stripe", FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER)
+        with self.assertRaises(FamilyEligibilityError):
+            FamilyCandidateEvaluator.evaluate_from_ledger("stripe")
+
+
 if __name__ == "__main__":
     unittest.main()
+

@@ -31,7 +31,16 @@ class FamilyTier(str, Enum):
     TIER_1_PLATFORM_HUB = "tier_1_platform_hub"         # Dedicated physical hub under tools-and-platforms/<family>/
     TIER_1_META_FAMILY = "tier_1_meta_family"           # Dedicated meta hub under meta-and-agent-skills/<family>/
     TIER_2_LOGICAL_FAMILY = "tier_2_logical_family"     # Domain-anchored logical family (metadata tag only)
+    PENDING_ADJUDICATION = "pending_adjudication"       # Uncertain or provisional qualification held pending human review
     DISQUALIFIED_SPRAWL = "disqualified_sprawl"         # Vendor sprawl / isolated tool (no family designation)
+
+
+class EvidenceStatus(str, Enum):
+    """Evidence rigor status for qualitative qualification gates."""
+    VERIFIED_INSPECTED = "verified_inspected"           # Concrete evidence directly inspected in skill package files/scripts
+    DOCUMENTED_ADJUDICATION = "documented_adjudication" # Human architectural consensus documented in census/ADR
+    ASSUMPTION_PROVISIONAL = "assumption_provisional"   # Unverified assumption requiring human adjudication
+    UNSUPPORTED = "unsupported"                         # Lacks required evidence; gate failed
 
 
 class ProviderType(str, Enum):
@@ -82,19 +91,56 @@ class FamilyQualificationRecord:
     """Census-backed qualification evidence ledger record for a candidate ecosystem."""
     family_slug: str
     candidate_name: str
-    census_member_count: int
-    categories_spanned: List[str]
-    subcategories_spanned: List[str]
-    tool_surface_evidence: str
-    shared_primitives_evidence: str
-    coordinated_lifecycle_evidence: str
+    source_paths: List[str]
+    candidate_membership_count: int
+    duplicate_adjusted_count: int
+    category_coverage: List[str]
+    subcategory_coverage: List[str]
     gate_1_tool_surface_cohesion: bool
+    gate_1_evidence: str
+    gate_1_status: EvidenceStatus
     gate_2_shared_primitives: bool
+    gate_2_evidence: str
+    gate_2_status: EvidenceStatus
     gate_3_critical_mass: bool
     gate_4_coordinated_lifecycle: bool
+    gate_4_evidence: str
+    gate_4_status: EvidenceStatus
     expected_tier: FamilyTier
+    distinct_category_coverage: Optional[List[str]] = None
+    manual_review_paths: List[str] = field(default_factory=list)
     uncertain_cases_or_boundary_notes: Optional[str] = None
     is_internal_meta: bool = False
+
+    @property
+    def census_member_count(self) -> int:
+        """Backward-compatibility alias for candidate_membership_count."""
+        return self.candidate_membership_count
+
+    @property
+    def categories_spanned(self) -> List[str]:
+        """Backward-compatibility alias for category_coverage."""
+        return self.category_coverage
+
+    @property
+    def subcategories_spanned(self) -> List[str]:
+        """Backward-compatibility alias for subcategory_coverage."""
+        return self.subcategory_coverage
+
+    @property
+    def tool_surface_evidence(self) -> str:
+        """Backward-compatibility alias for gate_1_evidence."""
+        return self.gate_1_evidence
+
+    @property
+    def shared_primitives_evidence(self) -> str:
+        """Backward-compatibility alias for gate_2_evidence."""
+        return self.gate_2_evidence
+
+    @property
+    def coordinated_lifecycle_evidence(self) -> str:
+        """Backward-compatibility alias for gate_4_evidence."""
+        return self.gate_4_evidence
 
 
 @dataclass
@@ -131,6 +177,7 @@ class FamilyCandidateEvaluator:
     Prevents vendor-bucket sprawl and enforces catalog structural hygiene.
     """
 
+    # Baseline empirical catalog families recognized during REV-126/150 census
     # Baseline empirical catalog families recognized during REV-126/150 census
     AUTHORITATIVE_TIER_1_PLATFORMS: Dict[str, Dict[str, Any]] = {
         "github": {
@@ -189,14 +236,6 @@ class FamilyCandidateEvaluator:
             "surface": "op CLI, Connect API, K8s Operator",
             "primitives": ["service-account-token", "vault-profile"],
         },
-        "notebooklm": {
-            "title": "NotebookLM Synthesis & Research",
-            "vendor": "Google",
-            "min_members": 4,
-            "min_categories": 2,
-            "surface": "NotebookLM Web Client, notebooklm-py, Playwright harness, Private RPCs",
-            "primitives": ["session-cookies", "notebook-context", "source-grounding-documents"],
-        },
     }
 
     AUTHORITATIVE_TIER_1_META_FAMILIES: Dict[str, Dict[str, Any]] = {
@@ -210,13 +249,6 @@ class FamilyCandidateEvaluator:
     }
 
     AUTHORITATIVE_TIER_2_LOGICAL_FAMILIES: Dict[str, Dict[str, Any]] = {
-        "stripe": {
-            "title": "Stripe Payments",
-            "vendor": "Stripe",
-            "members": 2,
-            "primary_domain": "business-and-operations",
-            "surface": "Stripe CLI, Stripe SDK, REST",
-        },
         "supabase": {
             "title": "Supabase BaaS",
             "vendor": "Supabase",
@@ -224,6 +256,21 @@ class FamilyCandidateEvaluator:
             "primary_domain": "development",
             "surface": "supabase CLI, PostgREST, Auth SDK",
         },
+    }
+
+    PENDING_ADJUDICATION_CANDIDATES: Dict[str, Dict[str, Any]] = {
+        "notebooklm": {
+            "title": "NotebookLM Synthesis & Research",
+            "vendor": "Google",
+            "candidate_members": 4,
+            "duplicate_adjusted_members": 3,
+            "status": "pending_adjudication",
+            "reason": (
+                "4 candidate packages in census, 1 duplicate pair, 3 distinct capabilities all in "
+                "content-and-documentation (failing single-domain threshold 3 < 5). 2 packages (50%) under "
+                "manual_review. Unofficial browser automation and cookie extraction lack verified public platform surface."
+            ),
+        }
     }
 
     # Examples of rejected vendor sprawl candidates
@@ -243,218 +290,566 @@ class FamilyCandidateEvaluator:
         "github": FamilyQualificationRecord(
             family_slug="github",
             candidate_name="GitHub Operations",
-            census_member_count=22,
-            categories_spanned=["development", "github-operations", "quality-and-security"],
-            subcategories_spanned=["workflow-automation", "security-audit"],
-            tool_surface_evidence="gh CLI, GitHub MCP server, GitHub GraphQL/REST APIs",
-            shared_primitives_evidence="GH_TOKEN, GITHUB_TOKEN, repo context, Git credentials",
-            coordinated_lifecycle_evidence="Actions, issues, PRs, and security scans track GitHub API/CLI changes together in lockstep",
+            source_paths=[
+                "library/development/fullstack/address-github-comments",
+                "library/development/fullstack/openclaw-github-repo-commander",
+                "library/development/fullstack/push-skill-to-github",
+                "library/github-operations/actions-advanced",
+                "library/github-operations/actions-debugger",
+                "library/github-operations/advanced-workflows",
+                "library/github-operations/commit",
+                "library/github-operations/create-branch",
+                "library/github-operations/create-issue-gate",
+                "library/github-operations/feature-tracking",
+                "library/github-operations/github",
+                "library/github-operations/hooks-automation",
+                "library/github-operations/issue-creator",
+                "library/github-operations/llms-maintain",
+                "library/github-operations/pr-merge-champion",
+                "library/github-operations/pr-review",
+                "library/github-operations/pr-writer",
+                "library/github-operations/presence",
+                "library/github-operations/publish-changes",
+                "library/github-operations/review-requests",
+                "library/github-operations/security-review",
+                "library/quality-and-security/testing/actions-templates",
+            ],
+            candidate_membership_count=22,
+            duplicate_adjusted_count=22,
+            category_coverage=["development", "github-operations", "quality-and-security"],
+            subcategory_coverage=["fullstack", "testing"],
             gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="gh CLI v2.x, official GitHub MCP server, GitHub Octokit REST and GraphQL APIs",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_2_shared_primitives=True,
+            gate_2_evidence="GH_TOKEN, GITHUB_TOKEN, git config, repository context and credentials",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_3_critical_mass=True,
             gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Actions, issues, PRs, and security scans track GitHub API/CLI changes together in lockstep",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
             expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
-            uncertain_cases_or_boundary_notes="27 generic keyword mentions pruned during census. 15 duplicate candidate pairs retained direction-neutral under REV-128.",
+            manual_review_paths=[],
+            uncertain_cases_or_boundary_notes="27 generic keyword mentions pruned during census. 15 candidate duplicate pairs remain under direction-neutral review in REV-128.",
         ),
         "webflow": FamilyQualificationRecord(
             family_slug="webflow",
             candidate_name="Webflow Platform",
-            census_member_count=22,
-            categories_spanned=["design-and-experience", "development", "marketing-and-seo", "quality-and-security"],
-            subcategories_spanned=["cms", "designer-extensions", "devlink", "ui-components"],
-            tool_surface_evidence="webflow-cli, Webflow Designer API, Webflow REST CMS API",
-            shared_primitives_evidence="Site API tokens, Designer extension tokens, DevLink React components",
-            coordinated_lifecycle_evidence="Designer API versions, CMS v2 schema updates, DevLink sync track in lockstep",
+            source_paths=[
+                "library/design-and-experience/taste-and-critique/webflow-ui-skills",
+                "library/design-and-experience/ui-ux/designer-tools",
+                "library/design-and-experience/ui-ux/flowkit-naming",
+                "library/design-and-experience/ui-ux/webflow-code-component-component-scaffold",
+                "library/design-and-experience/ui-ux/webflow-code-component-pre-deploy-check",
+                "library/design-and-experience/ui-ux/webflow-code-components",
+                "library/development/backend/safe-publish",
+                "library/development/frontend/webflow-cli-code-component",
+                "library/development/frontend/webflow-cli-designer-extension",
+                "library/development/frontend/webflow-cli-devlink",
+                "library/development/frontend/webflow-code-component-component-audit",
+                "library/development/frontend/webflow-code-component-convert-component",
+                "library/development/fullstack/webflow-automation",
+                "library/development/fullstack/webflow-cli-cloud",
+                "library/development/fullstack/webflow-code-component-deploy-guide",
+                "library/development/fullstack/webflow-code-component-local-dev-setup",
+                "library/development/fullstack/webflow-code-component-troubleshoot-deploy",
+                "library/development/mobile/cms-collection-setup",
+                "library/marketing-and-seo/cro/bulk-cms-update",
+                "library/marketing-and-seo/on-page-seo/publish-blog",
+                "library/quality-and-security/debugging/webflow-cli-troubleshooter",
+                "library/quality-and-security/debugging/webflow-designer-api",
+            ],
+            candidate_membership_count=22,
+            duplicate_adjusted_count=22,
+            category_coverage=["design-and-experience", "development", "marketing-and-seo", "quality-and-security"],
+            subcategory_coverage=["backend", "cro", "debugging", "frontend", "fullstack", "mobile", "on-page-seo", "taste-and-critique", "ui-ux"],
             gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="webflow-cli, Webflow Designer API, Webflow REST CMS v2 API",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_2_shared_primitives=True,
+            gate_2_evidence="Site API tokens, Designer extension tokens, DevLink React components",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_3_critical_mass=True,
             gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Designer API versions, CMS v2 schema updates, DevLink sync track in lockstep",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
             expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            manual_review_paths=["library/development/fullstack/webflow-cli-cloud"],
             uncertain_cases_or_boundary_notes="6 generic audit mentions pruned during census. 16 prefix packages + 6 dedicated tools.",
         ),
         "figma": FamilyQualificationRecord(
             family_slug="figma",
             candidate_name="Figma Design Platform",
-            census_member_count=14,
-            categories_spanned=["design-and-experience", "development"],
-            subcategories_spanned=["design-systems", "motion-and-graphics", "fullstack"],
-            tool_surface_evidence="Figma Plugin API, Code Connect CLI, REST API",
-            shared_primitives_evidence="Figma access tokens, design tokens, FigJam/Slides context",
-            coordinated_lifecycle_evidence="Plugin manifest schema updates, REST OAuth tokens, Code Connect releases in lockstep",
+            source_paths=[
+                "library/design-and-experience/design-systems/figma-code-connect",
+                "library/design-and-experience/design-systems/figma-create-new-file",
+                "library/design-and-experience/design-systems/figma-design-to-code",
+                "library/design-and-experience/design-systems/figma-generate-design",
+                "library/design-and-experience/design-systems/figma-generate-diagram",
+                "library/design-and-experience/design-systems/figma-generate-library",
+                "library/design-and-experience/design-systems/figma-swiftui",
+                "library/design-and-experience/design-systems/figma-use",
+                "library/design-and-experience/design-systems/figma-use-figjam",
+                "library/design-and-experience/design-systems/figma-use-slides",
+                "library/design-and-experience/design-systems/generate-project-plan",
+                "library/design-and-experience/motion-and-graphics/figma-implement-motion",
+                "library/design-and-experience/motion-and-graphics/figma-use-motion",
+                "library/development/fullstack/figma",
+            ],
+            candidate_membership_count=14,
+            duplicate_adjusted_count=14,
+            category_coverage=["design-and-experience", "development"],
+            subcategory_coverage=["design-systems", "fullstack", "motion-and-graphics"],
             gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="Figma Plugin API, Code Connect CLI, Figma REST API",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_2_shared_primitives=True,
+            gate_2_evidence="Figma OAuth access tokens, design tokens, FigJam/Slides context",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_3_critical_mass=True,
             gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Plugin manifest schema updates, REST OAuth tokens, Code Connect releases in lockstep",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
             expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            manual_review_paths=[
+                "library/design-and-experience/design-systems/figma-swiftui",
+                "library/design-and-experience/motion-and-graphics/figma-implement-motion",
+            ],
             uncertain_cases_or_boundary_notes="2 broad design methodology skills (design-system-architect, product-design) pruned.",
         ),
         "n8n": FamilyQualificationRecord(
             family_slug="n8n",
             candidate_name="n8n Workflow Automation",
-            census_member_count=14,
-            categories_spanned=["business-and-operations", "data-and-ai", "marketing-and-seo", "quality-and-security", "workflow-and-automation"],
-            subcategories_spanned=["integrations", "ai-workflows", "campaigns", "error-handling", "automation"],
-            tool_surface_evidence="n8n Node SDK, Public REST API, Community Node interfaces",
-            shared_primitives_evidence="Instance credentials, node expression syntax, webhook triggers",
-            coordinated_lifecycle_evidence="Node versioning contracts, n8n core runtime upgrades in lockstep",
+            source_paths=[
+                "library/business-and-operations/legal-and-governance/n8n-error-handling",
+                "library/data-and-ai/llm-and-rag/n8n-agents",
+                "library/marketing-and-seo/cro/n8n-binary-and-data",
+                "library/marketing-and-seo/cro/n8n-multi-instance",
+                "library/quality-and-security/debugging/n8n-code-javascript",
+                "library/quality-and-security/debugging/n8n-expression-syntax",
+                "library/quality-and-security/debugging/using-n8n-mcp-skills",
+                "library/workflow-and-automation/tool-integration/n8n-code-python",
+                "library/workflow-and-automation/tool-integration/n8n-code-tool",
+                "library/workflow-and-automation/tool-integration/n8n-mcp-tools-expert",
+                "library/workflow-and-automation/tool-integration/n8n-node-configuration",
+                "library/workflow-and-automation/tool-integration/n8n-subworkflows",
+                "library/workflow-and-automation/tool-integration/n8n-validation-expert",
+                "library/workflow-and-automation/tool-integration/n8n-workflow-patterns",
+            ],
+            candidate_membership_count=14,
+            duplicate_adjusted_count=14,
+            category_coverage=["business-and-operations", "data-and-ai", "marketing-and-seo", "quality-and-security", "workflow-and-automation"],
+            subcategory_coverage=["cro", "debugging", "legal-and-governance", "llm-and-rag", "tool-integration"],
             gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="n8n Node SDK, Public REST API, Community Node interfaces",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_2_shared_primitives=True,
+            gate_2_evidence="Instance credentials, node expression syntax, webhook triggers",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_3_critical_mass=True,
             gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Node versioning contracts, n8n core runtime upgrades in lockstep",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
             expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            manual_review_paths=[
+                "library/marketing-and-seo/cro/n8n-multi-instance",
+                "library/quality-and-security/debugging/n8n-expression-syntax",
+            ],
             uncertain_cases_or_boundary_notes="Member skills scattered across 5 functional categories, requiring dedicated hub consolidation.",
         ),
         "hugging-face": FamilyQualificationRecord(
             family_slug="hugging-face",
             candidate_name="Hugging Face Machine Learning",
-            census_member_count=19,
-            categories_spanned=["data-and-ai", "quality-and-security"],
-            subcategories_spanned=["models", "datasets", "spaces", "evaluations"],
-            tool_surface_evidence="huggingface_hub CLI, Python SDK, Inference API, ZeroGPU",
-            shared_primitives_evidence="HF_TOKEN, dataset viewer protocols, model repository schemas",
-            coordinated_lifecycle_evidence="Hub client releases, token permissions, model card schemas in lockstep",
+            source_paths=[
+                "library/data-and-ai/analytics/hugging-face-vision-trainer",
+                "library/data-and-ai/llm-and-rag/hugging-face-community-evals",
+                "library/data-and-ai/llm-and-rag/hugging-face-datasets",
+                "library/data-and-ai/llm-and-rag/hugging-face-evaluation",
+                "library/data-and-ai/machine-learning/hugging-face-cli",
+                "library/data-and-ai/machine-learning/hugging-face-dataset-viewer",
+                "library/data-and-ai/machine-learning/hugging-face-gradio",
+                "library/data-and-ai/machine-learning/hugging-face-jobs",
+                "library/data-and-ai/machine-learning/hugging-face-model-trainer",
+                "library/data-and-ai/machine-learning/hugging-face-paper-publisher",
+                "library/data-and-ai/machine-learning/hugging-face-papers",
+                "library/data-and-ai/machine-learning/hugging-face-tool-builder",
+                "library/data-and-ai/machine-learning/hugging-face-trackio",
+                "library/data-and-ai/machine-learning/huggingface-best",
+                "library/data-and-ai/machine-learning/huggingface-local-models",
+                "library/data-and-ai/machine-learning/huggingface-lora-space-builder",
+                "library/data-and-ai/machine-learning/huggingface-tool-builder",
+                "library/data-and-ai/machine-learning/huggingface-zerogpu",
+                "library/quality-and-security/debugging/huggingface-spaces",
+            ],
+            candidate_membership_count=19,
+            duplicate_adjusted_count=19,
+            category_coverage=["data-and-ai", "quality-and-security"],
+            subcategory_coverage=["analytics", "debugging", "llm-and-rag", "machine-learning"],
             gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="huggingface_hub CLI, Python SDK, Inference API, ZeroGPU",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_2_shared_primitives=True,
+            gate_2_evidence="HF_TOKEN, dataset viewer protocols, model repository schemas",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_3_critical_mass=True,
             gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Hub client releases, token permissions, model card schemas in lockstep",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
             expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            manual_review_paths=[],
             uncertain_cases_or_boundary_notes="13 hugging-face-* packages + 6 huggingface-* packages unified under single family hub.",
         ),
         "wordpress": FamilyQualificationRecord(
             family_slug="wordpress",
             candidate_name="WordPress / WooCommerce CMS",
-            census_member_count=7,
-            categories_spanned=["development", "marketing-and-seo"],
-            subcategories_spanned=["cms", "ecommerce"],
-            tool_surface_evidence="WP-CLI binary, WordPress Core REST API, WooCommerce REST API",
-            shared_primitives_evidence="Application passwords, site connection configs, DB credentials",
-            coordinated_lifecycle_evidence="WordPress REST API schema, PHP/plugin compatibility, WooCommerce API versions in lockstep",
+            source_paths=[
+                "library/development/backend/wordpress",
+                "library/development/backend/wordpress-core-admin",
+                "library/development/backend/wordpress-performance-optimization",
+                "library/development/backend/wordpress-plugin-development",
+                "library/development/backend/wordpress-theme-development",
+                "library/development/backend/wordpress-woocommerce",
+                "library/marketing-and-seo/on-page-seo/codebase-to-wordpress-converter",
+            ],
+            candidate_membership_count=7,
+            duplicate_adjusted_count=7,
+            category_coverage=["development", "marketing-and-seo"],
+            subcategory_coverage=["backend", "on-page-seo"],
             gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="WP-CLI binary, WordPress Core REST API, WooCommerce REST API",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_2_shared_primitives=True,
+            gate_2_evidence="Application passwords, site connection configs, DB credentials",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_3_critical_mass=True,
             gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="WordPress REST API schema, PHP/plugin compatibility, WooCommerce API versions in lockstep",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
             expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            manual_review_paths=[],
             uncertain_cases_or_boundary_notes="7 validated members across CMS and eCommerce domains.",
         ),
         "1password": FamilyQualificationRecord(
             family_slug="1password",
             candidate_name="1Password Secret Management",
-            census_member_count=5,
-            categories_spanned=["infrastructure-and-ops"],
-            subcategories_spanned=["secrets-management"],
-            tool_surface_evidence="op CLI binary, 1Password Connect API, Kubernetes operator",
-            shared_primitives_evidence="Service account tokens, vault profile paths, secret references (op://)",
-            coordinated_lifecycle_evidence="op CLI v2 commands, connect server tokens, k8s operator CRDs in lockstep",
+            source_paths=[
+                "library/infrastructure-and-ops/containers-and-orchestration/1password",
+                "library/infrastructure-and-ops/containers-and-orchestration/1password-cli",
+                "library/infrastructure-and-ops/containers-and-orchestration/1password-developer-environments",
+                "library/infrastructure-and-ops/containers-and-orchestration/1password-kubernetes",
+                "library/infrastructure-and-ops/containers-and-orchestration/1password-service-accounts",
+            ],
+            candidate_membership_count=5,
+            duplicate_adjusted_count=5,
+            category_coverage=["infrastructure-and-ops"],
+            subcategory_coverage=["containers-and-orchestration"],
             gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="op CLI binary, 1Password Connect API, Kubernetes operator",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_2_shared_primitives=True,
+            gate_2_evidence="Service account tokens, vault profile paths, secret references (op://)",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_3_critical_mass=True,
             gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="op CLI v2 commands, connect server tokens, k8s operator CRDs in lockstep",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
             expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
+            manual_review_paths=[],
             uncertain_cases_or_boundary_notes="Satisfies single-domain high-density threshold (>=5 ops) requiring dedicated primitive/adapter harness.",
         ),
         "skill-lifecycle": FamilyQualificationRecord(
             family_slug="skill-lifecycle",
             candidate_name="Skills Lifecycle & Governance",
-            census_member_count=13,
-            categories_spanned=["skills-create-manage-update"],
-            subcategories_spanned=["lifecycle-management"],
-            tool_surface_evidence="skill-library CLI, validate/lint tooling, CI workflows",
-            shared_primitives_evidence="skill.json schemas, census ledger formats, ADR contracts",
-            coordinated_lifecycle_evidence="Catalog architecture versions (REV-126 -> REV-130) upgrade in lockstep",
+            source_paths=[
+                "library/skills-create-manage-update/skill-audit",
+                "library/skills-create-manage-update/skill-check",
+                "library/skills-create-manage-update/skill-creator",
+                "library/skills-create-manage-update/skill-improver",
+                "library/skills-create-manage-update/skill-inventory",
+                "library/skills-create-manage-update/skill-library-restructure",
+                "library/skills-create-manage-update/skill-make-template",
+                "library/skills-create-manage-update/skill-manage",
+                "library/skills-create-manage-update/skill-optimizer",
+                "library/skills-create-manage-update/skill-review",
+                "library/skills-create-manage-update/skill-writer",
+                "library/skills-create-manage-update/skills-writing",
+                "library/skills-create-manage-update/template-skill-enhanced",
+            ],
+            candidate_membership_count=13,
+            duplicate_adjusted_count=13,
+            category_coverage=["skills-create-manage-update"],
+            subcategory_coverage=[],
             gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="skill-library CLI, validate/lint tooling, CI workflows",
+            gate_1_status=EvidenceStatus.DOCUMENTED_ADJUDICATION,
             gate_2_shared_primitives=True,
+            gate_2_evidence="skill.json schemas, census ledger formats, ADR contracts",
+            gate_2_status=EvidenceStatus.DOCUMENTED_ADJUDICATION,
             gate_3_critical_mass=True,
             gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Catalog architecture versions (REV-126 -> REV-130) upgrade in lockstep",
+            gate_4_status=EvidenceStatus.DOCUMENTED_ADJUDICATION,
             expected_tier=FamilyTier.TIER_1_META_FAMILY,
+            manual_review_paths=[],
             uncertain_cases_or_boundary_notes="Internal meta-capability family residing in meta-and-agent-skills/, not a third-party vendor platform.",
             is_internal_meta=True,
         ),
         "notebooklm": FamilyQualificationRecord(
             family_slug="notebooklm",
             candidate_name="NotebookLM Synthesis & Research",
-            census_member_count=4,
-            categories_spanned=["content-and-documentation", "marketing-and-seo"],
-            subcategories_spanned=["presentations", "on-page-seo", "technical-writing"],
-            tool_surface_evidence="NotebookLM Web Client, unofficial CLI (notebooklm-py), Playwright automation harness, private Google RPC endpoints",
-            shared_primitives_evidence="Google session authentication cookies, notebook ID context, source grounding documents",
-            coordinated_lifecycle_evidence="Unofficial APIs, session token extraction, and Playwright harnesses break and upgrade in lockstep whenever Google alters NotebookLM web endpoints",
-            gate_1_tool_surface_cohesion=True,
-            gate_2_shared_primitives=True,
-            gate_3_critical_mass=True,
-            gate_4_coordinated_lifecycle=True,
-            expected_tier=FamilyTier.TIER_1_PLATFORM_HUB,
-            uncertain_cases_or_boundary_notes=(
-                "Census contains 4 packages spanning 2 categories. Includes 1 byte-for-byte duplicate pair "
-                "(library/marketing-and-seo/on-page-seo/notebooklm identical to library/content-and-documentation/presentations/notebooklm) "
-                "and 2 skills in manual_review disposition. Even if de-duplicated to 3 distinct skills, it satisfies Gate 3 (>=3 skills "
-                "spanning 2 categories). Classified as Tier 1 Platform Hub adhering strictly to qualification rules."
-            ),
-        ),
-        "stripe": FamilyQualificationRecord(
-            family_slug="stripe",
-            candidate_name="Stripe Payments",
-            census_member_count=2,
-            categories_spanned=["business-and-operations"],
-            subcategories_spanned=["finance-and-accounting"],
-            tool_surface_evidence="Stripe CLI (stripe), Stripe Python/Node SDK, Stripe REST API",
-            shared_primitives_evidence="STRIPE_SECRET_KEY, webhook signing secrets, customer/charge ID tokens",
-            coordinated_lifecycle_evidence="Tracks Stripe API version dates (e.g. 2024-04-10) in lockstep",
-            gate_1_tool_surface_cohesion=True,
-            gate_2_shared_primitives=True,
+            source_paths=[
+                "library/content-and-documentation/presentations/notebooklm",
+                "library/content-and-documentation/presentations/notebooklm-create",
+                "library/content-and-documentation/technical-writing/notebook-lm-api",
+                "library/marketing-and-seo/on-page-seo/notebooklm",
+            ],
+            candidate_membership_count=4,
+            duplicate_adjusted_count=3,
+            category_coverage=["content-and-documentation", "marketing-and-seo"],
+            distinct_category_coverage=["content-and-documentation"],
+            subcategory_coverage=["on-page-seo", "presentations", "technical-writing"],
+            gate_1_tool_surface_cohesion=False,
+            gate_1_evidence="Unofficial web client, unverified notebooklm-py script, Playwright browser scraping harness; no official public API or CLI",
+            gate_1_status=EvidenceStatus.ASSUMPTION_PROVISIONAL,
+            gate_2_shared_primitives=False,
+            gate_2_evidence="Scraped Google web session cookies, ad-hoc notebook ID extraction across scripts; lacks standardized platform primitive package",
+            gate_2_status=EvidenceStatus.ASSUMPTION_PROVISIONAL,
             gate_3_critical_mass=False,
-            gate_4_coordinated_lifecycle=True,
-            expected_tier=FamilyTier.TIER_2_LOGICAL_FAMILY,
-            uncertain_cases_or_boundary_notes="Fails Gate 3 critical mass (2 members < 3 cross-domain, < 5 single-domain). Retained in business-and-operations.",
+            gate_4_coordinated_lifecycle=False,
+            gate_4_evidence="Scripts break on Google web UI updates; lacks synchronized vendor release lifecycle or formal versioning",
+            gate_4_status=EvidenceStatus.ASSUMPTION_PROVISIONAL,
+            expected_tier=FamilyTier.PENDING_ADJUDICATION,
+            manual_review_paths=[
+                "library/content-and-documentation/presentations/notebooklm-create",
+                "library/marketing-and-seo/on-page-seo/notebooklm",
+            ],
+            uncertain_cases_or_boundary_notes=(
+                "Census contains 4 packages across 2 categories, but includes 1 byte-for-byte duplicate pair "
+                "(library/marketing-and-seo/on-page-seo/notebooklm identical to library/content-and-documentation/presentations/notebooklm). "
+                "Distinct capabilities total 3, all residing in content-and-documentation (failing single-domain threshold 3 < 5). "
+                "2 of 4 packages (50%) have manual_review dispositions. Tools rely on reverse-engineered web scraping without official APIs. "
+                "Held as PENDING_ADJUDICATION in domain trees pending human architectural review."
+            ),
         ),
         "supabase": FamilyQualificationRecord(
             family_slug="supabase",
             candidate_name="Supabase BaaS",
-            census_member_count=2,
-            categories_spanned=["development"],
-            subcategories_spanned=["databases"],
-            tool_surface_evidence="supabase CLI, PostgREST HTTP, Supabase GoTrue Auth SDK",
-            shared_primitives_evidence="SUPABASE_URL, anon key, service_role key, project ref",
-            coordinated_lifecycle_evidence="Tracks Supabase platform migrations and PostgREST schema versions in lockstep",
+            source_paths=[
+                "library/development/frontend/nextjs-supabase-auth",
+                "library/marketing-and-seo/cro/supabase",
+            ],
+            candidate_membership_count=2,
+            duplicate_adjusted_count=2,
+            category_coverage=["development", "marketing-and-seo"],
+            distinct_category_coverage=["development", "marketing-and-seo"],
+            subcategory_coverage=["cro", "frontend"],
             gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="supabase CLI, PostgREST HTTP, Supabase GoTrue Auth SDK",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_2_shared_primitives=True,
+            gate_2_evidence="SUPABASE_URL, anon key, service_role key, project ref",
+            gate_2_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_3_critical_mass=False,
             gate_4_coordinated_lifecycle=True,
+            gate_4_evidence="Tracks Supabase platform migrations and PostgREST schema versions in lockstep",
+            gate_4_status=EvidenceStatus.VERIFIED_INSPECTED,
             expected_tier=FamilyTier.TIER_2_LOGICAL_FAMILY,
-            uncertain_cases_or_boundary_notes="Fails Gate 3 critical mass (2 members < 3 cross-domain, < 5 single-domain). Retained in development/databases.",
+            manual_review_paths=[],
+            uncertain_cases_or_boundary_notes="Fails Gate 3 critical mass (2 members < 3 cross-domain threshold). Retained in domain trees as logical family.",
         ),
         "curl": FamilyQualificationRecord(
             family_slug="curl",
             candidate_name="cURL HTTP Utility",
-            census_member_count=1,
-            categories_spanned=["development"],
-            subcategories_spanned=["http-tools"],
-            tool_surface_evidence="Generic POSIX curl binary commands",
-            shared_primitives_evidence="None (ad-hoc URLs and headers)",
-            coordinated_lifecycle_evidence="None (standard POSIX utility)",
+            source_paths=[],
+            candidate_membership_count=0,
+            duplicate_adjusted_count=0,
+            category_coverage=[],
+            subcategory_coverage=[],
             gate_1_tool_surface_cohesion=False,
+            gate_1_evidence="Generic POSIX curl binary commands",
+            gate_1_status=EvidenceStatus.UNSUPPORTED,
             gate_2_shared_primitives=False,
+            gate_2_evidence="None (ad-hoc URLs and headers)",
+            gate_2_status=EvidenceStatus.UNSUPPORTED,
             gate_3_critical_mass=False,
             gate_4_coordinated_lifecycle=False,
+            gate_4_evidence="None (standard POSIX utility)",
+            gate_4_status=EvidenceStatus.UNSUPPORTED,
             expected_tier=FamilyTier.DISQUALIFIED_SPRAWL,
+            manual_review_paths=[],
             uncertain_cases_or_boundary_notes="Generic utility failing Gates 1, 2, 3, 4. Strictly forbidden from creating family tags or platform folders.",
         ),
         "docker-basics": FamilyQualificationRecord(
             family_slug="docker-basics",
             candidate_name="Docker Basics",
-            census_member_count=1,
-            categories_spanned=["infrastructure-and-ops"],
-            subcategories_spanned=["containerization"],
-            tool_surface_evidence="Local docker CLI commands",
-            shared_primitives_evidence="None (ad-hoc container names and flags)",
-            coordinated_lifecycle_evidence="None (isolated utility script)",
+            source_paths=[
+                "library/infrastructure-and-ops/containers-and-orchestration/docker-expert",
+            ],
+            candidate_membership_count=1,
+            duplicate_adjusted_count=1,
+            category_coverage=["infrastructure-and-ops"],
+            subcategory_coverage=["containers-and-orchestration"],
             gate_1_tool_surface_cohesion=True,
+            gate_1_evidence="Local docker CLI commands",
+            gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,
             gate_2_shared_primitives=False,
+            gate_2_evidence="None (isolated CLI flags, no shared platform state or secrets)",
+            gate_2_status=EvidenceStatus.UNSUPPORTED,
             gate_3_critical_mass=False,
             gate_4_coordinated_lifecycle=False,
+            gate_4_evidence="None (isolated container utility)",
+            gate_4_status=EvidenceStatus.UNSUPPORTED,
             expected_tier=FamilyTier.DISQUALIFIED_SPRAWL,
+            manual_review_paths=[],
             uncertain_cases_or_boundary_notes="Isolated single capability failing Gates 2, 3, 4. Retained as independent domain capability.",
         ),
     }
+
+    @classmethod
+    def validate_record_integrity(cls, record: FamilyQualificationRecord) -> None:
+        """
+        Validate that a candidate's qualification record is independently auditable and grounded in source evidence:
+        1. Member count matches len(source_paths) (unless 0 for disqualified sprawl without library members).
+        2. duplicate_adjusted_count satisfies 0 <= duplicate_adjusted_count <= candidate_membership_count.
+        3. Category coverage matches categories extracted from source_paths.
+        4. Gate 3 critical mass matches quantitative evaluation derived from source_paths.
+        5. Qualitative gates (1, 2, 4) have concrete non-empty evidence strings and valid evidence statuses.
+        6. Authoritative tiers (Tier 1 Hub, Tier 1 Meta, Tier 2 Logical) cannot be asserted on ASSUMPTION_PROVISIONAL,
+           UNSUPPORTED, or unresolved manual_review_paths.
+        7. Evaluated tier from gates matches expected_tier (or PENDING_ADJUDICATION if uncertain).
+        """
+        # 1. Member count vs source_paths
+        if len(record.source_paths) != record.candidate_membership_count:
+            raise FamilyEligibilityError(
+                f"Member count mismatch for candidate '{record.family_slug}': record claims "
+                f"{record.candidate_membership_count} but provided {len(record.source_paths)} source paths."
+            )
+        if record.candidate_membership_count > 0:
+            if not (1 <= record.duplicate_adjusted_count <= record.candidate_membership_count):
+                raise FamilyEligibilityError(
+                    f"Invalid duplicate_adjusted_count {record.duplicate_adjusted_count} for candidate '{record.family_slug}'. "
+                    f"Must be between 1 and {record.candidate_membership_count}."
+                )
+
+        # 2. Category coverage vs derived categories from source_paths
+        derived_categories = set()
+        for p in record.source_paths:
+            parts = p.strip("/").split("/")
+            if len(parts) >= 2 and parts[0] == "library":
+                derived_categories.add(parts[1])
+            elif len(parts) >= 1:
+                derived_categories.add(parts[0])
+
+        if set(record.category_coverage) != derived_categories:
+            raise FamilyEligibilityError(
+                f"Category coverage mismatch for candidate '{record.family_slug}': record claims "
+                f"{sorted(record.category_coverage)} but source paths span {sorted(derived_categories)}."
+            )
+
+        # 3. Gate 3 critical mass validation derived directly from source records
+        cats_for_gate3 = (
+            record.distinct_category_coverage
+            if record.distinct_category_coverage is not None
+            else record.category_coverage
+        )
+        cat_count = len(cats_for_gate3)
+        dup_count = record.duplicate_adjusted_count
+
+        if record.is_internal_meta:
+            derived_gate_3 = dup_count >= 5
+        else:
+            derived_gate_3 = (
+                (dup_count >= 3 and cat_count >= 2)
+                or (dup_count >= 5 and cat_count >= 1)
+            )
+
+        if record.gate_3_critical_mass != derived_gate_3:
+            raise FamilyEligibilityError(
+                f"Contradictory Gate 3 assertion for candidate '{record.family_slug}': record claims "
+                f"{record.gate_3_critical_mass} but source paths and duplicate-adjusted count evaluate to "
+                f"{derived_gate_3} (count={dup_count}, categories={cat_count})."
+            )
+
+        # 4. Qualitative gates non-empty evidence and status validation
+        if record.gate_1_tool_surface_cohesion:
+            if not record.gate_1_evidence or not record.gate_1_evidence.strip():
+                raise FamilyEligibilityError(
+                    f"Candidate '{record.family_slug}' asserts Gate 1 (Tool Surface) but provides empty evidence."
+                )
+            if record.gate_1_status == EvidenceStatus.UNSUPPORTED:
+                raise FamilyEligibilityError(
+                    f"Candidate '{record.family_slug}' asserts Gate 1 (Tool Surface) but evidence status is UNSUPPORTED."
+                )
+
+        if record.gate_2_shared_primitives:
+            if not record.gate_2_evidence or not record.gate_2_evidence.strip():
+                raise FamilyEligibilityError(
+                    f"Candidate '{record.family_slug}' asserts Gate 2 (Shared Primitives) but provides empty evidence."
+                )
+            if record.gate_2_status == EvidenceStatus.UNSUPPORTED:
+                raise FamilyEligibilityError(
+                    f"Candidate '{record.family_slug}' asserts Gate 2 (Shared Primitives) but evidence status is UNSUPPORTED."
+                )
+
+        if record.gate_4_coordinated_lifecycle:
+            if not record.gate_4_evidence or not record.gate_4_evidence.strip():
+                raise FamilyEligibilityError(
+                    f"Candidate '{record.family_slug}' asserts Gate 4 (Coordinated Lifecycle) but provides empty evidence."
+                )
+            if record.gate_4_status == EvidenceStatus.UNSUPPORTED:
+                raise FamilyEligibilityError(
+                    f"Candidate '{record.family_slug}' asserts Gate 4 (Coordinated Lifecycle) but evidence status is UNSUPPORTED."
+                )
+
+        # 5. Authoritative tier requirements vs. Provisional assumptions / Manual reviews
+        is_authoritative = record.expected_tier in (
+            FamilyTier.TIER_1_PLATFORM_HUB,
+            FamilyTier.TIER_1_META_FAMILY,
+            FamilyTier.TIER_2_LOGICAL_FAMILY,
+        )
+        if is_authoritative:
+            asserted_statuses = []
+            if record.gate_1_tool_surface_cohesion:
+                asserted_statuses.append(("Gate 1", record.gate_1_status))
+            if record.gate_2_shared_primitives:
+                asserted_statuses.append(("Gate 2", record.gate_2_status))
+            if record.gate_4_coordinated_lifecycle:
+                asserted_statuses.append(("Gate 4", record.gate_4_status))
+
+            for gate_name, status in asserted_statuses:
+                if status in (EvidenceStatus.ASSUMPTION_PROVISIONAL, EvidenceStatus.UNSUPPORTED):
+                    raise FamilyEligibilityError(
+                        f"Authoritative tier '{record.expected_tier.value}' for candidate '{record.family_slug}' "
+                        f"cannot be asserted on provisional assumptions or unsupported evidence ({gate_name} status: {status.value}). "
+                        "Candidate must be designated PENDING_ADJUDICATION until verified."
+                    )
+
+            if record.manual_review_paths and len(record.manual_review_paths) / max(len(record.source_paths), 1) >= 0.5:
+                raise FamilyEligibilityError(
+                    f"Candidate '{record.family_slug}' has {len(record.manual_review_paths)} of "
+                    f"{len(record.source_paths)} packages under manual_review and cannot claim an authoritative tier. "
+                    "Must be designated PENDING_ADJUDICATION."
+                )
+
+        # 6. Evaluated tier consistency check
+        if record.expected_tier == FamilyTier.PENDING_ADJUDICATION:
+            return
+
+        evaluated_tier, _ = cls.evaluate(
+            family_slug=record.family_slug,
+            member_count=record.duplicate_adjusted_count,
+            categories_spanned=cat_count,
+            has_tool_surface=record.gate_1_tool_surface_cohesion,
+            has_shared_primitives=record.gate_2_shared_primitives,
+            has_coordinated_lifecycle=record.gate_4_coordinated_lifecycle,
+            is_internal_meta=record.is_internal_meta,
+        )
+
+        if evaluated_tier != record.expected_tier:
+            raise FamilyEligibilityError(
+                f"Contradictory tier assignment for candidate '{record.family_slug}': evaluator yielded "
+                f"'{evaluated_tier.value}' but record expected '{record.expected_tier.value}'."
+            )
 
     @classmethod
     def evaluate(
@@ -525,7 +920,7 @@ class FamilyCandidateEvaluator:
             return f"tools-and-platforms/{slug}"
         elif tier == FamilyTier.TIER_1_META_FAMILY:
             return f"meta-and-agent-skills/{slug}"
-        elif tier == FamilyTier.TIER_2_LOGICAL_FAMILY:
+        elif tier in (FamilyTier.TIER_2_LOGICAL_FAMILY, FamilyTier.PENDING_ADJUDICATION):
             # Anchored in domain tree, forbidden from claiming dedicated tools-and-platforms root
             return "<primary_domain>/<subcategory>"
         else:
@@ -550,10 +945,30 @@ class FamilyCandidateEvaluator:
             )
 
         record = cls.CENSUS_FAMILY_QUALIFICATION_LEDGER[slug]
+        cls.validate_record_integrity(record)
+
+        if record.expected_tier == FamilyTier.PENDING_ADJUDICATION:
+            gate = FamilyQualificationGate(
+                gate_1_tool_surface_cohesion=record.gate_1_tool_surface_cohesion,
+                gate_2_shared_primitives=record.gate_2_shared_primitives,
+                gate_3_critical_mass=record.gate_3_critical_mass,
+                gate_4_coordinated_lifecycle=record.gate_4_coordinated_lifecycle,
+                details={
+                    "slug": slug,
+                    "member_count": record.duplicate_adjusted_count,
+                    "categories_spanned": len(record.distinct_category_coverage or record.category_coverage),
+                    "is_internal_meta": record.is_internal_meta,
+                    "pending_adjudication": True,
+                    "manual_review_count": len(record.manual_review_paths),
+                },
+            )
+            return FamilyTier.PENDING_ADJUDICATION, gate, record
+
+        cats_spanned = len(record.distinct_category_coverage if record.distinct_category_coverage is not None else record.category_coverage)
         tier, gate = cls.evaluate(
             family_slug=record.family_slug,
-            member_count=record.census_member_count,
-            categories_spanned=len(record.categories_spanned),
+            member_count=record.duplicate_adjusted_count,
+            categories_spanned=cats_spanned,
             has_tool_surface=record.gate_1_tool_surface_cohesion,
             has_shared_primitives=record.gate_2_shared_primitives,
             has_coordinated_lifecycle=record.gate_4_coordinated_lifecycle,

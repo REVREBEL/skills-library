@@ -456,9 +456,10 @@ To establish a dedicated first-class platform hub under `library/tools-and-platf
 
 | Tier | Eligibility Criteria | Physical Placement | Metadata Tagging | Validated Catalog Examples |
 | :--- | :--- | :--- | :--- | :--- |
-| **Tier 1: Platform Hub** | Meets **all 4 gates** | Dedicated hub: `library/tools-and-platforms/<family>/` | `families: ["<family>"]` | `github` (22), `webflow` (22), `hugging-face` (19), `figma` (14), `n8n` (14), `wordpress` (7), `1password` (5), `notebooklm` (4) |
+| **Tier 1: Platform Hub** | Meets **all 4 gates** with verified source evidence | Dedicated hub: `library/tools-and-platforms/<family>/` | `families: ["<family>"]` | `github` (22), `webflow` (22), `hugging-face` (19), `figma` (14), `n8n` (14), `wordpress` (7), `1password` (5) |
 | **Tier 1: Meta-Family** | Universal agent engineering infrastructure internal to the library | Dedicated meta hub: `library/meta-and-agent-skills/<family>/` | `families: ["<family>"]` | `skill-lifecycle` (13) |
-| **Tier 2: Logical Family** | Meets Gates 1 and 2, but sub-critical mass (<3 skills or <5 single-domain skills) | Retained in primary domain: `library/<category>/<subcategory>/<skill>/` | `families: ["<family>"]` | `stripe` (2), `supabase` (2) |
+| **Tier 2: Logical Family** | Meets Gates 1 and 2, but sub-critical mass (<3 skills or <5 single-domain skills) | Retained in primary domain: `library/<category>/<subcategory>/<skill>/` | `families: ["<family>"]` | `supabase` (2) |
+| **Pending Adjudication** | Inconclusive critical mass, unverified provisional primitives, or high manual review ratio ($\ge 50\%$) | Retained in domain tree (`<primary_domain>/<subcategory>`) | Provisional only | `notebooklm` (4 packages, 3 distinct in 1 domain, 2 manual reviews) |
 | **Disqualified / Vendor Sprawl** | Fails Gate 1 or Gate 2 (isolated tool or incidental API mention) | Resides strictly in functional domain | **Forbidden** | `docker-basics`, `slack-notifier`, `curl-helper` |
 
 ### 9.3 Execution Provider Decoupling & Invariants
