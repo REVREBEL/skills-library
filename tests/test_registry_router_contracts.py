@@ -566,6 +566,49 @@ class TestAliasResolverAndInvariants(unittest.TestCase):
         self.assertIsNone(p1.relationships.get("aliased_to"))
         self.assertIsNone(p2.relationships.get("aliased_to"))
 
+    def test_omitted_outcome_defaults_to_pending_adjudication_safe_by_construction(self):
+        """
+        Regression test: omitting the outcome parameter in build_direction_neutral_duplicate_pair
+        MUST default to PENDING_ADJUDICATION.
+        It must NEVER create an alias or mark either skill deprecated without explicit adjudication.
+        """
+        hub_cap = RegistryEntry(
+            canonical_id="github:list-repos",
+            urn="",
+            name="list-repos",
+            role="capability",
+            domain="tools-and-platforms",
+            physical_path="library/tools-and-platforms/github/list-repos",
+            relationships={"composed_of": [], "extends": None, "depends_on": [], "adapts": None, "aliased_to": None, "belongs_to_family": "github"},
+        )
+        legacy_data = {
+            "canonical_id": "development:github-list-repos",
+            "name": "list-repos",
+            "domain": "development",
+            "category": "development",
+            "subcategory": "backend",
+            "physical_path": "library/development/backend/list-repos",
+        }
+
+        # Call with omitted outcome
+        e_hub, e_domain = AliasResolver.build_direction_neutral_duplicate_pair(hub_cap, legacy_data)
+
+        # Neither skill may be converted to an alias
+        self.assertNotEqual(e_hub.role, "alias", "Hub must not be converted to alias by default")
+        self.assertNotEqual(e_domain.role, "alias", "Domain skill must not be converted to alias by default")
+
+        # Neither skill may have an aliased_to pointer
+        self.assertIsNone(e_hub.relationships.get("aliased_to"), "Hub must have no aliased_to pointer")
+        self.assertIsNone(e_domain.relationships.get("aliased_to"), "Domain skill must have no aliased_to pointer")
+
+        # Neither skill may be marked deprecated
+        self.assertNotEqual(e_hub.status, "deprecated", "Hub must not be marked deprecated by default")
+        self.assertNotEqual(e_domain.status, "deprecated", "Domain skill must not be marked deprecated by default")
+
+        # Both remain in provisional direction-neutral baseline
+        self.assertEqual(e_hub.status, "provisional")
+        self.assertEqual(e_domain.status, "provisional")
+
 
 class TestMultiViewProjector(unittest.TestCase):
     """Verifies all 4 projection views and inverted search index generation."""

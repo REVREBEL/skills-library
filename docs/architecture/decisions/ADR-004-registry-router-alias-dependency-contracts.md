@@ -239,22 +239,22 @@ Under REV-128 and REV-129, 15 GitHub duplicate pairs (e.g. `library/tools-and-pl
 
 A Tier 1 platform family qualification establishes physical eligibility for a platform hub directory. **It does not prove that the platform implementation is semantically authoritative for every similarly named skill.** Pre-determining platform ownership before semantic adjudication violates the REV-128 contract.
 
-Therefore, the catalog architecture treats all 15 pairs as **direction-neutral** until each pair undergoes documented semantic adjudication. The architecture supports three distinct governed outcomes upon adjudication:
+Therefore, the catalog architecture treats all 15 pairs as **direction-neutral** until each pair undergoes documented semantic adjudication. The architecture supports four distinct governed outcomes, **defaulting to `pending_adjudication` by construction** so that unresolved duplicate pairs never create an alias or mark either skill deprecated without explicit adjudication:
 
-1. **Platform Ownership with Backward-Compatible Alias (`platform_canonical`)**:
+1. **Pending Adjudication Baseline (`pending_adjudication` - Default)**:
+   - Prior to semantic adjudication, neither skill is forced into a canonical-or-alias hierarchy.
+   - Both skills remain provisional, direction-neutral catalog entries with zero alias redirection and neither skill marked deprecated.
+2. **Platform Ownership with Backward-Compatible Alias (`platform_canonical`)**:
    - The platform hub capability (`github:<slug>`) is adjudicated as the canonical owner.
    - The functional domain path mints an `AliasObject` (`development:<slug>` $\to$ `aliased_to: "github:<slug>"`).
    - The functional domain alias is marked `status: "deprecated"`, warning callers while ensuring single-hop backward compatibility.
-2. **Functional-Domain Ownership with Platform-Facing Alias (`domain_canonical`)**:
+3. **Functional-Domain Ownership with Platform-Facing Alias (`domain_canonical`)**:
    - The functional domain capability (`development:<slug>`) is adjudicated as the authoritative canonical implementation.
    - The platform hub path mints an `AliasObject` (`github:<slug>` $\to$ `aliased_to: "development:<slug>"`).
    - Callers invoking the platform hub route directly to the general-purpose domain capability.
-3. **Dual Retention with Distinct Canonical Identities (`dual_retention`)**:
+4. **Dual Retention with Distinct Canonical Identities (`dual_retention`)**:
    - When the two implementations provide distinct, non-interchangeable capabilities despite sharing a common name (e.g. specialized API-based automation vs generic developer workflow), both skills are retained as distinct canonical capabilities.
    - Neither skill is designated an alias; both remain active and distinct (`github:<slug>` and `development:<slug>`).
-4. **Pending Adjudication Baseline (`pending_adjudication`)**:
-   - Prior to semantic adjudication, neither skill is forced into a canonical-or-alias hierarchy.
-   - Both skills remain provisional, direction-neutral catalog entries with zero alias redirection.
 
 ### 5.3 Deprecation Lifecycle
 1. **Active**: Fully supported canonical skill or direct alias.

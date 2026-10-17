@@ -773,10 +773,13 @@ class AliasResolver:
     def build_direction_neutral_duplicate_pair(
         canonical_hub_entry: RegistryEntry,
         legacy_path_entry_data: Dict[str, Any],
-        outcome: DuplicateAdjudicationOutcome = DuplicateAdjudicationOutcome.PLATFORM_CANONICAL,
+        outcome: DuplicateAdjudicationOutcome = DuplicateAdjudicationOutcome.PENDING_ADJUDICATION,
     ) -> Tuple[RegistryEntry, RegistryEntry]:
         """
         Convenience wrapper around adjudicate_duplicate_pair using legacy path dictionary.
+        Defaults to DuplicateAdjudicationOutcome.PENDING_ADJUDICATION to preserve REV-128
+        direction neutrality by default: neither skill becomes an alias or is marked deprecated
+        without explicit semantic adjudication.
         """
         domain_entry = RegistryEntry(
             canonical_id=legacy_path_entry_data["canonical_id"],
