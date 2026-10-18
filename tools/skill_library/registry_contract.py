@@ -182,7 +182,7 @@ class RegistryEntry:
 
         # Normalize relationships dict structure
         rels = self.relationships or {}
-        self.relationships = {
+        normalized_rels = {
             "composed_of": sorted(rels.get("composed_of", [])),
             "extends": rels.get("extends"),
             "depends_on": sorted(rels.get("depends_on", [])),
@@ -190,6 +190,10 @@ class RegistryEntry:
             "aliased_to": rels.get("aliased_to"),
             "belongs_to_family": rels.get("belongs_to_family"),
         }
+        for k, v in rels.items():
+            if k not in normalized_rels:
+                normalized_rels[k] = v
+        self.relationships = normalized_rels
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -730,6 +734,7 @@ class AliasResolver:
                     "adapts": None,
                     "aliased_to": hub_entry.canonical_id,
                     "belongs_to_family": hub_entry.relationships.get("belongs_to_family"),
+                    "adjudication_outcome": outcome.value,
                 },
             )
             return hub_entry, alias
@@ -753,6 +758,7 @@ class AliasResolver:
                     "adapts": None,
                     "aliased_to": domain_entry.canonical_id,
                     "belongs_to_family": hub_entry.relationships.get("belongs_to_family"),
+                    "adjudication_outcome": outcome.value,
                 },
             )
             return domain_entry, alias

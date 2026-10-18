@@ -89,13 +89,17 @@ flowchart TD
 - **Failure Mode**: Any duplicate ID or structural syntax error halts the pipeline immediately (`FAILED`).
 
 ### 3.2 Gate 2: Family Qualification & Boundary Adherence (INV-8)
-- **Objective**: Enforce the REV-128 physical ownership layout and REV-129 platform family governance.
+- **Objective**: Enforce the REV-128 physical ownership layout and REV-129 platform family governance by consuming the approved census-backed `FamilyCandidateEvaluator` qualification outcomes.
 - **Rules**:
-  1. **Tier 1 Physical Hubs**: Platform families (e.g. `github`, `supabase`) must satisfy all 4 qualification gates (Tool Surface, Shared Primitives, Critical Mass $\ge 5$, Unified Lifecycle) with verifiable evidence.
-  2. **Physical Boundary Hold**: Only approved Tier 1 members may reside in `library/tools-and-platforms/<family-slug>/`. All other skills remain anchored in functional domain directories (`library/<category>/<subcategory>/`).
-  3. **Tier 2 Logical Families**: Logical cross-cutting groupings (e.g. `browser-automation`) remain purely virtual routers and must not create physical directory moves.
-  4. **Direction-Neutral Hold**: The 15 GitHub duplicate pairs must remain direction-neutral candidates until explicit semantic adjudication. Neither side may be forcibly deprecated into an alias without documented adjudication.
-- **Failure Mode**: Unauthorized platform directory relocation, unevidenced Tier 1 qualification, or premature duplicate alias conversion halts the migration (`FAILED`).
+  1. **Tier 1 Physical Hubs**: Platform families (e.g. `github`, `webflow`, `figma`) must satisfy all 4 qualification gates with verified evidence:
+     - Gate 1: Official public tool surface cohesion (CLI, MCP, REST API, SDK).
+     - Gate 2: Shared platform configuration/credentials/primitives.
+     - Gate 3: Critical mass ($\ge 3$ distinct capabilities across $\ge 2$ functional categories, OR $\ge 5$ distinct, tightly coupled operations in 1 complex functional domain; $\ge 5$ capabilities for internal meta-families).
+     - Gate 4: Coordinated release and version lifecycle.
+  2. **Physical Boundary Hold**: Only families that have formally qualified for Tier 1 via `FamilyCandidateEvaluator` may establish physical hubs in `library/tools-and-platforms/<family-slug>/`. Any skill placed in a platform hub must declare membership in that approved Tier 1 family.
+  3. **Tier 2 Logical Families & Unadjudicated Candidates**: Logical cross-cutting groupings (e.g. `supabase`, `browser-automation`) and candidates pending adjudication (e.g. `notebooklm`) remain purely virtual routers anchored in functional domain directories (`library/<category>/<subcategory>/`) and are strictly prohibited from creating physical directories under `tools-and-platforms/`.
+  4. **Direction-Neutral Hold & Alias Protection**: Candidate duplicate pairs (such as the 15 GitHub duplicate pairs) must remain direction-neutral until explicit semantic adjudication. Converting an unadjudicated candidate into an alias without documented adjudication is rejected, regardless of lifecycle status (`active`, `deprecated`, or otherwise).
+- **Failure Mode**: Placement of skills in unqualified platform directories, unevidenced Tier 1 qualification claims, or premature duplicate alias conversion halts the migration (`FAILED`).
 
 ### 3.3 Gate 3: Graph Topology, Acyclicity & Alias Purity (INV-1, INV-3, INV-4, INV-5)
 - **Objective**: Guarantee that the catalog relationship graph is a valid Directed Acyclic Graph (DAG) with strict structural bounds on aliases, overlays, and primitives.
@@ -109,10 +113,11 @@ flowchart TD
 ### 3.4 Gate 4: Resource & Asset Preservation (Zero Data Loss)
 - **Objective**: Ensure that 100% of physical assets, executables, scripts, templates, and documentation are accounted for and protected from loss or truncation during migration.
 - **Rules**:
-  1. **Core Package File**: Every physical skill directory must contain a valid, non-empty `SKILL.md`.
-  2. **Support Asset Manifest**: All auxiliary resources (scripts under `scripts/`, reference data under `references/`, assets under `assets/`, schemas under `schemas/`) must be enumerated with SHA-256 integrity digests.
-  3. **No Unaccounted Files**: Migration plans must track every file in the source directory. Any orphaned or untracked file triggers an asset loss warning or error.
-- **Failure Mode**: Missing `SKILL.md` or missing auxiliary support files fails Gate 4 (`FAILED`).
+  1. **Core Package File**: Every physical skill directory must contain a valid, non-empty `SKILL.md` (`size > 0`).
+  2. **Support Asset Manifest**: All auxiliary resources (scripts under `scripts/`, reference data under `references/`, assets under `assets/`, schemas under `schemas/`) must be recursively inventoried with SHA-256 integrity digests and byte sizes.
+  3. **Source-to-Destination Preservation & Verification**: When migration plans or manifests are evaluated, complete source and destination file inventories are compared. Any file missing in the destination, truncated, or possessing a mismatched SHA-256 checksum triggers a fatal asset preservation failure.
+  4. **No Unaccounted Files**: Migration plans must track every file in the source directory. Any orphaned, lost, or untracked file triggers an immediate error.
+- **Failure Mode**: Missing `SKILL.md`, truncated files, missing auxiliary support assets, or SHA-256 checksum mismatches fail Gate 4 (`FAILED`).
 
 ### 3.5 Gate 5: Reference Closure & Dependency Completeness (INV-7)
 - **Objective**: Ensure that all referenced identifiers across all relationship types resolve to active entries in the authoritative catalog registry.

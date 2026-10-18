@@ -65,6 +65,9 @@ from skill_library.migration_gates import (
     GateResult,
     GateStatus,
     GateViolation,
+    SkillFileAsset,
+    SkillPackageManifest,
+    compare_package_manifests,
     HistoricalProvenanceMapper,
     HistoricalProvenanceRecord,
     MigrationGateEvaluator,
@@ -293,6 +296,73 @@ class TestGate2FamilyQualification(unittest.TestCase):
         self.assertFalse(res.is_passed)
         self.assertTrue(any("converted to an active alias without semantic adjudication" in v.message for v in res.violations))
 
+    def test_gate2_rejects_unqualified_family_in_tools_and_platforms(self):
+        """Verifies physical hub placement requires an approved Tier 1 platform family (e.g. Supabase is Tier 2)."""
+        entry = RegistryEntry(
+            canonical_id="supabase:auth",
+            urn="urn:skill:supabase:auth",
+            name="auth",
+            role="capability",
+            description="Supabase Auth",
+            domain="tools-and-platforms",
+            category="tools-and-platforms",
+            subcategory="supabase",
+            owner="core",
+            families=["supabase"],
+            physical_path="library/tools-and-platforms/supabase/auth",
+            status="active",
+            relationships={"belongs_to_family": "supabase"},
+        )
+        reg = _build_test_registry([entry])
+        res = MigrationGateEvaluator.evaluate_gate_2_family_qualification(reg)
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "UNQUALIFIED_FAMILY_PHYSICAL_HUB" for v in res.violations))
+        self.assertTrue(any("not an approved Tier 1 platform hub" in v.message for v in res.violations))
+
+    def test_gate2_rejects_deprecated_unadjudicated_duplicate_alias(self):
+        """Verifies that an unadjudicated alias marked 'deprecated' is strictly rejected."""
+        entry = RegistryEntry(
+            canonical_id="github:pr-action",
+            urn="urn:skill:github:pr-action",
+            name="pr-action",
+            role="alias",
+            description="Unadjudicated deprecated alias",
+            domain="tools-and-platforms",
+            category="tools-and-platforms",
+            subcategory="github",
+            owner="core",
+            status="deprecated",  # Deprecated alias without adjudication!
+            relationships={"aliased_to": "developer-tools:pr-action"},
+        )
+        reg = _build_test_registry([entry])
+        res = MigrationGateEvaluator.evaluate_gate_2_family_qualification(reg)
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "UNADJUDICATED_DUPLICATE_ALIAS" for v in res.violations))
+        self.assertTrue(any("converted to a deprecated alias without semantic adjudication" in v.message for v in res.violations))
+
+    def test_gate2_accepts_adjudicated_duplicate_alias(self):
+        """Verifies that an adjudicated alias (with explicit outcome) passes Gate 2."""
+        entry = RegistryEntry(
+            canonical_id="github:actions",
+            urn="urn:skill:github:actions",
+            name="actions",
+            role="alias",
+            description="Adjudicated alias",
+            domain="tools-and-platforms",
+            category="tools-and-platforms",
+            subcategory="github",
+            owner="core",
+            status="deprecated",
+            relationships={
+                "aliased_to": "developer-tools:actions",
+                "adjudication_outcome": DuplicateAdjudicationOutcome.DOMAIN_CANONICAL.value,
+            },
+        )
+        reg = _build_test_registry([entry])
+        res = MigrationGateEvaluator.evaluate_gate_2_family_qualification(reg)
+        self.assertTrue(res.is_passed)
+
+
 
 class TestGate3GraphTopologyAndAcyclicity(unittest.TestCase):
     """Verifies Gate 3: Graph Topology, Acyclicity & Alias Purity (INV-1, INV-3, INV-4, INV-5)."""
@@ -448,6 +518,40 @@ class TestGate3GraphTopologyAndAcyclicity(unittest.TestCase):
         self.assertFalse(res.is_passed)
         self.assertTrue(any(v.rule == "INV-5_PRIMITIVE_COMPOSITION_PROHIBITED" for v in res.violations))
 
+    def test_gate3_catches_cycle_involving_adapts(self):
+        """Verifies that a circular cycle involving an 'adapts' relationship is detected (INV-1)."""
+        reg = _build_test_registry([
+            RegistryEntry(
+                canonical_id="domain:target-service",
+                urn="urn:skill:domain:target-service",
+                name="target-service",
+                role="capability",
+                description="Target Service",
+                domain="domain",
+                category="domain",
+                subcategory="sub",
+                owner="core",
+                relationships={"depends_on": ["domain:adapter-skill"]},
+            ),
+            RegistryEntry(
+                canonical_id="domain:adapter-skill",
+                urn="urn:skill:domain:adapter-skill",
+                name="adapter-skill",
+                role="adapter",
+                description="Adapter Skill",
+                domain="domain",
+                category="domain",
+                subcategory="sub",
+                owner="core",
+                relationships={"adapts": "domain:target-service"},  # Cycle: target-service -> adapter-skill -> target-service
+            ),
+        ])
+        res = MigrationGateEvaluator.evaluate_gate_3_graph_topology(reg)
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "INV-1_CYCLE_DETECTED" for v in res.violations))
+        self.assertTrue(any("domain:target-service" in v.message and "domain:adapter-skill" in v.message for v in res.violations))
+
+
 
 class TestGate4ResourcePreservation(unittest.TestCase):
     """Verifies Gate 4: Resource & Asset Preservation (Zero Data Loss)."""
@@ -503,6 +607,174 @@ class TestGate4ResourcePreservation(unittest.TestCase):
         res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(reg, repository_root=self.temp_dir)
         self.assertFalse(res.is_passed)
         self.assertTrue(any("contains no SKILL.md" in v.message for v in res.violations))
+
+    def test_gate4_fails_when_skill_md_is_truncated(self):
+        """Verifies that a 0-byte SKILL.md fails Gate 4 with TRUNCATED_SKILL_MD."""
+        skill_dir = Path(self.temp_dir) / "library" / "dev" / "git" / "empty-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("")  # 0 bytes
+
+        reg = _build_test_registry([
+            RegistryEntry(
+                canonical_id="dev:empty-skill",
+                urn="urn:skill:dev:empty-skill",
+                name="empty-skill",
+                role="capability",
+                description="Empty skill",
+                domain="dev",
+                category="dev",
+                subcategory="git",
+                owner="core",
+                physical_path="library/dev/git/empty-skill",
+            )
+        ])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(reg, repository_root=self.temp_dir)
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "TRUNCATED_SKILL_MD" for v in res.violations))
+
+    def test_gate4_fails_when_supporting_asset_is_truncated(self):
+        """Verifies that a 0-byte auxiliary asset fails Gate 4 with TRUNCATED_ASSET_FILE."""
+        skill_dir = Path(self.temp_dir) / "library" / "dev" / "git" / "trunc-asset"
+        scripts_dir = skill_dir / "scripts"
+        scripts_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("# Valid Skill\nBody here.\n")
+        (scripts_dir / "helper.sh").write_text("")  # 0 bytes!
+
+        reg = _build_test_registry([
+            RegistryEntry(
+                canonical_id="dev:trunc-asset",
+                urn="urn:skill:dev:trunc-asset",
+                name="trunc-asset",
+                role="capability",
+                description="Truncated asset skill",
+                domain="dev",
+                category="dev",
+                subcategory="git",
+                owner="core",
+                physical_path="library/dev/git/trunc-asset",
+            )
+        ])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(reg, repository_root=self.temp_dir)
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "TRUNCATED_ASSET_FILE" for v in res.violations))
+
+    def test_gate4_source_to_destination_missing_supporting_asset(self):
+        """Verifies source-to-destination manifest comparison catches missing auxiliary assets."""
+        src_dir = Path(self.temp_dir) / "src" / "commit"
+        dst_dir = Path(self.temp_dir) / "dst" / "commit"
+        src_scripts = src_dir / "scripts"
+        src_scripts.mkdir(parents=True)
+        dst_dir.mkdir(parents=True)
+
+        (src_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (src_scripts / "run.py").write_text("print('run')\n")
+        (dst_dir / "SKILL.md").write_text("# Commit Skill\n")
+        # Notice: dst_dir is missing scripts/run.py!
+
+        src_manifest = SkillPackageManifest.from_directory("dev:commit", str(src_dir))
+        dst_manifest = SkillPackageManifest.from_directory("dev:commit", str(dst_dir))
+
+        reg = _build_test_registry([
+            RegistryEntry(
+                canonical_id="dev:commit",
+                urn="urn:skill:dev:commit",
+                name="commit",
+                role="capability",
+                description="Commit",
+                domain="dev",
+                category="dev",
+                subcategory="git",
+                owner="core",
+                physical_path=str(dst_dir),
+            )
+        ])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:commit": src_manifest},
+            destination_manifests={"dev:commit": dst_manifest},
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "MISSING_SUPPORTING_ASSET" for v in res.violations))
+        self.assertTrue(any("scripts/run.py" in v.message for v in res.violations))
+
+    def test_gate4_source_to_destination_checksum_mismatch(self):
+        """Verifies source-to-destination manifest comparison catches file modifications/tampering."""
+        src_dir = Path(self.temp_dir) / "src" / "review"
+        dst_dir = Path(self.temp_dir) / "dst" / "review"
+        src_dir.mkdir(parents=True)
+        dst_dir.mkdir(parents=True)
+
+        (src_dir / "SKILL.md").write_text("# Review Skill v1\n")
+        (dst_dir / "SKILL.md").write_text("# Review Skill MODIFIED v2\n")
+
+        src_manifest = SkillPackageManifest.from_directory("dev:review", str(src_dir))
+        dst_manifest = SkillPackageManifest.from_directory("dev:review", str(dst_dir))
+
+        reg = _build_test_registry([
+            RegistryEntry(
+                canonical_id="dev:review",
+                urn="urn:skill:dev:review",
+                name="review",
+                role="capability",
+                description="Review",
+                domain="dev",
+                category="dev",
+                subcategory="git",
+                owner="core",
+                physical_path=str(dst_dir),
+            )
+        ])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:review": src_manifest},
+            destination_manifests={"dev:review": dst_manifest},
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "RESOURCE_CHECKSUM_MISMATCH" for v in res.violations))
+
+    def test_gate4_source_to_destination_exact_match_passes(self):
+        """Verifies that 100% byte-for-byte asset preservation passes Gate 4."""
+        src_dir = Path(self.temp_dir) / "src" / "clean-skill"
+        dst_dir = Path(self.temp_dir) / "dst" / "clean-skill"
+        (src_dir / "scripts").mkdir(parents=True)
+        (dst_dir / "scripts").mkdir(parents=True)
+
+        content_skill = "# Clean Skill\nAll documentation.\n"
+        content_script = "#!/usr/bin/env python3\nprint('safe')\n"
+
+        (src_dir / "SKILL.md").write_text(content_skill)
+        (src_dir / "scripts" / "tool.py").write_text(content_script)
+        (dst_dir / "SKILL.md").write_text(content_skill)
+        (dst_dir / "scripts" / "tool.py").write_text(content_script)
+
+        src_manifest = SkillPackageManifest.from_directory("dev:clean-skill", str(src_dir))
+        dst_manifest = SkillPackageManifest.from_directory("dev:clean-skill", str(dst_dir))
+
+        reg = _build_test_registry([
+            RegistryEntry(
+                canonical_id="dev:clean-skill",
+                urn="urn:skill:dev:clean-skill",
+                name="clean-skill",
+                role="capability",
+                description="Clean Skill",
+                domain="dev",
+                category="dev",
+                subcategory="git",
+                owner="core",
+                physical_path=str(dst_dir),
+            )
+        ])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:clean-skill": src_manifest},
+            destination_manifests={"dev:clean-skill": dst_manifest},
+        )
+        self.assertTrue(res.is_passed)
+        self.assertEqual(len(res.violations), 0)
+
 
 
 class TestGate5ReferenceClosure(unittest.TestCase):

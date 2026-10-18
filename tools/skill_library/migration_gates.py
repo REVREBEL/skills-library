@@ -138,6 +138,114 @@ class GateResult:
 
 
 @dataclass
+class SkillFileAsset:
+    """Represents a physical file asset belonging to a skill package with SHA-256 integrity digest."""
+    relative_path: str
+    size_bytes: int
+    sha256: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "relative_path": self.relative_path,
+            "size_bytes": self.size_bytes,
+            "sha256": self.sha256,
+        }
+
+
+@dataclass
+class SkillPackageManifest:
+    """
+    Complete recursive file inventory and SHA-256 checksum manifest for a skill package.
+    Used by Gate 4 to guarantee zero data loss and verify source-to-destination integrity.
+    """
+    skill_id: str
+    directory_path: str
+    files: Dict[str, SkillFileAsset] = field(default_factory=dict)
+    total_files: int = 0
+    total_bytes: int = 0
+
+    @classmethod
+    def from_directory(cls, skill_id: str, directory_path: str) -> "SkillPackageManifest":
+        """Compute complete recursive file manifest and SHA-256 digests for a skill directory."""
+        files: Dict[str, SkillFileAsset] = {}
+        total_bytes = 0
+        p = Path(directory_path)
+        if p.exists() and p.is_dir():
+            for item in sorted(p.rglob("*")):
+                if item.is_file():
+                    # Compute relative path inside package
+                    rel_p = str(item.relative_to(p))
+                    size = item.stat().st_size
+                    h = hashlib.sha256()
+                    with open(item, "rb") as f:
+                        while chunk := f.read(65536):
+                            h.update(chunk)
+                    digest = h.hexdigest()
+                    files[rel_p] = SkillFileAsset(
+                        relative_path=rel_p,
+                        size_bytes=size,
+                        sha256=digest,
+                    )
+                    total_bytes += size
+        return cls(
+            skill_id=skill_id,
+            directory_path=str(directory_path),
+            files=files,
+            total_files=len(files),
+            total_bytes=total_bytes,
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "skill_id": self.skill_id,
+            "directory_path": self.directory_path,
+            "total_files": self.total_files,
+            "total_bytes": self.total_bytes,
+            "files": {k: v.to_dict() for k, v in self.files.items()},
+        }
+
+
+def compare_package_manifests(
+    source_manifest: SkillPackageManifest,
+    destination_manifest: SkillPackageManifest,
+) -> List[GateViolation]:
+    """
+    Compares source and destination package manifests.
+    Guarantees that 100% of source files exist in destination with matching SHA-256 digests.
+    """
+    violations: List[GateViolation] = []
+    cid = source_manifest.skill_id
+    for rel_path, src_asset in source_manifest.files.items():
+        if rel_path not in destination_manifest.files:
+            violations.append(GateViolation(
+                gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                entity_id=cid,
+                rule="MISSING_SUPPORTING_ASSET",
+                message=f"Supporting asset '{rel_path}' for skill '{cid}' is missing from destination.",
+                context={"skill_id": cid, "file": rel_path},
+            ))
+        else:
+            dst_asset = destination_manifest.files[rel_path]
+            if dst_asset.size_bytes != src_asset.size_bytes or dst_asset.sha256 != src_asset.sha256:
+                violations.append(GateViolation(
+                    gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                    entity_id=cid,
+                    rule="RESOURCE_CHECKSUM_MISMATCH",
+                    message=(
+                        f"Checksum mismatch for asset '{rel_path}' in skill '{cid}': "
+                        f"source SHA-256 ({src_asset.sha256[:8]}...) != destination SHA-256 ({dst_asset.sha256[:8]}...)."
+                    ),
+                    context={
+                        "skill_id": cid,
+                        "file": rel_path,
+                        "source_sha256": src_asset.sha256,
+                        "destination_sha256": dst_asset.sha256,
+                    },
+                ))
+    return violations
+
+
+@dataclass
 class HistoricalProvenanceRecord:
     """
     Immutable historical provenance record mapping pre-rebuild Phase 01–12 assets
@@ -501,6 +609,7 @@ class MigrationGateEvaluator:
         """
         Gate 2: Platform Family Qualification & Physical/Virtual Boundary Adherence.
         Enforces 4-gate qualification framework (REV-129) and duplicate pair direction neutrality.
+        Validates family eligibility against FamilyCandidateEvaluator approved tiers.
         """
         t0 = time.time()
         violations: List[GateViolation] = []
@@ -509,30 +618,66 @@ class MigrationGateEvaluator:
         for cid, entry in sorted(registry.skills.items()):
             path = entry.physical_path or ""
             if "tools-and-platforms/" in path:
-                # Must belong to an approved Tier 1 family
                 parts = path.split("tools-and-platforms/")[-1].split("/")
                 family_slug = parts[0] if parts else ""
+
+                # Verify that the family actually qualifies as a Tier 1 platform hub
+                is_tier_1 = (
+                    family_slug in FamilyCandidateEvaluator.AUTHORITATIVE_TIER_1_PLATFORMS
+                    or family_slug in FamilyCandidateEvaluator.AUTHORITATIVE_TIER_1_META_FAMILIES
+                    or (
+                        family_slug in FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER
+                        and FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER[family_slug].expected_tier == FamilyTier.TIER_1_PLATFORM_HUB
+                    )
+                )
+
+                if not is_tier_1:
+                    violations.append(GateViolation(
+                        gate_id=GateID.GATE_2_FAMILY_QUALIFICATION,
+                        entity_id=cid,
+                        rule="UNQUALIFIED_FAMILY_PHYSICAL_HUB",
+                        message=(
+                            f"Skill '{cid}' is placed at physical hub 'tools-and-platforms/{family_slug}', "
+                            f"but family '{family_slug}' is not an approved Tier 1 platform hub according to FamilyCandidateEvaluator."
+                        ),
+                        context={"family_slug": family_slug, "path": path},
+                    ))
+
+                # Check membership declaration
                 if family_slug not in entry.families and entry.relationships.get("belongs_to_family") != family_slug:
                     violations.append(GateViolation(
                         gate_id=GateID.GATE_2_FAMILY_QUALIFICATION,
                         entity_id=cid,
                         rule="PHYSICAL_FAMILY_MISMATCH",
                         message=f"Skill '{cid}' at physical hub '{path}' does not declare membership in family '{family_slug}'.",
+                        context={"family_slug": family_slug, "path": path},
                     ))
 
             # 2. Direction-neutral duplicate baseline check
-            if entry.role == "alias" and "github" in entry.canonical_id:
-                # Aliased duplicate must have documented adjudication outcome
+            # Any candidate duplicate alias must have an approved adjudication outcome.
+            # Rejected regardless of lifecycle status (active, deprecated, draft, etc.)
+            if entry.role == "alias" and (
+                "github" in entry.canonical_id
+                or entry.relationships.get("candidate_pair")
+                or "candidate_duplicate" in entry.tags
+            ):
                 outcome = entry.relationships.get("adjudication_outcome")
                 if not outcome or outcome == DuplicateAdjudicationOutcome.PENDING_ADJUDICATION.value:
-                    # An alias cannot be active under pending_adjudication
-                    if entry.status == "active":
-                        violations.append(GateViolation(
-                            gate_id=GateID.GATE_2_FAMILY_QUALIFICATION,
-                            entity_id=cid,
-                            rule="UNADJUDICATED_DUPLICATE_ALIAS",
-                            message=f"Duplicate candidate '{cid}' was converted to an active alias without semantic adjudication.",
-                        ))
+                    status_desc = f"an {entry.status}" if entry.status == "active" else f"a {entry.status}"
+                    violations.append(GateViolation(
+                        gate_id=GateID.GATE_2_FAMILY_QUALIFICATION,
+                        entity_id=cid,
+                        rule="UNADJUDICATED_DUPLICATE_ALIAS",
+                        message=(
+                            f"Duplicate candidate '{cid}' was converted to {status_desc} alias "
+                            f"without semantic adjudication."
+                        ),
+                        context={
+                            "canonical_id": cid,
+                            "status": entry.status,
+                            "adjudication_outcome": outcome,
+                        },
+                    ))
 
         status = GateStatus.PASSED if not violations else GateStatus.FAILED
         return GateResult(
@@ -548,13 +693,15 @@ class MigrationGateEvaluator:
     def evaluate_gate_3_graph_topology(cls, registry: CatalogRegistry) -> GateResult:
         """
         Gate 3: Graph Topology, Acyclicity & Alias Purity.
-        Enforces INV-1 (Acyclicity), INV-3 (Single-Hop Alias), INV-4 (Single-Level Overlay),
+        Enforces INV-1 (Acyclicity across depends_on, composed_of, extends, adapts),
+        INV-3 (Single-Hop Alias), INV-4 (Single-Level Overlay),
         and INV-5 (Primitive Composition Prohibition).
         """
         t0 = time.time()
         violations: List[GateViolation] = []
 
-        # 1. Build adjacency list for DAG cycle detection
+        # 1. Build adjacency list for DAG cycle detection including all 4 directed relationship types:
+        # depends_on, composed_of, extends, adapts
         adj: Dict[str, Set[str]] = {cid: set() for cid in registry.skills}
         for cid, entry in registry.skills.items():
             for dep in entry.relationships.get("depends_on", []):
@@ -566,6 +713,9 @@ class MigrationGateEvaluator:
             ext = entry.relationships.get("extends")
             if ext and ext in adj:
                 adj[cid].add(ext)
+            adp = entry.relationships.get("adapts")
+            if adp and adp in adj:
+                adj[cid].add(adp)
 
         # Detect cycles via DFS
         visited: Dict[str, int] = {}  # 0=unvisited, 1=visiting, 2=visited
@@ -574,7 +724,7 @@ class MigrationGateEvaluator:
         def dfs(node: str, path: List[str]):
             visited[node] = 1
             path.append(node)
-            for neighbor in adj.get(node, set()):
+            for neighbor in sorted(adj.get(node, set())):
                 if visited.get(neighbor, 0) == 1:
                     cycle_idx = path.index(neighbor)
                     cycle_path = " -> ".join(path[cycle_idx:] + [neighbor])
@@ -594,6 +744,22 @@ class MigrationGateEvaluator:
         for cid in sorted(registry.skills.keys()):
             if visited.get(cid, 0) == 0:
                 dfs(cid, [])
+
+        # Authoritative concordance check with DependencyResolver
+        try:
+            dep_resolver = DependencyResolver(registry)
+            authoritative_cycle = dep_resolver.detect_cycle()
+            if authoritative_cycle and not cycle_nodes:
+                cycle_path = " -> ".join(authoritative_cycle)
+                violations.append(GateViolation(
+                    gate_id=GateID.GATE_3_GRAPH_TOPOLOGY,
+                    entity_id=authoritative_cycle[0],
+                    rule="INV-1_CYCLE_DETECTED",
+                    message=f"Circular dependency cycle detected: {cycle_path}",
+                    context={"cycle": cycle_path},
+                ))
+        except Exception:
+            pass
 
         # 2. Check INV-3: Single-Hop Alias Resolution & No Circular/Chained Aliases
         for cid, entry in sorted(registry.skills.items()):
@@ -662,17 +828,23 @@ class MigrationGateEvaluator:
         cls,
         registry: CatalogRegistry,
         repository_root: Optional[str] = None,
+        source_manifests: Optional[Dict[str, SkillPackageManifest]] = None,
+        destination_manifests: Optional[Dict[str, SkillPackageManifest]] = None,
+        migration_manifest: Optional[Dict[str, Any]] = None,
     ) -> GateResult:
         """
         Gate 4: Resource & Asset Preservation.
         Verifies that every skill's assets (SKILL.md, scripts, templates, references)
         are tracked and mapped 1-to-1 to prevent accidental data loss.
+        Performs recursive file inventory and SHA-256 integrity verification when source
+        and destination package manifests or migration manifests are provided.
         """
         t0 = time.time()
         violations: List[GateViolation] = []
         root = repository_root or os.getcwd()
         checked_count = 0
 
+        # 1. Physical package existence and internal asset integrity
         for cid, entry in sorted(registry.skills.items()):
             if entry.role == "alias":
                 continue  # Aliases are virtual redirect pointers
@@ -699,8 +871,28 @@ class MigrationGateEvaluator:
                         message=f"Skill directory '{phys_path}' exists but contains no SKILL.md.",
                         context={"path": phys_path},
                     ))
+                elif os.path.getsize(skill_md) == 0:
+                    violations.append(GateViolation(
+                        gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                        entity_id=cid,
+                        rule="TRUNCATED_SKILL_MD",
+                        message=f"Skill file '{phys_path}/SKILL.md' exists but is 0 bytes (truncated/empty).",
+                        context={"path": phys_path},
+                    ))
+
+                # Check recursive package contents for 0-byte truncated files
+                manifest = SkillPackageManifest.from_directory(cid, abs_path)
+                for rel_p, asset in sorted(manifest.files.items()):
+                    if asset.size_bytes == 0 and not rel_p.endswith(".gitkeep"):
+                        violations.append(GateViolation(
+                            gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                            entity_id=cid,
+                            rule="TRUNCATED_ASSET_FILE",
+                            message=f"Asset file '{rel_p}' in skill '{cid}' is 0 bytes (truncated/empty).",
+                            context={"skill_id": cid, "file": rel_p},
+                        ))
             else:
-                # During pre-flight simulation or testing, record warning or error if live check
+                # During pre-flight simulation or testing, record error
                 violations.append(GateViolation(
                     gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
                     entity_id=cid,
@@ -708,6 +900,68 @@ class MigrationGateEvaluator:
                     message=f"Physical path '{phys_path}' does not exist on disk.",
                     context={"path": phys_path},
                 ))
+
+        # 2. Source-to-Destination package inventory and SHA-256 verification
+        if source_manifests:
+            for src_cid, src_manifest in sorted(source_manifests.items()):
+                dst_manifest = None
+                if destination_manifests and src_cid in destination_manifests:
+                    dst_manifest = destination_manifests[src_cid]
+                elif src_cid in registry.skills:
+                    dest_entry = registry.skills[src_cid]
+                    if dest_entry.physical_path:
+                        dest_abs = (
+                            os.path.join(root, dest_entry.physical_path)
+                            if not os.path.isabs(dest_entry.physical_path)
+                            else dest_entry.physical_path
+                        )
+                        if os.path.exists(dest_abs):
+                            dst_manifest = SkillPackageManifest.from_directory(src_cid, dest_abs)
+                        else:
+                            violations.append(GateViolation(
+                                gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                                entity_id=src_cid,
+                                rule="UNRESOLVED_PHYSICAL_DIRECTORY",
+                                message=f"Destination directory for '{src_cid}' does not exist: {dest_abs}",
+                                context={"path": dest_abs},
+                            ))
+                            continue
+                    else:
+                        violations.append(GateViolation(
+                            gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                            entity_id=src_cid,
+                            rule="MISSING_PHYSICAL_PATH",
+                            message=f"Destination entry for '{src_cid}' has no physical_path.",
+                        ))
+                        continue
+                else:
+                    violations.append(GateViolation(
+                        gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                        entity_id=src_cid,
+                        rule="MISSING_DESTINATION_PACKAGE",
+                        message=f"Destination package for skill '{src_cid}' is missing from destination manifests/registry.",
+                    ))
+                    continue
+
+                if dst_manifest:
+                    cmp_violations = compare_package_manifests(src_manifest, dst_manifest)
+                    violations.extend(cmp_violations)
+
+        # 3. Direct migration manifest comparison (if provided)
+        if migration_manifest:
+            moves = migration_manifest.get("moves", migration_manifest) if isinstance(migration_manifest, dict) else migration_manifest
+            if isinstance(moves, list):
+                for move in moves:
+                    m_cid = move.get("skill_id", "unknown")
+                    s_dir = move.get("source_dir")
+                    d_dir = move.get("dest_dir")
+                    if s_dir and d_dir:
+                        s_abs = os.path.join(root, s_dir) if not os.path.isabs(s_dir) else s_dir
+                        d_abs = os.path.join(root, d_dir) if not os.path.isabs(d_dir) else d_dir
+                        s_man = SkillPackageManifest.from_directory(m_cid, s_abs)
+                        d_man = SkillPackageManifest.from_directory(m_cid, d_abs)
+                        cmp_violations = compare_package_manifests(s_man, d_man)
+                        violations.extend(cmp_violations)
 
         status = GateStatus.PASSED if not violations else GateStatus.FAILED
         return GateResult(
@@ -1046,11 +1300,17 @@ class MigrationGateRunner:
         repository_root: Optional[str] = None,
         census_records: Optional[List[Dict[str, Any]]] = None,
         provenance_report: Optional[ProvenanceReconciliationReport] = None,
+        source_manifests: Optional[Dict[str, SkillPackageManifest]] = None,
+        destination_manifests: Optional[Dict[str, SkillPackageManifest]] = None,
+        migration_manifest: Optional[Dict[str, Any]] = None,
     ):
         self.registry = registry
         self.repository_root = repository_root or os.getcwd()
         self.census_records = census_records
         self.provenance_report = provenance_report
+        self.source_manifests = source_manifests
+        self.destination_manifests = destination_manifests
+        self.migration_manifest = migration_manifest
 
     def run_gate(self, gate_id: GateID) -> GateResult:
         """Runs a single migration gate by ID."""
@@ -1061,7 +1321,13 @@ class MigrationGateRunner:
         elif gate_id == GateID.GATE_3_GRAPH_TOPOLOGY:
             return MigrationGateEvaluator.evaluate_gate_3_graph_topology(self.registry)
         elif gate_id == GateID.GATE_4_RESOURCE_PRESERVATION:
-            return MigrationGateEvaluator.evaluate_gate_4_resource_preservation(self.registry, self.repository_root)
+            return MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+                self.registry,
+                self.repository_root,
+                source_manifests=self.source_manifests,
+                destination_manifests=self.destination_manifests,
+                migration_manifest=self.migration_manifest,
+            )
         elif gate_id == GateID.GATE_5_REFERENCE_CLOSURE:
             return MigrationGateEvaluator.evaluate_gate_5_reference_closure(self.registry)
         elif gate_id == GateID.GATE_6_VIEW_RECONCILIATION:
