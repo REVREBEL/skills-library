@@ -940,6 +940,407 @@ class TestGate4ResourcePreservation(unittest.TestCase):
         )
         self.assertTrue(res.is_passed)
 
+    def test_gate4_rejects_source_manifest_path_mismatch(self):
+        """Verifies Gate 4 rejects source manifest with path mismatch."""
+        src_dir = Path(self.temp_dir) / "src" / "commit"
+        dst_dir = Path(self.temp_dir) / "dst" / "commit"
+        other_dir = Path(self.temp_dir) / "src" / "other"
+        src_dir.mkdir(parents=True)
+        dst_dir.mkdir(parents=True)
+        other_dir.mkdir(parents=True)
+        (src_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (dst_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (other_dir / "SKILL.md").write_text("# Commit Skill\n")
+
+        # Manifest pointing to other_dir instead of planned move source
+        src_manifest = SkillPackageManifest.from_directory("dev:commit", str(other_dir))
+        dst_manifest = SkillPackageManifest.from_directory("dev:commit", str(dst_dir))
+
+        reg = _build_test_registry([])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:commit": src_manifest},
+            destination_manifests={"dev:commit": dst_manifest},
+            planned_moves=[{"skill_id": "dev:commit", "source_path": str(src_dir), "destination_path": str(dst_dir)}],
+            is_migration_authorization=True,
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "MANIFEST_PATH_MISMATCH" for v in res.violations))
+
+    def test_gate4_rejects_destination_manifest_path_mismatch(self):
+        """Verifies Gate 4 rejects destination manifest with path mismatch."""
+        src_dir = Path(self.temp_dir) / "src" / "commit"
+        dst_dir = Path(self.temp_dir) / "dst" / "commit"
+        other_dir = Path(self.temp_dir) / "dst" / "other"
+        src_dir.mkdir(parents=True)
+        dst_dir.mkdir(parents=True)
+        other_dir.mkdir(parents=True)
+        (src_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (dst_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (other_dir / "SKILL.md").write_text("# Commit Skill\n")
+
+        src_manifest = SkillPackageManifest.from_directory("dev:commit", str(src_dir))
+        dst_manifest = SkillPackageManifest.from_directory("dev:commit", str(other_dir))
+
+        reg = _build_test_registry([])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:commit": src_manifest},
+            destination_manifests={"dev:commit": dst_manifest},
+            planned_moves=[{"skill_id": "dev:commit", "source_path": str(src_dir), "destination_path": str(dst_dir)}],
+            is_migration_authorization=True,
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "MANIFEST_PATH_MISMATCH" for v in res.violations))
+
+    def test_gate4_rejects_manifest_identity_mismatch(self):
+        """Verifies Gate 4 rejects manifests whose skill_id does not match the planned move."""
+        src_dir = Path(self.temp_dir) / "src" / "commit"
+        dst_dir = Path(self.temp_dir) / "dst" / "commit"
+        src_dir.mkdir(parents=True)
+        dst_dir.mkdir(parents=True)
+        (src_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (dst_dir / "SKILL.md").write_text("# Commit Skill\n")
+
+        src_manifest = SkillPackageManifest.from_directory("dev:other", str(src_dir))
+        dst_manifest = SkillPackageManifest.from_directory("dev:commit", str(dst_dir))
+
+        reg = _build_test_registry([])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:commit": src_manifest},
+            destination_manifests={"dev:commit": dst_manifest},
+            planned_moves=[{"skill_id": "dev:commit", "source_path": str(src_dir), "destination_path": str(dst_dir)}],
+            is_migration_authorization=True,
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "MANIFEST_IDENTITY_MISMATCH" for v in res.violations))
+
+    def test_gate4_rejects_fabricated_manifest_checksums(self):
+        """Verifies Gate 4 detects fabricated checksums in supplied manifests."""
+        src_dir = Path(self.temp_dir) / "src" / "commit"
+        dst_dir = Path(self.temp_dir) / "dst" / "commit"
+        src_dir.mkdir(parents=True)
+        dst_dir.mkdir(parents=True)
+        (src_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (dst_dir / "SKILL.md").write_text("# Commit Skill\n")
+
+        src_manifest = SkillPackageManifest.from_directory("dev:commit", str(src_dir))
+        dst_manifest = SkillPackageManifest.from_directory("dev:commit", str(dst_dir))
+
+        # Fabricate checksum in src_manifest
+        fake_asset = SkillFileAsset(relative_path="SKILL.md", size_bytes=src_manifest.files["SKILL.md"].size_bytes, sha256="0" * 64)
+        src_manifest.files["SKILL.md"] = fake_asset
+
+        reg = _build_test_registry([])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:commit": src_manifest},
+            destination_manifests={"dev:commit": dst_manifest},
+            planned_moves=[{"skill_id": "dev:commit", "source_path": str(src_dir), "destination_path": str(dst_dir)}],
+            is_migration_authorization=True,
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "FABRICATED_MANIFEST_CHECKSUM" for v in res.violations))
+
+    def test_gate4_rejects_stale_source_manifest_after_file_change(self):
+        """Verifies Gate 4 detects stale manifests when on-disk file was modified after manifest generation."""
+        src_dir = Path(self.temp_dir) / "src" / "commit"
+        dst_dir = Path(self.temp_dir) / "dst" / "commit"
+        src_dir.mkdir(parents=True)
+        dst_dir.mkdir(parents=True)
+        (src_dir / "SKILL.md").write_text("# Original\n")
+        (dst_dir / "SKILL.md").write_text("# Modified\n")
+
+        src_manifest = SkillPackageManifest.from_directory("dev:commit", str(src_dir))
+        # Now modify src_dir on disk after manifest creation
+        (src_dir / "SKILL.md").write_text("# Tampered after manifest\n")
+        dst_manifest = SkillPackageManifest.from_directory("dev:commit", str(dst_dir))
+
+        reg = _build_test_registry([])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:commit": src_manifest},
+            destination_manifests={"dev:commit": dst_manifest},
+            planned_moves=[{"skill_id": "dev:commit", "source_path": str(src_dir), "destination_path": str(dst_dir)}],
+            is_migration_authorization=True,
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "FABRICATED_MANIFEST_CHECKSUM" for v in res.violations))
+
+    def test_gate4_rejects_manifest_omitting_real_supporting_file(self):
+        """Verifies Gate 4 rejects a manifest that omits real files found on disk."""
+        src_dir = Path(self.temp_dir) / "src" / "commit"
+        dst_dir = Path(self.temp_dir) / "dst" / "commit"
+        src_dir.mkdir(parents=True)
+        dst_dir.mkdir(parents=True)
+        (src_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (src_dir / "helper.py").write_text("print(1)\n")
+        (dst_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (dst_dir / "helper.py").write_text("print(1)\n")
+
+        src_manifest = SkillPackageManifest.from_directory("dev:commit", str(src_dir))
+        # Omit helper.py from manifest
+        del src_manifest.files["helper.py"]
+        dst_manifest = SkillPackageManifest.from_directory("dev:commit", str(dst_dir))
+
+        reg = _build_test_registry([])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:commit": src_manifest},
+            destination_manifests={"dev:commit": dst_manifest},
+            planned_moves=[{"skill_id": "dev:commit", "source_path": str(src_dir), "destination_path": str(dst_dir)}],
+            is_migration_authorization=True,
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "MANIFEST_OMITTED_FILE" for v in res.violations))
+
+    def test_gate4_rejects_manifest_with_phantom_file(self):
+        """Verifies Gate 4 rejects a manifest that lists files that do not exist on disk."""
+        src_dir = Path(self.temp_dir) / "src" / "commit"
+        dst_dir = Path(self.temp_dir) / "dst" / "commit"
+        src_dir.mkdir(parents=True)
+        dst_dir.mkdir(parents=True)
+        (src_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (dst_dir / "SKILL.md").write_text("# Commit Skill\n")
+
+        src_manifest = SkillPackageManifest.from_directory("dev:commit", str(src_dir))
+        # Add phantom file
+        src_manifest.files["ghost.py"] = SkillFileAsset("ghost.py", 10, "1" * 64)
+        dst_manifest = SkillPackageManifest.from_directory("dev:commit", str(dst_dir))
+
+        reg = _build_test_registry([])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:commit": src_manifest},
+            destination_manifests={"dev:commit": dst_manifest},
+            planned_moves=[{"skill_id": "dev:commit", "source_path": str(src_dir), "destination_path": str(dst_dir)}],
+            is_migration_authorization=True,
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "MANIFEST_PHANTOM_FILE" for v in res.violations))
+
+    def test_gate4_rejects_destination_with_modified_supporting_resource(self):
+        """Verifies Gate 4 rejects destination with altered file contents (RESOURCE_CHECKSUM_MISMATCH)."""
+        src_dir = Path(self.temp_dir) / "src" / "commit"
+        dst_dir = Path(self.temp_dir) / "dst" / "commit"
+        src_dir.mkdir(parents=True)
+        dst_dir.mkdir(parents=True)
+        (src_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (src_dir / "helper.py").write_text("print('version 1')\n")
+        (dst_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (dst_dir / "helper.py").write_text("print('version 2 diverged')\n")
+
+        src_manifest = SkillPackageManifest.from_directory("dev:commit", str(src_dir))
+        dst_manifest = SkillPackageManifest.from_directory("dev:commit", str(dst_dir))
+
+        reg = _build_test_registry([])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:commit": src_manifest},
+            destination_manifests={"dev:commit": dst_manifest},
+            planned_moves=[{"skill_id": "dev:commit", "source_path": str(src_dir), "destination_path": str(dst_dir)}],
+            is_migration_authorization=True,
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "RESOURCE_CHECKSUM_MISMATCH" for v in res.violations))
+
+    def test_gate4_rejects_destination_with_unexpected_extra_file(self):
+        """Verifies Gate 4 rejects destination containing unmapped assets not present in source."""
+        src_dir = Path(self.temp_dir) / "src" / "commit"
+        dst_dir = Path(self.temp_dir) / "dst" / "commit"
+        src_dir.mkdir(parents=True)
+        dst_dir.mkdir(parents=True)
+        (src_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (dst_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (dst_dir / "extra.txt").write_text("unaccounted extra file\n")
+
+        src_manifest = SkillPackageManifest.from_directory("dev:commit", str(src_dir))
+        dst_manifest = SkillPackageManifest.from_directory("dev:commit", str(dst_dir))
+
+        reg = _build_test_registry([])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:commit": src_manifest},
+            destination_manifests={"dev:commit": dst_manifest},
+            planned_moves=[{"skill_id": "dev:commit", "source_path": str(src_dir), "destination_path": str(dst_dir)}],
+            is_migration_authorization=True,
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "UNEXPECTED_DESTINATION_FILE" for v in res.violations))
+
+    def test_gate4_rejects_path_traversal_with_dotdot(self):
+        """Verifies Gate 4 rejects planned moves containing '..' path traversal."""
+        reg = _build_test_registry([])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:escape": SkillPackageManifest("dev:escape", "/any")},
+            destination_manifests={"dev:escape": SkillPackageManifest("dev:escape", "/any")},
+            planned_moves=[{"skill_id": "dev:escape", "source_path": "../escape/src", "destination_path": "library/dest"}],
+            is_migration_authorization=True,
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "PATH_TRAVERSAL_DETECTED" for v in res.violations))
+
+    def test_gate4_rejects_unauthorized_absolute_path(self):
+        """Verifies Gate 4 rejects paths that resolve outside repository/staging roots."""
+        reg = _build_test_registry([])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:escape": SkillPackageManifest("dev:escape", "/etc/passwd")},
+            destination_manifests={"dev:escape": SkillPackageManifest("dev:escape", "/etc/passwd")},
+            planned_moves=[{"skill_id": "dev:escape", "source_path": "/etc/passwd", "destination_path": "library/dest"}],
+            is_migration_authorization=True,
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "PATH_TRAVERSAL_DETECTED" for v in res.violations))
+
+    def test_gate4_rejects_symlink_escaping_repository(self):
+        """Verifies Gate 4 rejects symlinks pointing outside repository root."""
+        src_dir = Path(self.temp_dir) / "src" / "escape-link"
+        dst_dir = Path(self.temp_dir) / "dst" / "escape-link"
+        outside_dir = Path(tempfile.mkdtemp())
+        try:
+            outside_target = outside_dir / "secret.txt"
+            outside_target.write_text("secret")
+            src_dir.mkdir(parents=True)
+            dst_dir.mkdir(parents=True)
+            (src_dir / "SKILL.md").write_text("# Skill\n")
+            (dst_dir / "SKILL.md").write_text("# Skill\n")
+            os.symlink(str(outside_target), str(src_dir / "leak.txt"))
+
+            src_manifest = SkillPackageManifest.from_directory("dev:escape-link", str(src_dir))
+            dst_manifest = SkillPackageManifest.from_directory("dev:escape-link", str(dst_dir))
+
+            reg = _build_test_registry([])
+            res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+                reg,
+                repository_root=self.temp_dir,
+                source_manifests={"dev:escape-link": src_manifest},
+                destination_manifests={"dev:escape-link": dst_manifest},
+                planned_moves=[{"skill_id": "dev:escape-link", "source_path": str(src_dir), "destination_path": str(dst_dir)}],
+                is_migration_authorization=True,
+            )
+            self.assertFalse(res.is_passed)
+            self.assertTrue(any(v.rule == "PATH_TRAVERSAL_DETECTED" for v in res.violations))
+        finally:
+            shutil.rmtree(outside_dir, ignore_errors=True)
+
+    def test_gate4_rejects_authorization_with_missing_destination_and_staging(self):
+        """Verifies Gate 4 rejects authorization when destination exists neither live nor in staging."""
+        src_dir = Path(self.temp_dir) / "src" / "commit"
+        src_dir.mkdir(parents=True)
+        (src_dir / "SKILL.md").write_text("# Commit Skill\n")
+        src_manifest = SkillPackageManifest.from_directory("dev:commit", str(src_dir))
+
+        non_existent_dst = Path(self.temp_dir) / "live" / "nonexistent"
+        dst_manifest = SkillPackageManifest("dev:commit", str(non_existent_dst))
+
+        reg = _build_test_registry([])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:commit": src_manifest},
+            destination_manifests={"dev:commit": dst_manifest},
+            planned_moves=[{"skill_id": "dev:commit", "source_path": str(src_dir), "destination_path": str(non_existent_dst)}],
+            is_migration_authorization=True,
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "MISSING_DESTINATION_EVIDENCE" for v in res.violations))
+
+    def test_gate4_passes_with_authentic_staged_destination(self):
+        """Verifies Gate 4 passes preflight when destination is staged in an isolated staging directory."""
+        src_dir = Path(self.temp_dir) / "live" / "git-commit"
+        staged_dir = Path(self.temp_dir) / "staging" / "tools-and-platforms" / "git" / "commit"
+        live_dest_dir = Path(self.temp_dir) / "live" / "tools-and-platforms" / "git" / "commit"
+
+        src_dir.mkdir(parents=True)
+        staged_dir.mkdir(parents=True)
+        # live_dest_dir does NOT exist yet!
+
+        (src_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (src_dir / "script.sh").write_text("#!/bin/sh\necho 1\n")
+
+        (staged_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (staged_dir / "script.sh").write_text("#!/bin/sh\necho 1\n")
+
+        src_manifest = SkillPackageManifest.from_directory("dev:commit", str(src_dir))
+        dst_manifest = SkillPackageManifest.from_directory("dev:commit", str(staged_dir))
+
+        reg = _build_test_registry([
+            RegistryEntry(
+                canonical_id="dev:commit",
+                urn="urn:skill:dev:commit",
+                name="commit",
+                role="capability",
+                description="Commit",
+                domain="dev",
+                category="dev",
+                subcategory="git",
+                owner="core",
+                physical_path=str(live_dest_dir),
+            )
+        ])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:commit": src_manifest},
+            destination_manifests={"dev:commit": dst_manifest},
+            planned_moves=[{
+                "skill_id": "dev:commit",
+                "source_path": str(src_dir),
+                "destination_path": str(live_dest_dir),
+                "staged_dir": str(staged_dir),
+            }],
+            is_migration_authorization=True,
+            staging_root=str(Path(self.temp_dir) / "staging"),
+        )
+        self.assertTrue(res.is_passed)
+        self.assertEqual(len(res.violations), 0)
+
+    def test_runner_gate4_with_staged_destination(self):
+        """Verifies MigrationGateRunner executes Gate 4 cleanly with staging_root."""
+        src_dir = Path(self.temp_dir) / "live" / "git-commit"
+        staged_dir = Path(self.temp_dir) / "staging" / "commit"
+        live_dest_dir = Path(self.temp_dir) / "live" / "new-commit"
+
+        src_dir.mkdir(parents=True)
+        staged_dir.mkdir(parents=True)
+        (src_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (staged_dir / "SKILL.md").write_text("# Commit Skill\n")
+
+        src_manifest = SkillPackageManifest.from_directory("dev:commit", str(src_dir))
+        dst_manifest = SkillPackageManifest.from_directory("dev:commit", str(staged_dir))
+
+        reg = _build_test_registry([])
+        runner = MigrationGateRunner(
+            registry=reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:commit": src_manifest},
+            destination_manifests={"dev:commit": dst_manifest},
+            planned_moves=[{
+                "skill_id": "dev:commit",
+                "source_path": str(src_dir),
+                "destination_path": str(live_dest_dir),
+                "staged_dir": str(staged_dir),
+            }],
+            is_migration_authorization=True,
+            staging_root=str(Path(self.temp_dir) / "staging"),
+        )
+        res = runner.run_gate(GateID.GATE_4_RESOURCE_PRESERVATION)
+        self.assertTrue(res.is_passed)
+
 
 
 

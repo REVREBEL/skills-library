@@ -199,6 +199,10 @@ class SkillPackageManifest:
             total_bytes=total_bytes,
         )
 
+    @property
+    def root_path(self) -> str:
+        return self.directory_path
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "skill_id": self.skill_id,
@@ -215,7 +219,8 @@ def compare_package_manifests(
 ) -> List[GateViolation]:
     """
     Compares source and destination package manifests.
-    Guarantees that 100% of source files exist in destination with matching SHA-256 digests.
+    Guarantees that 100% of source files exist in destination with matching SHA-256 digests,
+    and detects any unexpected unmapped assets present in the destination.
     """
     violations: List[GateViolation] = []
     cid = source_manifest.skill_id
@@ -246,7 +251,90 @@ def compare_package_manifests(
                         "destination_sha256": dst_asset.sha256,
                     },
                 ))
+    for rel_path in destination_manifest.files:
+        if rel_path not in source_manifest.files:
+            violations.append(GateViolation(
+                gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                entity_id=cid,
+                rule="UNEXPECTED_DESTINATION_FILE",
+                message=f"Destination package for skill '{cid}' contains unexpected unmapped asset: '{rel_path}'.",
+                context={"skill_id": cid, "file": rel_path},
+            ))
     return violations
+
+
+def is_subpath(target: Path, base: Path) -> bool:
+    """Checks whether target is equal to or located under base."""
+    try:
+        target.resolve().relative_to(base.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def check_path_containment(
+    path_str: str,
+    repository_root: str,
+    extra_allowed_roots: Optional[List[str]] = None,
+) -> Tuple[bool, Optional[str]]:
+    """
+    Validates that path_str satisfies containment and security invariants:
+      1. Contains no '..' traversal segments.
+      2. If absolute or resolved, is strictly contained within repository_root
+         or one of extra_allowed_roots.
+      3. Contains no symlinks that escape allowed boundaries.
+    Returns (is_valid, violation_message_if_invalid).
+    """
+    if not path_str:
+        return False, "Path is empty."
+
+    p = Path(path_str)
+
+    # 1. Reject raw '..' path components
+    if ".." in p.parts:
+        return False, f"Path '{path_str}' contains forbidden path traversal sequences ('..')."
+
+    # Build canonical allowed roots
+    allowed: List[Path] = [Path(repository_root).resolve()]
+    if extra_allowed_roots:
+        for r in extra_allowed_roots:
+            if r:
+                allowed.append(Path(r).resolve())
+
+    # Resolve candidate path
+    try:
+        resolved = p.resolve() if p.is_absolute() else (Path(repository_root) / p).resolve()
+    except Exception as exc:
+        return False, f"Failed to resolve path '{path_str}': {exc}"
+
+    # 2. Containment check: must be inside at least one allowed root
+    if not any(is_subpath(resolved, root) for root in allowed):
+        return False, f"Path '{path_str}' resolves to '{resolved}', which is outside allowed repository and staging roots."
+
+    # 3. Symlink escape check: if path itself or any contained file is a symlink pointing outside
+    target = p if p.is_absolute() else (Path(repository_root) / p)
+
+    if target.exists():
+        if target.is_symlink():
+            try:
+                real_target = target.resolve()
+                if not any(is_subpath(real_target, root) for root in allowed):
+                    return False, f"Symlink '{path_str}' points to '{real_target}', which escapes allowed boundaries."
+            except Exception as exc:
+                return False, f"Symlink '{path_str}' could not be resolved: {exc}"
+
+        if target.is_dir():
+            for item in target.rglob("*"):
+                if item.is_symlink():
+                    try:
+                        real_item = item.resolve()
+                        if not any(is_subpath(real_item, root) for root in allowed):
+                            return False, f"Symlink '{item}' inside package points to '{real_item}', which escapes allowed boundaries."
+                    except Exception as exc:
+                        return False, f"Symlink '{item}' could not be resolved: {exc}"
+
+    return True, None
+
 
 
 @dataclass
@@ -879,6 +967,8 @@ class MigrationGateEvaluator:
         migration_manifest: Optional[Dict[str, Any]] = None,
         planned_moves: Optional[List[Dict[str, str]]] = None,
         is_migration_authorization: bool = False,
+        staging_root: Optional[str] = None,
+        staging_directories: Optional[Dict[str, str]] = None,
     ) -> GateResult:
         """
         Gate 4: Resource & Asset Preservation.
@@ -886,19 +976,47 @@ class MigrationGateEvaluator:
         are tracked and mapped 1-to-1 to prevent accidental data loss.
         Distinguishes between static inventory audit and migration authorization preflight:
           - In static audit mode: verifies physical existence, valid SKILL.md, and non-empty assets.
-          - In migration authorization mode: requires complete source and destination manifests
-            for every planned physical move. Fails closed (MISSING_SOURCE_MANIFEST / MISSING_DESTINATION_MANIFEST)
-            if manifests are missing, rather than falling back to directory checks.
+          - In migration authorization mode: enforces a 3-tier verification model:
+              1. Manifest presence and metadata alignment (fail closed if missing or mismatched).
+              2. Fresh on-disk inventory generation and cross-examination against supplied manifests
+                 (rejecting fabricated checksums, stale manifests, omitted files, phantom files,
+                 and path containment/traversal violations).
+              3. Deterministic 1-to-1 source vs destination preservation comparison (rejecting missing
+                 supporting assets, checksum divergences, and unexpected unmapped destination files).
+            Supports non-destructive preflight through isolated staging directories (staged_dir,
+            staging_directories, staging_root) when destination does not yet exist in live catalog.
         """
         t0 = time.time()
         violations: List[GateViolation] = []
         root = repository_root or os.getcwd()
         checked_count = 0
 
+        # Collect moving skill canonical IDs so static audit doesn't falsely check
+        # destinations before physical moves occur
+        moving_cids = set()
+        is_migration_mode = is_migration_authorization or (planned_moves is not None) or (migration_manifest is not None)
+        if is_migration_mode:
+            all_moves_for_cids: List[Dict[str, Any]] = []
+            if planned_moves:
+                all_moves_for_cids.extend(planned_moves)
+            if migration_manifest:
+                raw_moves = migration_manifest.get("moves", migration_manifest) if isinstance(migration_manifest, dict) else migration_manifest
+                if isinstance(raw_moves, list):
+                    all_moves_for_cids.extend(raw_moves)
+            for m in all_moves_for_cids:
+                if isinstance(m, dict):
+                    cid_val = m.get("skill_id") or m.get("canonical_id")
+                    if cid_val:
+                        moving_cids.add(cid_val)
+
         # 1. Physical package existence and internal asset integrity (Static Inventory Audit)
         for cid, entry in sorted(registry.skills.items()):
             if entry.role == "alias":
                 continue  # Aliases are virtual redirect pointers
+
+            if is_migration_mode and cid in moving_cids:
+                # Skills undergoing planned moves are validated under Section 2 migration authorization
+                continue
 
             phys_path = entry.physical_path
             if not phys_path:
@@ -953,7 +1071,6 @@ class MigrationGateEvaluator:
                 ))
 
         # 2. Migration Authorization Preflight Enforcement (Physical Moves)
-        is_migration_mode = is_migration_authorization or (planned_moves is not None) or (migration_manifest is not None)
         if is_migration_mode:
             moves: List[Dict[str, Any]] = []
             if planned_moves:
@@ -971,12 +1088,62 @@ class MigrationGateEvaluator:
                     message="Migration authorization requested but no planned moves or migration manifest provided.",
                 ))
             else:
+                # Establish allowed extra roots for containment checks (e.g., staging directory)
+                extra_roots: List[str] = []
+                if staging_root:
+                    extra_roots.append(staging_root)
+                if staging_directories:
+                    extra_roots.extend(staging_directories.values())
+
                 for move in moves:
+                    checked_count += 1
                     m_cid = move.get("skill_id") or move.get("canonical_id") or "unknown"
                     s_dir = move.get("source_dir") or move.get("source_path")
                     d_dir = move.get("dest_dir") or move.get("destination_dir") or move.get("destination_path")
+                    staged_dir = move.get("staged_dir") or move.get("staged_path")
+                    if not staged_dir and staging_directories and m_cid in staging_directories:
+                        staged_dir = staging_directories[m_cid]
 
-                    # In migration authorization, complete source evidence is mandatory: fail closed if missing
+                    # 2.1 Canonical Path Containment & Security Invariant
+                    move_extra_roots = list(extra_roots)
+                    if staged_dir and staged_dir not in move_extra_roots:
+                        move_extra_roots.append(staged_dir)
+
+                    path_valid, path_err = check_path_containment(s_dir, root, move_extra_roots)
+                    if not path_valid:
+                        violations.append(GateViolation(
+                            gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                            entity_id=m_cid,
+                            rule="PATH_TRAVERSAL_DETECTED",
+                            message=f"Path containment violation in source path: {path_err}",
+                            context={"path": s_dir, "skill_id": m_cid},
+                        ))
+                        continue
+
+                    path_valid, path_err = check_path_containment(d_dir, root, move_extra_roots)
+                    if not path_valid:
+                        violations.append(GateViolation(
+                            gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                            entity_id=m_cid,
+                            rule="PATH_TRAVERSAL_DETECTED",
+                            message=f"Path containment violation in destination path: {path_err}",
+                            context={"path": d_dir, "skill_id": m_cid},
+                        ))
+                        continue
+
+                    if staged_dir:
+                        path_valid, path_err = check_path_containment(staged_dir, root, move_extra_roots)
+                        if not path_valid:
+                            violations.append(GateViolation(
+                                gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                                entity_id=m_cid,
+                                rule="PATH_TRAVERSAL_DETECTED",
+                                message=f"Path containment violation in staged destination path: {path_err}",
+                                context={"path": staged_dir, "skill_id": m_cid},
+                            ))
+                            continue
+
+                    # 2.2 Complete source and destination manifests are mandatory
                     src_manifest: Optional[SkillPackageManifest] = None
                     if source_manifests and m_cid in source_manifests:
                         src_manifest = source_manifests[m_cid]
@@ -991,14 +1158,9 @@ class MigrationGateEvaluator:
                         ))
                         continue
 
-                    # Complete destination evidence is mandatory: fail closed if missing
                     dst_manifest: Optional[SkillPackageManifest] = None
                     if destination_manifests and m_cid in destination_manifests:
                         dst_manifest = destination_manifests[m_cid]
-                    elif d_dir:
-                        d_abs = os.path.join(root, d_dir) if not os.path.isabs(d_dir) else d_dir
-                        if os.path.exists(d_abs):
-                            dst_manifest = SkillPackageManifest.from_directory(m_cid, d_abs)
 
                     if not dst_manifest:
                         violations.append(GateViolation(
@@ -1010,9 +1172,171 @@ class MigrationGateEvaluator:
                         ))
                         continue
 
-                    # Deterministic recursive file inventory and SHA-256 comparison
-                    cmp_violations = compare_package_manifests(src_manifest, dst_manifest)
-                    violations.extend(cmp_violations)
+                    # 2.3 Resolve actual physical locations on disk
+                    s_abs = Path(s_dir).resolve() if Path(s_dir).is_absolute() else (Path(root) / s_dir).resolve()
+                    if not s_abs.exists() or not s_abs.is_dir():
+                        violations.append(GateViolation(
+                            gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                            entity_id=m_cid,
+                            rule="UNRESOLVED_PHYSICAL_DIRECTORY",
+                            message=f"Physical source path '{s_dir}' for skill '{m_cid}' does not exist on disk.",
+                            context={"path": str(s_abs)},
+                        ))
+                        continue
+
+                    d_abs = Path(d_dir).resolve() if Path(d_dir).is_absolute() else (Path(root) / d_dir).resolve()
+                    dest_on_disk: Optional[Path] = None
+                    dest_type: str = ""
+
+                    if d_abs.exists() and d_abs.is_dir():
+                        dest_on_disk = d_abs
+                        dest_type = "live"
+                    elif staged_dir:
+                        stg_abs = Path(staged_dir).resolve() if Path(staged_dir).is_absolute() else (Path(root) / staged_dir).resolve()
+                        if stg_abs.exists() and stg_abs.is_dir():
+                            dest_on_disk = stg_abs
+                            dest_type = "staged"
+                    elif staging_root:
+                        cands = [
+                            (Path(staging_root) / d_dir).resolve(),
+                            (Path(staging_root) / m_cid).resolve(),
+                            (Path(staging_root) / Path(d_dir).name).resolve(),
+                        ]
+                        for cand in cands:
+                            if cand.exists() and cand.is_dir():
+                                dest_on_disk = cand
+                                dest_type = "staged"
+                                break
+
+                    if dest_on_disk is None:
+                        violations.append(GateViolation(
+                            gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                            entity_id=m_cid,
+                            rule="MISSING_DESTINATION_EVIDENCE",
+                            message=f"Migration authorization failed: destination for skill '{m_cid}' does not exist on disk in live catalog ('{d_dir}') nor in staged location.",
+                            context={"destination_path": d_dir, "skill_id": m_cid},
+                        ))
+                        continue
+
+                    # 2.4 Verify supplied manifests correspond to correct skill identity and paths
+                    if src_manifest.skill_id != m_cid:
+                        violations.append(GateViolation(
+                            gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                            entity_id=m_cid,
+                            rule="MANIFEST_IDENTITY_MISMATCH",
+                            message=f"Source manifest skill ID '{src_manifest.skill_id}' does not match planned move ID '{m_cid}'.",
+                            context={"manifest_id": src_manifest.skill_id, "expected_id": m_cid},
+                        ))
+
+                    src_manifest_p = Path(src_manifest.root_path).resolve() if Path(src_manifest.root_path).is_absolute() else (Path(root) / src_manifest.root_path).resolve()
+                    if src_manifest_p != s_abs:
+                        violations.append(GateViolation(
+                            gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                            entity_id=m_cid,
+                            rule="MANIFEST_PATH_MISMATCH",
+                            message=f"Source manifest root path '{src_manifest.root_path}' does not match planned source path '{s_dir}'.",
+                            context={"manifest_path": src_manifest.root_path, "expected_path": str(s_abs)},
+                        ))
+
+                    if dst_manifest.skill_id != m_cid:
+                        violations.append(GateViolation(
+                            gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                            entity_id=m_cid,
+                            rule="MANIFEST_IDENTITY_MISMATCH",
+                            message=f"Destination manifest skill ID '{dst_manifest.skill_id}' does not match planned move ID '{m_cid}'.",
+                            context={"manifest_id": dst_manifest.skill_id, "expected_id": m_cid},
+                        ))
+
+                    dst_manifest_p = Path(dst_manifest.root_path).resolve() if Path(dst_manifest.root_path).is_absolute() else (Path(root) / dst_manifest.root_path).resolve()
+                    if dst_manifest_p != d_abs and dst_manifest_p != dest_on_disk:
+                        violations.append(GateViolation(
+                            gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                            entity_id=m_cid,
+                            rule="MANIFEST_PATH_MISMATCH",
+                            message=f"Destination manifest root path '{dst_manifest.root_path}' does not match planned destination path '{d_dir}' or staged directory '{dest_on_disk}'.",
+                            context={"manifest_path": dst_manifest.root_path, "expected_path": str(dest_on_disk)},
+                        ))
+
+                    # 2.5 Fresh On-Disk Manifest Generation & Anti-Fabrication Cross-Examination
+                    disk_src_manifest = SkillPackageManifest.from_directory(m_cid, str(s_abs))
+                    disk_dst_manifest = SkillPackageManifest.from_directory(m_cid, str(dest_on_disk))
+
+                    # Cross-examine supplied source manifest against disk source
+                    for rel_p in disk_src_manifest.files:
+                        if rel_p not in src_manifest.files:
+                            violations.append(GateViolation(
+                                gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                                entity_id=m_cid,
+                                rule="MANIFEST_OMITTED_FILE",
+                                message=f"Supplied source manifest for skill '{m_cid}' omits real file '{rel_p}' found on disk.",
+                                context={"skill_id": m_cid, "file": rel_p},
+                            ))
+
+                    for rel_p in src_manifest.files:
+                        if rel_p not in disk_src_manifest.files:
+                            violations.append(GateViolation(
+                                gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                                entity_id=m_cid,
+                                rule="MANIFEST_PHANTOM_FILE",
+                                message=f"Supplied source manifest for skill '{m_cid}' lists phantom file '{rel_p}' not present on disk.",
+                                context={"skill_id": m_cid, "file": rel_p},
+                            ))
+
+                    for rel_p, asset in src_manifest.files.items():
+                        if rel_p in disk_src_manifest.files:
+                            disk_asset = disk_src_manifest.files[rel_p]
+                            if asset.sha256 != disk_asset.sha256 or asset.size_bytes != disk_asset.size_bytes:
+                                violations.append(GateViolation(
+                                    gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                                    entity_id=m_cid,
+                                    rule="FABRICATED_MANIFEST_CHECKSUM",
+                                    message=f"Supplied source manifest for skill '{m_cid}' has checksum/size mismatch for '{rel_p}': manifest={asset.sha256[:8]}, disk={disk_asset.sha256[:8]}.",
+                                    context={"skill_id": m_cid, "file": rel_p, "manifest_sha256": asset.sha256, "disk_sha256": disk_asset.sha256},
+                                ))
+
+                    # Cross-examine supplied destination manifest against disk destination
+                    for rel_p in disk_dst_manifest.files:
+                        if rel_p not in dst_manifest.files:
+                            violations.append(GateViolation(
+                                gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                                entity_id=m_cid,
+                                rule="MANIFEST_OMITTED_FILE",
+                                message=f"Supplied destination manifest for skill '{m_cid}' omits real file '{rel_p}' found on disk ({dest_type}).",
+                                context={"skill_id": m_cid, "file": rel_p, "dest_type": dest_type},
+                            ))
+
+                    for rel_p in dst_manifest.files:
+                        if rel_p not in disk_dst_manifest.files:
+                            violations.append(GateViolation(
+                                gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                                entity_id=m_cid,
+                                rule="MANIFEST_PHANTOM_FILE",
+                                message=f"Supplied destination manifest for skill '{m_cid}' lists phantom file '{rel_p}' not present on disk ({dest_type}).",
+                                context={"skill_id": m_cid, "file": rel_p, "dest_type": dest_type},
+                            ))
+
+                    for rel_p, asset in dst_manifest.files.items():
+                        if rel_p in disk_dst_manifest.files:
+                            disk_asset = disk_dst_manifest.files[rel_p]
+                            if asset.sha256 != disk_asset.sha256 or asset.size_bytes != disk_asset.size_bytes:
+                                violations.append(GateViolation(
+                                    gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                                    entity_id=m_cid,
+                                    rule="FABRICATED_MANIFEST_CHECKSUM",
+                                    message=f"Supplied destination manifest for skill '{m_cid}' has checksum/size mismatch for '{rel_p}': manifest={asset.sha256[:8]}, disk={disk_asset.sha256[:8]}.",
+                                    context={"skill_id": m_cid, "file": rel_p, "manifest_sha256": asset.sha256, "disk_sha256": disk_asset.sha256},
+                                ))
+
+                    # 2.6 Full 1-to-1 Preservation Comparison between disk source and disk destination
+                    cmp_disk_violations = compare_package_manifests(disk_src_manifest, disk_dst_manifest)
+                    violations.extend(cmp_disk_violations)
+
+                    # Also compare supplied manifests, deduplicating identical violations
+                    cmp_supplied_violations = compare_package_manifests(src_manifest, dst_manifest)
+                    existing_signatures = {(v.rule, v.entity_id, v.message) for v in violations}
+                    for v in cmp_supplied_violations:
+                        if (v.rule, v.entity_id, v.message) not in existing_signatures:
+                            violations.append(v)
 
         # 3. Source-to-Destination manifest audit (when manifests supplied in static audit mode)
         elif source_manifests:
@@ -1402,6 +1726,8 @@ class MigrationGateRunner:
         migration_manifest: Optional[Dict[str, Any]] = None,
         planned_moves: Optional[List[Dict[str, str]]] = None,
         is_migration_authorization: bool = False,
+        staging_root: Optional[str] = None,
+        staging_directories: Optional[Dict[str, str]] = None,
     ):
         self.registry = registry
         self.repository_root = repository_root or os.getcwd()
@@ -1412,6 +1738,8 @@ class MigrationGateRunner:
         self.migration_manifest = migration_manifest
         self.planned_moves = planned_moves
         self.is_migration_authorization = is_migration_authorization
+        self.staging_root = staging_root
+        self.staging_directories = staging_directories
 
     def run_gate(self, gate_id: GateID) -> GateResult:
         """Runs a single migration gate by ID."""
@@ -1430,6 +1758,8 @@ class MigrationGateRunner:
                 migration_manifest=self.migration_manifest,
                 planned_moves=self.planned_moves,
                 is_migration_authorization=self.is_migration_authorization,
+                staging_root=self.staging_root,
+                staging_directories=self.staging_directories,
             )
         elif gate_id == GateID.GATE_5_REFERENCE_CLOSURE:
             return MigrationGateEvaluator.evaluate_gate_5_reference_closure(self.registry)

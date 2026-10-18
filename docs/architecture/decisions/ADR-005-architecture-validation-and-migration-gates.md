@@ -112,19 +112,31 @@ flowchart TD
 - **Failure Mode**: Cyclic dependencies, alias chains, invalid overlay targets, or composite primitives fail Gate 3 (`FAILED`).
 
 ### 3.4 Gate 4: Resource & Asset Preservation (Zero Data Loss)
-- **Objective**: Ensure that 100% of physical assets, executables, scripts, templates, and documentation are accounted for and protected from loss or truncation during migration.
+- **Objective**: Ensure that 100% of physical assets, executables, scripts, templates, and documentation are accounted for, independently verified against real disk files, and protected from loss, tampering, or truncation during migration.
 - **Rules**:
-  1. **Static Package Inventory Audit**: Every physical skill package directory must contain a valid, non-empty `SKILL.md` (`size > 0`). All auxiliary resources (under `scripts/`, `references/`, `assets/`, `schemas/`) are checked for 0-byte truncation (`TRUNCATED_ASSET_FILE`).
+  1. **Static Package Inventory Audit**: Every physical skill package directory must contain a valid, non-empty `SKILL.md` (`size > 0`). All auxiliary resources (under `scripts/`, `references/`, `assets/`, `schemas/`) are checked for 0-byte truncation (`TRUNCATED_ASSET_FILE`). Skills undergoing planned moves in migration authorization mode are audited against their planned migration evidence to avoid false existence errors before physical moves.
   2. **Migration Preflight Authorization Boundary**: Gate 4 strictly distinguishes a static directory audit from migration preflight authorization. When a physical migration is planned (`is_migration_authorization=True`, `planned_moves`, or `migration_manifest`), complete source and destination package manifests (`SkillPackageManifest`) are mandatory for every planned move:
      - Missing source manifest fails closed with `MISSING_SOURCE_MANIFEST`.
      - Missing destination manifest fails closed with `MISSING_DESTINATION_MANIFEST`.
      - Absence of planned moves in authorization mode fails closed with `MISSING_MIGRATION_MANIFEST`.
      - Gate 4 will **never** silently fall back to directory existence checks when authorizing physical moves.
-  3. **Deterministic Recursive File Inventory & SHA-256 Comparisons**: For each authorized move, source and destination manifests are compared:
-     $$\text{SHA-256}(\text{Asset}_{\text{source}}) \equiv \text{SHA-256}(\text{Asset}_{\text{dest}})$$
-     Any file missing in the destination (`MISSING_SUPPORTING_ASSET`), unexpected extra file (`UNEXPECTED_DESTINATION_FILE`), or checksum mismatch (`RESOURCE_CHECKSUM_MISMATCH`) fails Gate 4 immediately.
-  4. **Zero Untracked Files**: Migration plans must track every file in the source directory. Any orphaned or untracked file triggers an immediate error.
-- **Failure Mode**: Missing manifests during authorization, missing `SKILL.md`, truncated files, missing auxiliary support assets, or SHA-256 checksum mismatches fail Gate 4 (`FAILED`).
+  3. **Three-Tier Manifest & File Evidence Verification Model**:
+     - **Tier 1 (Manifest Presence & Alignment)**: Complete manifests must be supplied and verify that manifest `skill_id` matches the planned move (`MANIFEST_IDENTITY_MISMATCH`) and canonical paths align (`MANIFEST_PATH_MISMATCH`). Two internally consistent manifests cannot certify themselves.
+     - **Tier 2 (Fresh On-Disk Generation & Cross-Examination)**: Fresh recursive file inventories and SHA-256 digests are independently generated directly from actual on-disk files. The independently computed inventories are cross-examined against the supplied manifests:
+       - Any checksum divergence or file size mismatch fails with `FABRICATED_MANIFEST_CHECKSUM` (preventing forged or stale manifests).
+       - Any file present on disk but omitted from the manifest fails with `MANIFEST_OMITTED_FILE`.
+       - Any file listed in the manifest but absent from disk fails with `MANIFEST_PHANTOM_FILE`.
+     - **Tier 3 (Source-to-Destination Preservation)**: Deterministic 1-to-1 comparison between source disk inventory and destination disk inventory:
+       $$\text{SHA-256}(\text{Asset}_{\text{source}}) \equiv \text{SHA-256}(\text{Asset}_{\text{dest}})$$
+       Any file missing in the destination fails with `MISSING_SUPPORTING_ASSET`, any altered content fails with `RESOURCE_CHECKSUM_MISMATCH`, and any unexpected unmapped asset in the destination fails with `UNEXPECTED_DESTINATION_FILE`.
+  4. **Non-Destructive Staging Preflight Pattern**:
+     - Preflight validation is strictly non-destructive. If a planned destination does not yet exist in the live catalog, the candidate package must be staged in an explicitly designated, isolated staging directory (`staged_dir`, `staging_directories`, or under `staging_root`).
+     - If neither the live destination directory nor an authentic staged package exists on disk, Gate 4 fails closed with `MISSING_DESTINATION_EVIDENCE`.
+     - Preflight evaluation never creates, moves, renames, copies, or deletes live catalog files.
+  5. **Canonical Path Containment & Security Invariants**:
+     - All source, destination, and staging paths must resolve strictly within the repository root or authorized staging roots.
+     - Traversal sequences (`..`), unauthorized absolute filesystem paths, or symlinks pointing outside allowed boundaries are rejected immediately (`PATH_TRAVERSAL_DETECTED`).
+- **Failure Mode**: Missing manifests, fabricated or stale checksums, omitted or phantom files, path traversal escapes, missing destination evidence, truncated files, or checksum divergences fail Gate 4 (`FAILED`).
 
 ### 3.5 Gate 5: Reference Closure & Dependency Completeness (INV-7)
 - **Objective**: Ensure that all referenced identifiers across all relationship types resolve to active entries in the authoritative catalog registry.
