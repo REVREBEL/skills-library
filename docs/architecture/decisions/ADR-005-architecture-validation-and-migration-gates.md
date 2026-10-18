@@ -89,16 +89,17 @@ flowchart TD
 - **Failure Mode**: Any duplicate ID or structural syntax error halts the pipeline immediately (`FAILED`).
 
 ### 3.2 Gate 2: Family Qualification & Boundary Adherence (INV-8)
-- **Objective**: Enforce the REV-128 physical ownership layout and REV-129 platform family governance by consuming the approved census-backed `FamilyCandidateEvaluator` qualification outcomes.
+- **Objective**: Enforce the REV-128 physical ownership layout and REV-129 platform family governance by directly executing independent, census-backed `FamilyCandidateEvaluator` qualification validation.
 - **Rules**:
   1. **Tier 1 Physical Hubs**: Platform families (e.g. `github`, `webflow`, `figma`) must satisfy all 4 qualification gates with verified evidence:
      - Gate 1: Official public tool surface cohesion (CLI, MCP, REST API, SDK).
      - Gate 2: Shared platform configuration/credentials/primitives.
      - Gate 3: Critical mass ($\ge 3$ distinct capabilities across $\ge 2$ functional categories, OR $\ge 5$ distinct, tightly coupled operations in 1 complex functional domain; $\ge 5$ capabilities for internal meta-families).
      - Gate 4: Coordinated release and version lifecycle.
-  2. **Physical Boundary Hold**: Only families that have formally qualified for Tier 1 via `FamilyCandidateEvaluator` may establish physical hubs in `library/tools-and-platforms/<family-slug>/`. Any skill placed in a platform hub must declare membership in that approved Tier 1 family.
-  3. **Tier 2 Logical Families & Unadjudicated Candidates**: Logical cross-cutting groupings (e.g. `supabase`, `browser-automation`) and candidates pending adjudication (e.g. `notebooklm`) remain purely virtual routers anchored in functional domain directories (`library/<category>/<subcategory>/`) and are strictly prohibited from creating physical directories under `tools-and-platforms/`.
-  4. **Direction-Neutral Hold & Alias Protection**: Candidate duplicate pairs (such as the 15 GitHub duplicate pairs) must remain direction-neutral until explicit semantic adjudication. Converting an unadjudicated candidate into an alias without documented adjudication is rejected, regardless of lifecycle status (`active`, `deprecated`, or otherwise).
+  2. **Authoritative Census Cross-Examination**: Gate 2 does not trust declared tier strings or static lists; it invokes `FamilyCandidateEvaluator.evaluate_from_ledger(family_slug, census=census_inst)` against the authoritative semantic role census (`audit/taxonomy-census/semantic-role-census.json`). If evaluation raises an error, returns `PENDING_ADJUDICATION` (e.g. `notebooklm`), or does not establish `TIER_1_PLATFORM_HUB`, Gate 2 fails closed (`UNQUALIFIED_FAMILY_PHYSICAL_HUB`).
+  3. **Physical Boundary Hold**: Only families that have formally qualified for Tier 1 via `FamilyCandidateEvaluator` may establish physical hubs in `library/tools-and-platforms/<family-slug>/`. Any skill placed in a platform hub must declare membership in that approved Tier 1 family.
+  4. **Tier 2 Logical Families & Unadjudicated Candidates**: Logical cross-cutting groupings (e.g. `supabase`, `browser-automation`) and candidates pending adjudication (e.g. `notebooklm`) remain purely virtual routers anchored in functional domain directories (`library/<category>/<subcategory>/`) and are strictly prohibited from creating physical directories under `tools-and-platforms/`.
+  5. **Direction-Neutral Hold & Ledger-Backed Duplicate Protection**: Candidate duplicate pairs (such as the 15 GitHub duplicate pairs) are identified by matching against `DuplicateCandidateRegistry.CANDIDATE_HYPOTHESES` (matching candidate canonical IDs, leaf names, legacy paths, platform paths, and tags). An untagged, renamed, or legacy candidate pair cannot bypass protection. Converting an unadjudicated candidate into an alias without documented adjudication is rejected (`UNADJUDICATED_DUPLICATE_ALIAS`), regardless of lifecycle status (`active`, `deprecated`, or otherwise).
 - **Failure Mode**: Placement of skills in unqualified platform directories, unevidenced Tier 1 qualification claims, or premature duplicate alias conversion halts the migration (`FAILED`).
 
 ### 3.3 Gate 3: Graph Topology, Acyclicity & Alias Purity (INV-1, INV-3, INV-4, INV-5)
@@ -113,11 +114,17 @@ flowchart TD
 ### 3.4 Gate 4: Resource & Asset Preservation (Zero Data Loss)
 - **Objective**: Ensure that 100% of physical assets, executables, scripts, templates, and documentation are accounted for and protected from loss or truncation during migration.
 - **Rules**:
-  1. **Core Package File**: Every physical skill directory must contain a valid, non-empty `SKILL.md` (`size > 0`).
-  2. **Support Asset Manifest**: All auxiliary resources (scripts under `scripts/`, reference data under `references/`, assets under `assets/`, schemas under `schemas/`) must be recursively inventoried with SHA-256 integrity digests and byte sizes.
-  3. **Source-to-Destination Preservation & Verification**: When migration plans or manifests are evaluated, complete source and destination file inventories are compared. Any file missing in the destination, truncated, or possessing a mismatched SHA-256 checksum triggers a fatal asset preservation failure.
-  4. **No Unaccounted Files**: Migration plans must track every file in the source directory. Any orphaned, lost, or untracked file triggers an immediate error.
-- **Failure Mode**: Missing `SKILL.md`, truncated files, missing auxiliary support assets, or SHA-256 checksum mismatches fail Gate 4 (`FAILED`).
+  1. **Static Package Inventory Audit**: Every physical skill package directory must contain a valid, non-empty `SKILL.md` (`size > 0`). All auxiliary resources (under `scripts/`, `references/`, `assets/`, `schemas/`) are checked for 0-byte truncation (`TRUNCATED_ASSET_FILE`).
+  2. **Migration Preflight Authorization Boundary**: Gate 4 strictly distinguishes a static directory audit from migration preflight authorization. When a physical migration is planned (`is_migration_authorization=True`, `planned_moves`, or `migration_manifest`), complete source and destination package manifests (`SkillPackageManifest`) are mandatory for every planned move:
+     - Missing source manifest fails closed with `MISSING_SOURCE_MANIFEST`.
+     - Missing destination manifest fails closed with `MISSING_DESTINATION_MANIFEST`.
+     - Absence of planned moves in authorization mode fails closed with `MISSING_MIGRATION_MANIFEST`.
+     - Gate 4 will **never** silently fall back to directory existence checks when authorizing physical moves.
+  3. **Deterministic Recursive File Inventory & SHA-256 Comparisons**: For each authorized move, source and destination manifests are compared:
+     $$\text{SHA-256}(\text{Asset}_{\text{source}}) \equiv \text{SHA-256}(\text{Asset}_{\text{dest}})$$
+     Any file missing in the destination (`MISSING_SUPPORTING_ASSET`), unexpected extra file (`UNEXPECTED_DESTINATION_FILE`), or checksum mismatch (`RESOURCE_CHECKSUM_MISMATCH`) fails Gate 4 immediately.
+  4. **Zero Untracked Files**: Migration plans must track every file in the source directory. Any orphaned or untracked file triggers an immediate error.
+- **Failure Mode**: Missing manifests during authorization, missing `SKILL.md`, truncated files, missing auxiliary support assets, or SHA-256 checksum mismatches fail Gate 4 (`FAILED`).
 
 ### 3.5 Gate 5: Reference Closure & Dependency Completeness (INV-7)
 - **Objective**: Ensure that all referenced identifiers across all relationship types resolve to active entries in the authoritative catalog registry.

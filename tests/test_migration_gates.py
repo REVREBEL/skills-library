@@ -362,6 +362,69 @@ class TestGate2FamilyQualification(unittest.TestCase):
         res = MigrationGateEvaluator.evaluate_gate_2_family_qualification(reg)
         self.assertTrue(res.is_passed)
 
+    def test_gate2_rejects_pending_adjudication_family_in_tools_and_platforms(self):
+        """Verifies that a family with PENDING_ADJUDICATION status (e.g. NotebookLM) cannot form a physical hub."""
+        entry = RegistryEntry(
+            canonical_id="notebooklm:query",
+            urn="urn:skill:notebooklm:query",
+            name="query",
+            role="capability",
+            description="NotebookLM Query",
+            domain="tools-and-platforms",
+            category="tools-and-platforms",
+            subcategory="notebooklm",
+            owner="core",
+            families=["notebooklm"],
+            physical_path="library/tools-and-platforms/notebooklm/query",
+            status="active",
+            relationships={"belongs_to_family": "notebooklm"},
+        )
+        reg = _build_test_registry([entry])
+        res = MigrationGateEvaluator.evaluate_gate_2_family_qualification(reg)
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "UNQUALIFIED_FAMILY_PHYSICAL_HUB" for v in res.violations))
+        self.assertTrue(any("not an approved Tier 1 platform hub" in v.message for v in res.violations))
+
+    def test_gate2_rejects_untagged_renamed_duplicate_candidate_alias(self):
+        """Verifies that an untagged, renamed duplicate candidate alias (e.g. github:general-operations) is rejected without adjudication."""
+        entry = RegistryEntry(
+            canonical_id="github:general-operations",
+            urn="urn:skill:github:general-operations",
+            name="general-operations",
+            role="alias",
+            description="Renamed untagged alias",
+            domain="tools-and-platforms",
+            category="tools-and-platforms",
+            subcategory="github",
+            owner="core",
+            status="active",
+            relationships={"aliased_to": "developer-tools:ops"},
+        )
+        reg = _build_test_registry([entry])
+        res = MigrationGateEvaluator.evaluate_gate_2_family_qualification(reg)
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "UNADJUDICATED_DUPLICATE_ALIAS" for v in res.violations))
+
+    def test_gate2_rejects_untagged_domain_duplicate_candidate_alias(self):
+        """Verifies that an untagged domain duplicate candidate (e.g. development:commit) pointing to github:commit is rejected without adjudication."""
+        entry = RegistryEntry(
+            canonical_id="development:commit",
+            urn="urn:skill:development:commit",
+            name="commit",
+            role="alias",
+            description="Domain duplicate alias candidate",
+            domain="development",
+            category="development",
+            subcategory="git",
+            owner="core",
+            status="deprecated",
+            relationships={"aliased_to": "github:commit"},
+        )
+        reg = _build_test_registry([entry])
+        res = MigrationGateEvaluator.evaluate_gate_2_family_qualification(reg)
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "UNADJUDICATED_DUPLICATE_ALIAS" for v in res.violations))
+
 
 
 class TestGate3GraphTopologyAndAcyclicity(unittest.TestCase):
@@ -774,6 +837,109 @@ class TestGate4ResourcePreservation(unittest.TestCase):
         )
         self.assertTrue(res.is_passed)
         self.assertEqual(len(res.violations), 0)
+
+    def test_gate4_migration_authorization_fails_when_source_manifest_missing(self):
+        """Verifies that Gate 4 fails closed in migration authorization mode when source manifest is missing."""
+        entry = RegistryEntry(
+            canonical_id="dev:commit",
+            urn="urn:skill:dev:commit",
+            name="commit",
+            role="capability",
+            description="Commit",
+            domain="dev",
+            category="dev",
+            subcategory="git",
+            owner="core",
+            physical_path="library/dev/git/commit",
+        )
+        reg = _build_test_registry([entry])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            planned_moves=[{"skill_id": "dev:commit", "source_path": "library/dev/git/commit", "destination_path": "library/tools-and-platforms/git/commit"}],
+            is_migration_authorization=True,
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "MISSING_SOURCE_MANIFEST" for v in res.violations))
+        self.assertTrue(any("missing source package manifest" in v.message for v in res.violations))
+
+    def test_gate4_migration_authorization_fails_when_destination_manifest_missing(self):
+        """Verifies that Gate 4 fails closed in migration authorization mode when destination manifest is missing."""
+        src_dir = Path(self.temp_dir) / "src" / "commit"
+        src_dir.mkdir(parents=True)
+        (src_dir / "SKILL.md").write_text("# Commit Skill\n")
+        src_manifest = SkillPackageManifest.from_directory("dev:commit", str(src_dir))
+
+        entry = RegistryEntry(
+            canonical_id="dev:commit",
+            urn="urn:skill:dev:commit",
+            name="commit",
+            role="capability",
+            description="Commit",
+            domain="dev",
+            category="dev",
+            subcategory="git",
+            owner="core",
+            physical_path=str(src_dir),
+        )
+        reg = _build_test_registry([entry])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:commit": src_manifest},
+            planned_moves=[{"skill_id": "dev:commit", "source_path": str(src_dir), "destination_path": "nonexistent/dest/path"}],
+            is_migration_authorization=True,
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "MISSING_DESTINATION_MANIFEST" for v in res.violations))
+        self.assertTrue(any("missing destination package manifest" in v.message for v in res.violations))
+
+    def test_gate4_migration_authorization_fails_when_no_manifest_provided_in_auth_mode(self):
+        """Verifies that Gate 4 fails closed in migration authorization mode when no planned moves or migration manifest are provided."""
+        reg = _build_test_registry([])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            is_migration_authorization=True,
+        )
+        self.assertFalse(res.is_passed)
+        self.assertTrue(any(v.rule == "MISSING_MIGRATION_MANIFEST" for v in res.violations))
+
+    def test_gate4_migration_authorization_passes_with_matching_manifests(self):
+        """Verifies that Gate 4 passes migration authorization when planned moves have complete matching manifests."""
+        src_dir = Path(self.temp_dir) / "src" / "commit"
+        dst_dir = Path(self.temp_dir) / "dst" / "commit"
+        src_dir.mkdir(parents=True)
+        dst_dir.mkdir(parents=True)
+        (src_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (dst_dir / "SKILL.md").write_text("# Commit Skill\n")
+
+        src_manifest = SkillPackageManifest.from_directory("dev:commit", str(src_dir))
+        dst_manifest = SkillPackageManifest.from_directory("dev:commit", str(dst_dir))
+
+        entry = RegistryEntry(
+            canonical_id="dev:commit",
+            urn="urn:skill:dev:commit",
+            name="commit",
+            role="capability",
+            description="Commit",
+            domain="dev",
+            category="dev",
+            subcategory="git",
+            owner="core",
+            physical_path=str(dst_dir),
+        )
+        reg = _build_test_registry([entry])
+        res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+            reg,
+            repository_root=self.temp_dir,
+            source_manifests={"dev:commit": src_manifest},
+            destination_manifests={"dev:commit": dst_manifest},
+            planned_moves=[{"skill_id": "dev:commit", "source_path": str(src_dir), "destination_path": str(dst_dir)}],
+            is_migration_authorization=True,
+        )
+        self.assertTrue(res.is_passed)
+
 
 
 

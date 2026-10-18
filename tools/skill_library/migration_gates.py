@@ -36,12 +36,16 @@ from .object_model import (
     SkillRole,
 )
 from .family_contract import (
+    AuthoritativeCensus,
     EvidenceStatus,
     FamilyCandidateEvaluator,
     FamilyEligibilityError,
     FamilyQualificationGate,
     FamilyQualificationRecord,
     FamilyTier,
+)
+from .physical_layout import (
+    DuplicateCandidateRegistry,
 )
 from .registry_contract import (
     AliasResolver,
@@ -614,6 +618,28 @@ class MigrationGateEvaluator:
         t0 = time.time()
         violations: List[GateViolation] = []
 
+        # Load authoritative census instance for independent cross-examination
+        census_inst = None
+        try:
+            census_inst = AuthoritativeCensus.get_instance()
+        except Exception:
+            census_inst = None
+
+        # Build candidate duplicate lookup sets from DuplicateCandidateRegistry
+        candidate_hypotheses = DuplicateCandidateRegistry.CANDIDATE_HYPOTHESES
+        candidate_canonical_ids = {h.candidate_canonical_id for h in candidate_hypotheses.values()}
+        candidate_leaf_names = set(candidate_hypotheses.keys())
+        for h in candidate_hypotheses.values():
+            candidate_leaf_names.add(h.leaf_name)
+            if ":" in h.candidate_canonical_id:
+                candidate_leaf_names.add(h.candidate_canonical_id.split(":")[-1])
+        candidate_paths = set()
+        for h in candidate_hypotheses.values():
+            candidate_paths.add(h.legacy_main_path)
+            candidate_paths.add(f"library/{h.legacy_main_path}")
+            candidate_paths.add(h.candidate_platform_path)
+            candidate_paths.add(f"library/{h.candidate_platform_path}")
+
         # 1. Validate platform family physical directory claims
         for cid, entry in sorted(registry.skills.items()):
             path = entry.physical_path or ""
@@ -621,15 +647,14 @@ class MigrationGateEvaluator:
                 parts = path.split("tools-and-platforms/")[-1].split("/")
                 family_slug = parts[0] if parts else ""
 
-                # Verify that the family actually qualifies as a Tier 1 platform hub
-                is_tier_1 = (
-                    family_slug in FamilyCandidateEvaluator.AUTHORITATIVE_TIER_1_PLATFORMS
-                    or family_slug in FamilyCandidateEvaluator.AUTHORITATIVE_TIER_1_META_FAMILIES
-                    or (
-                        family_slug in FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER
-                        and FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER[family_slug].expected_tier == FamilyTier.TIER_1_PLATFORM_HUB
-                    )
-                )
+                # Verify that the family actually qualifies as an approved Tier 1 platform hub
+                # using the approved census-backed evaluation path
+                is_tier_1 = False
+                try:
+                    tier, _, _ = FamilyCandidateEvaluator.evaluate_from_ledger(family_slug, census=census_inst)
+                    is_tier_1 = (tier == FamilyTier.TIER_1_PLATFORM_HUB)
+                except Exception:
+                    is_tier_1 = False
 
                 if not is_tier_1:
                     violations.append(GateViolation(
@@ -638,7 +663,7 @@ class MigrationGateEvaluator:
                         rule="UNQUALIFIED_FAMILY_PHYSICAL_HUB",
                         message=(
                             f"Skill '{cid}' is placed at physical hub 'tools-and-platforms/{family_slug}', "
-                            f"but family '{family_slug}' is not an approved Tier 1 platform hub according to FamilyCandidateEvaluator."
+                            f"but family '{family_slug}' is not an approved Tier 1 platform hub according to census-backed FamilyCandidateEvaluator evaluation."
                         ),
                         context={"family_slug": family_slug, "path": path},
                     ))
@@ -656,28 +681,49 @@ class MigrationGateEvaluator:
             # 2. Direction-neutral duplicate baseline check
             # Any candidate duplicate alias must have an approved adjudication outcome.
             # Rejected regardless of lifecycle status (active, deprecated, draft, etc.)
-            if entry.role == "alias" and (
-                "github" in entry.canonical_id
-                or entry.relationships.get("candidate_pair")
-                or "candidate_duplicate" in entry.tags
-            ):
-                outcome = entry.relationships.get("adjudication_outcome")
-                if not outcome or outcome == DuplicateAdjudicationOutcome.PENDING_ADJUDICATION.value:
-                    status_desc = f"an {entry.status}" if entry.status == "active" else f"a {entry.status}"
-                    violations.append(GateViolation(
-                        gate_id=GateID.GATE_2_FAMILY_QUALIFICATION,
-                        entity_id=cid,
-                        rule="UNADJUDICATED_DUPLICATE_ALIAS",
-                        message=(
-                            f"Duplicate candidate '{cid}' was converted to {status_desc} alias "
-                            f"without semantic adjudication."
-                        ),
-                        context={
-                            "canonical_id": cid,
-                            "status": entry.status,
-                            "adjudication_outcome": outcome,
-                        },
-                    ))
+            # Untagged, renamed candidates from the approved candidate ledger cannot bypass this check.
+            if entry.role == "alias":
+                target_id = entry.relationships.get("aliased_to", "")
+                norm_path = (entry.physical_path or "").strip("/")
+                if norm_path.startswith("library/"):
+                    norm_path_rel = norm_path[len("library/"):]
+                else:
+                    norm_path_rel = norm_path
+
+                entry_leaf = cid.split(":")[-1] if ":" in cid else cid
+                target_leaf = target_id.split(":")[-1] if ":" in target_id else target_id
+
+                is_candidate_pair = (
+                    cid in candidate_canonical_ids
+                    or target_id in candidate_canonical_ids
+                    or entry_leaf in candidate_leaf_names
+                    or target_leaf in candidate_leaf_names
+                    or norm_path in candidate_paths
+                    or norm_path_rel in candidate_paths
+                    or "github" in cid
+                    or "github" in target_id
+                    or bool(entry.relationships.get("candidate_pair"))
+                    or "candidate_duplicate" in entry.tags
+                )
+
+                if is_candidate_pair:
+                    outcome = entry.relationships.get("adjudication_outcome")
+                    if not outcome or outcome == DuplicateAdjudicationOutcome.PENDING_ADJUDICATION.value:
+                        status_desc = f"an {entry.status}" if entry.status == "active" else f"a {entry.status}"
+                        violations.append(GateViolation(
+                            gate_id=GateID.GATE_2_FAMILY_QUALIFICATION,
+                            entity_id=cid,
+                            rule="UNADJUDICATED_DUPLICATE_ALIAS",
+                            message=(
+                                f"Duplicate candidate '{cid}' was converted to {status_desc} alias "
+                                f"without semantic adjudication."
+                            ),
+                            context={
+                                "canonical_id": cid,
+                                "status": entry.status,
+                                "adjudication_outcome": outcome,
+                            },
+                        ))
 
         status = GateStatus.PASSED if not violations else GateStatus.FAILED
         return GateResult(
@@ -831,20 +877,25 @@ class MigrationGateEvaluator:
         source_manifests: Optional[Dict[str, SkillPackageManifest]] = None,
         destination_manifests: Optional[Dict[str, SkillPackageManifest]] = None,
         migration_manifest: Optional[Dict[str, Any]] = None,
+        planned_moves: Optional[List[Dict[str, str]]] = None,
+        is_migration_authorization: bool = False,
     ) -> GateResult:
         """
         Gate 4: Resource & Asset Preservation.
         Verifies that every skill's assets (SKILL.md, scripts, templates, references)
         are tracked and mapped 1-to-1 to prevent accidental data loss.
-        Performs recursive file inventory and SHA-256 integrity verification when source
-        and destination package manifests or migration manifests are provided.
+        Distinguishes between static inventory audit and migration authorization preflight:
+          - In static audit mode: verifies physical existence, valid SKILL.md, and non-empty assets.
+          - In migration authorization mode: requires complete source and destination manifests
+            for every planned physical move. Fails closed (MISSING_SOURCE_MANIFEST / MISSING_DESTINATION_MANIFEST)
+            if manifests are missing, rather than falling back to directory checks.
         """
         t0 = time.time()
         violations: List[GateViolation] = []
         root = repository_root or os.getcwd()
         checked_count = 0
 
-        # 1. Physical package existence and internal asset integrity
+        # 1. Physical package existence and internal asset integrity (Static Inventory Audit)
         for cid, entry in sorted(registry.skills.items()):
             if entry.role == "alias":
                 continue  # Aliases are virtual redirect pointers
@@ -901,8 +952,70 @@ class MigrationGateEvaluator:
                     context={"path": phys_path},
                 ))
 
-        # 2. Source-to-Destination package inventory and SHA-256 verification
-        if source_manifests:
+        # 2. Migration Authorization Preflight Enforcement (Physical Moves)
+        is_migration_mode = is_migration_authorization or (planned_moves is not None) or (migration_manifest is not None)
+        if is_migration_mode:
+            moves: List[Dict[str, Any]] = []
+            if planned_moves:
+                moves.extend(planned_moves)
+            if migration_manifest:
+                raw_moves = migration_manifest.get("moves", migration_manifest) if isinstance(migration_manifest, dict) else migration_manifest
+                if isinstance(raw_moves, list):
+                    moves.extend(raw_moves)
+
+            if not moves:
+                violations.append(GateViolation(
+                    gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                    entity_id="migration_authorization",
+                    rule="MISSING_MIGRATION_MANIFEST",
+                    message="Migration authorization requested but no planned moves or migration manifest provided.",
+                ))
+            else:
+                for move in moves:
+                    m_cid = move.get("skill_id") or move.get("canonical_id") or "unknown"
+                    s_dir = move.get("source_dir") or move.get("source_path")
+                    d_dir = move.get("dest_dir") or move.get("destination_dir") or move.get("destination_path")
+
+                    # In migration authorization, complete source evidence is mandatory: fail closed if missing
+                    src_manifest: Optional[SkillPackageManifest] = None
+                    if source_manifests and m_cid in source_manifests:
+                        src_manifest = source_manifests[m_cid]
+
+                    if not src_manifest:
+                        violations.append(GateViolation(
+                            gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                            entity_id=m_cid,
+                            rule="MISSING_SOURCE_MANIFEST",
+                            message=f"Migration authorization failed: missing source package manifest for planned move of '{m_cid}'.",
+                            context={"move": move},
+                        ))
+                        continue
+
+                    # Complete destination evidence is mandatory: fail closed if missing
+                    dst_manifest: Optional[SkillPackageManifest] = None
+                    if destination_manifests and m_cid in destination_manifests:
+                        dst_manifest = destination_manifests[m_cid]
+                    elif d_dir:
+                        d_abs = os.path.join(root, d_dir) if not os.path.isabs(d_dir) else d_dir
+                        if os.path.exists(d_abs):
+                            dst_manifest = SkillPackageManifest.from_directory(m_cid, d_abs)
+
+                    if not dst_manifest:
+                        violations.append(GateViolation(
+                            gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
+                            entity_id=m_cid,
+                            rule="MISSING_DESTINATION_MANIFEST",
+                            message=f"Migration authorization failed: missing destination package manifest for planned move of '{m_cid}'.",
+                            context={"move": move},
+                        ))
+                        continue
+
+                    # Deterministic recursive file inventory and SHA-256 comparison
+                    cmp_violations = compare_package_manifests(src_manifest, dst_manifest)
+                    violations.extend(cmp_violations)
+
+        # 3. Source-to-Destination manifest audit (when manifests supplied in static audit mode)
+        elif source_manifests:
             for src_cid, src_manifest in sorted(source_manifests.items()):
                 dst_manifest = None
                 if destination_manifests and src_cid in destination_manifests:
@@ -946,22 +1059,6 @@ class MigrationGateEvaluator:
                 if dst_manifest:
                     cmp_violations = compare_package_manifests(src_manifest, dst_manifest)
                     violations.extend(cmp_violations)
-
-        # 3. Direct migration manifest comparison (if provided)
-        if migration_manifest:
-            moves = migration_manifest.get("moves", migration_manifest) if isinstance(migration_manifest, dict) else migration_manifest
-            if isinstance(moves, list):
-                for move in moves:
-                    m_cid = move.get("skill_id", "unknown")
-                    s_dir = move.get("source_dir")
-                    d_dir = move.get("dest_dir")
-                    if s_dir and d_dir:
-                        s_abs = os.path.join(root, s_dir) if not os.path.isabs(s_dir) else s_dir
-                        d_abs = os.path.join(root, d_dir) if not os.path.isabs(d_dir) else d_dir
-                        s_man = SkillPackageManifest.from_directory(m_cid, s_abs)
-                        d_man = SkillPackageManifest.from_directory(m_cid, d_abs)
-                        cmp_violations = compare_package_manifests(s_man, d_man)
-                        violations.extend(cmp_violations)
 
         status = GateStatus.PASSED if not violations else GateStatus.FAILED
         return GateResult(
@@ -1303,6 +1400,8 @@ class MigrationGateRunner:
         source_manifests: Optional[Dict[str, SkillPackageManifest]] = None,
         destination_manifests: Optional[Dict[str, SkillPackageManifest]] = None,
         migration_manifest: Optional[Dict[str, Any]] = None,
+        planned_moves: Optional[List[Dict[str, str]]] = None,
+        is_migration_authorization: bool = False,
     ):
         self.registry = registry
         self.repository_root = repository_root or os.getcwd()
@@ -1311,6 +1410,8 @@ class MigrationGateRunner:
         self.source_manifests = source_manifests
         self.destination_manifests = destination_manifests
         self.migration_manifest = migration_manifest
+        self.planned_moves = planned_moves
+        self.is_migration_authorization = is_migration_authorization
 
     def run_gate(self, gate_id: GateID) -> GateResult:
         """Runs a single migration gate by ID."""
@@ -1327,6 +1428,8 @@ class MigrationGateRunner:
                 source_manifests=self.source_manifests,
                 destination_manifests=self.destination_manifests,
                 migration_manifest=self.migration_manifest,
+                planned_moves=self.planned_moves,
+                is_migration_authorization=self.is_migration_authorization,
             )
         elif gate_id == GateID.GATE_5_REFERENCE_CLOSURE:
             return MigrationGateEvaluator.evaluate_gate_5_reference_closure(self.registry)
