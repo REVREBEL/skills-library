@@ -135,8 +135,9 @@ flowchart TD
      - Preflight evaluation never creates, moves, renames, copies, or deletes live catalog files.
   5. **Canonical Path Containment & Security Invariants**:
      - All source, destination, and staging paths must resolve strictly within the repository root or authorized staging roots.
+     - Staging roots are trusted **only** when supplied through independently approved configuration (`staging_root` or `staging_directories`). A move's `staged_dir` is checked against those authorized boundaries and is never added to the trusted roots automatically.
      - Traversal sequences (`..`), unauthorized absolute filesystem paths, or symlinks pointing outside allowed boundaries are rejected immediately (`PATH_TRAVERSAL_DETECTED`).
-- **Failure Mode**: Missing manifests, fabricated or stale checksums, omitted or phantom files, path traversal escapes, missing destination evidence, truncated files, or checksum divergences fail Gate 4 (`FAILED`).
+- **Failure Mode**: Missing manifests, fabricated or stale checksums, omitted or phantom files, path traversal escapes, unapproved staging locations, missing destination evidence, truncated files, or checksum divergences fail Gate 4 (`FAILED`).
 
 ### 3.5 Gate 5: Reference Closure & Dependency Completeness (INV-7)
 - **Objective**: Ensure that all referenced identifiers across all relationship types resolve to active entries in the authoritative catalog registry.

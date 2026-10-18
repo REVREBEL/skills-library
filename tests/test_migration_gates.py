@@ -1341,6 +1341,60 @@ class TestGate4ResourcePreservation(unittest.TestCase):
         res = runner.run_gate(GateID.GATE_4_RESOURCE_PRESERVATION)
         self.assertTrue(res.is_passed)
 
+    def test_gate4_rejects_staged_dir_outside_authorized_staging_roots(self):
+        """Verifies Gate 4 rejects an otherwise valid package staged outside authorized staging roots."""
+        src_dir = Path(self.temp_dir) / "live" / "git-commit"
+        authorized_staging_root = Path(self.temp_dir) / "authorized_staging"
+        authorized_staging_root.mkdir(parents=True)
+        live_dest_dir = Path(self.temp_dir) / "live" / "tools-and-platforms" / "git" / "commit"
+
+        src_dir.mkdir(parents=True)
+        (src_dir / "SKILL.md").write_text("# Commit Skill\n")
+        (src_dir / "script.sh").write_text("#!/bin/sh\necho 1\n")
+        src_manifest = SkillPackageManifest.from_directory("dev:commit", str(src_dir))
+
+        # Create an otherwise completely valid package staged in an unauthorized external location
+        with tempfile.TemporaryDirectory() as unauthorized_dir:
+            unauthorized_pkg = Path(unauthorized_dir) / "unauthorized_staging" / "commit"
+            unauthorized_pkg.mkdir(parents=True)
+            (unauthorized_pkg / "SKILL.md").write_text("# Commit Skill\n")
+            (unauthorized_pkg / "script.sh").write_text("#!/bin/sh\necho 1\n")
+            dst_manifest = SkillPackageManifest.from_directory("dev:commit", str(unauthorized_pkg))
+
+            reg = _build_test_registry([
+                RegistryEntry(
+                    canonical_id="dev:commit",
+                    urn="urn:skill:dev:commit",
+                    name="commit",
+                    role="capability",
+                    description="Commit",
+                    domain="dev",
+                    category="dev",
+                    subcategory="git",
+                    owner="core",
+                    physical_path=str(live_dest_dir),
+                )
+            ])
+
+            res = MigrationGateEvaluator.evaluate_gate_4_resource_preservation(
+                reg,
+                repository_root=self.temp_dir,
+                source_manifests={"dev:commit": src_manifest},
+                destination_manifests={"dev:commit": dst_manifest},
+                planned_moves=[{
+                    "skill_id": "dev:commit",
+                    "source_path": str(src_dir),
+                    "destination_path": str(live_dest_dir),
+                    "staged_dir": str(unauthorized_pkg),
+                }],
+                is_migration_authorization=True,
+                staging_root=str(authorized_staging_root),
+            )
+
+            self.assertFalse(res.is_passed)
+            self.assertTrue(any(v.rule == "PATH_TRAVERSAL_DETECTED" for v in res.violations))
+            self.assertTrue(any("outside allowed repository and staging roots" in v.message for v in res.violations))
+
 
 
 

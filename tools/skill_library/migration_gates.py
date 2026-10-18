@@ -1105,11 +1105,9 @@ class MigrationGateEvaluator:
                         staged_dir = staging_directories[m_cid]
 
                     # 2.1 Canonical Path Containment & Security Invariant
-                    move_extra_roots = list(extra_roots)
-                    if staged_dir and staged_dir not in move_extra_roots:
-                        move_extra_roots.append(staged_dir)
-
-                    path_valid, path_err = check_path_containment(s_dir, root, move_extra_roots)
+                    # Only trust staging roots supplied through independently approved configuration (staging_root or staging_directories).
+                    # A move's staged_dir must be checked against those roots, never added to them automatically.
+                    path_valid, path_err = check_path_containment(s_dir, root, extra_roots)
                     if not path_valid:
                         violations.append(GateViolation(
                             gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
@@ -1120,7 +1118,7 @@ class MigrationGateEvaluator:
                         ))
                         continue
 
-                    path_valid, path_err = check_path_containment(d_dir, root, move_extra_roots)
+                    path_valid, path_err = check_path_containment(d_dir, root, extra_roots)
                     if not path_valid:
                         violations.append(GateViolation(
                             gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
@@ -1132,7 +1130,7 @@ class MigrationGateEvaluator:
                         continue
 
                     if staged_dir:
-                        path_valid, path_err = check_path_containment(staged_dir, root, move_extra_roots)
+                        path_valid, path_err = check_path_containment(staged_dir, root, extra_roots)
                         if not path_valid:
                             violations.append(GateViolation(
                                 gate_id=GateID.GATE_4_RESOURCE_PRESERVATION,
