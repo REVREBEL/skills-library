@@ -23,7 +23,7 @@ The objective of **REV-132** is to replace the pre-architectural restructuring t
 This roadmap provides:
 1. **Full Traceability to Historical Evidence**: All 2,103 historical Phase 01–12 records in `audit/rebuild-phase-1-12/` are mapped to modern canonical identities without rewriting historical audit trails.
 2. **Replacement of Naive Duplicate Cleanup**: The held 470-group / 488-loser duplicate plan is superseded by semantic, gate-governed duplicate adjudication (Gate 3), preserving the 15 unresolved GitHub duplicate pairs in direction-neutral status.
-3. **6 Sequential, Gated Migration Phases**: Every physical and logical operation is tied 1-to-1 to the 9 formal validation gates established in ADR-005.
+3. **6 Sequential, Gated Migration Phases**: Every physical and logical operation is tied to the 9 formal validation gates established in ADR-005 (with Gate 7 evaluated as a baseline compilation check in Phase 01 and verified as a final idempotency check in Phase 06).
 4. **Strictly Non-Destructive Preflight Execution**: Physical relocations require cryptographic SHA-256 manifest authenticity, authorized staging directories, and path-containment verification before any live catalog file may be touched.
 
 ```mermaid
@@ -66,7 +66,7 @@ All migration phases strictly enforce the 10 architectural invariants codified i
 | **INV-3** | **Single-Hop Alias Purity** | Every alias points directly to an active canonical capability or workflow. No alias chaining ($a_1 \to a_2 \to t$) or self-loops ($a \to a$). |
 | **INV-4** | **Shallow Overlay Specialization** | Overlays only specialize base capabilities or workflows. Overlays cannot extend overlays ($\text{depth}(o) \le 1$). |
 | **INV-5** | **Leaf Primitive Purity** | Primitives are reusable atomic units and cannot compose other objects ($\text{composed\_of}(p) = \emptyset$). |
-| **INV-6** | **Path Independence** | Canonical identities are `<scope>:<slug>` or formal RFC 8141 URNs `urn:skill:<scope>:<slug>` matching `^[a-z0-9-]+:[a-z0-9-]+$` with zero filesystem path characters (`/`, `\`, `.`). |
+| **INV-6** | **Path Independence** | Canonical keys `<scope>:<slug>` match `^[a-z0-9-]+:[a-z0-9-]+$` with zero filesystem path characters (`/`, `\`, `.`), represented as RFC 8141 URNs `urn:skill:<scope>:<slug>`. |
 | **INV-7** | **Universal Reference Closure** | For every reference edge $e = (u, v) \in E$, the target $v$ exists in authoritative catalog registry $V$. No dangling edges. |
 | **INV-8** | **Family Boundary Separation** | Tier 1 platform hubs require census-backed 4-gate qualification. Tier 2 families are virtual routers in domain trees. Unadjudicated duplicates remain direction-neutral. |
 | **INV-9** | **Transitive Materialization Completeness** | Any materialized project bundle $\mathcal{B}(S)$ must contain all transitive prerequisites: $\forall s \in \mathcal{B}(S), \text{Dependencies}(s) \subseteq \mathcal{B}(S)$. |
@@ -254,7 +254,7 @@ The following matrix maps each of the 9 formal migration gates to its primary ph
 | **4** | `gate_4_resource_preservation` | Phase 04 | Zero Loss | `evaluate_gate_4_resource_preservation()` | `MISSING_SOURCE_MANIFEST`, `FABRICATED_MANIFEST_CHECKSUM`, `RESOURCE_CHECKSUM_MISMATCH`, `PATH_TRAVERSAL_DETECTED` |
 | **5** | `gate_5_reference_closure` | Phase 05 | INV-7 | `evaluate_gate_5_reference_closure()` | `DANGLING_DEPENDENCY_REFERENCE`, `DANGLING_COMPOSITION_REFERENCE`, `DANGLING_ALIAS_TARGET` |
 | **6** | `gate_6_view_reconciliation` | Phase 05 | Router Rules | `evaluate_gate_6_view_reconciliation()` | `UNMAPPED_CATALOG_ENTRY`, `ABSOLUTE_PATH_IN_ROUTER`, `BROKEN_RELATIVE_LINK` |
-| **7** | `gate_7_deterministic_compilation` | Phase 06 | INV-10 | `evaluate_gate_7_deterministic_compilation()` | `NON_DETERMINISTIC_REGISTRY_COMPILATION`, `NON_DETERMINISTIC_SEARCH_INDEX` |
+| **7** | `gate_7_deterministic_compilation` | Phase 01 (baseline), Phase 06 (final) | INV-10 | `evaluate_gate_7_deterministic_compilation()` | `NON_DETERMINISTIC_REGISTRY_COMPILATION`, `NON_DETERMINISTIC_SEARCH_INDEX` |
 | **8** | `gate_8_project_materialization` | Phase 06 | INV-9 | `evaluate_gate_8_project_materialization()` | `MISSING_TRANSITIVE_DEPENDENCY`, `RUNTIME_NAME_COLLISION` |
 | **9** | `gate_9_publication_preflight` | Phase 06 | Safety | `evaluate_gate_9_publication_preflight()` | `PROTECTED_ASSETS_DIRTY`, `MISSING_ROLLBACK_MANIFEST`, `TARGET_PERMISSION_DENIED` |
 
