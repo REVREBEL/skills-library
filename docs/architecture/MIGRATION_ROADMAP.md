@@ -1,11 +1,11 @@
 # Skills Library Implementation Roadmap & Migration Plan
 
-- **Status**: Approved & Authoritative
+- **Status**: Proposed, Pending REV-132 Approval
 - **Date**: 2026-10-18
 - **Work Order**: REV-132 (`9d8480d2-d995-44e0-b185-e869770d7346`)
 - **Supersedes**: Legacy Rebuild Tasks (Phases 01–13) & Held Duplicate Plan (REV-125)
 - **Preceding Architectural Decisions**:
-  - [REV-126 / REV-150: Semantic Role Census](audit/taxonomy-census/semantic-role-census.json)
+  - [REV-126 / REV-150: Semantic Role Census](../../audit/taxonomy-census/semantic-role-census.json)
   - [ADR-001: Path-Independent Canonical Identity Contract](decisions/ADR-001-path-independent-canonical-identity.md) (REV-127)
   - [ADR-002: Physical Ownership Model](decisions/ADR-002-physical-ownership-model.md) (REV-128)
   - [ADR-003: Platform Family Eligibility & Provider-Adapter Implementation Rules](decisions/ADR-003-family-eligibility-and-provider-adapters.md) (REV-129)
@@ -205,17 +205,21 @@ sequenceDiagram
 ---
 
 ### Phase 05: Multi-View Router Generation & Universal Reference Closure
-- **Objective**: Deterministically compile multi-view router projections and inverted token search indexes while guaranteeing universal reference closure across the entire catalog.
+- **Objective**: Deterministically compile all four ADR-004 discovery projection views, generated router hierarchies, and inverted token search indexes while guaranteeing universal reference closure across the entire catalog. Treat overlays and cross-cutting workflow packs as additional semantic projections and content structures.
 - **Enforced Gates**: **Gate 5** (Reference Closure & Dependencies) and **Gate 6** (Generated-View Reconciliation & Router Integrity).
 - **Key Work**:
   1. Verify that every identifier in `depends_on`, `composed_of`, `extends`, `adapts`, and `aliased_to` resolves to an active catalog entry ($u \to \emptyset$ is fatal).
-  2. Generate 3-view router projections deterministically:
-     - View 1: Functional Domain Hierarchy (`library/<category>/<subcategory>/SKILL.md`)
-     - View 2: Platform Family Hubs (`library/tools-and-platforms/<family-slug>/SKILL.md`)
-     - View 3: Capability Overlays & Cross-Cutting Packs
-  3. Generate inverted token search index (`audit/search-index.json`).
-  4. Enforce 100% relative link purity in markdown routers (rejecting absolute filesystem paths and `file:///` URLs).
-  5. Display execution provider badges (`CLI`, `MCP`, `REST`, `SDK`, `Prompt`) on platform family routers.
+  2. Compile all **4 canonical ADR-004 projection views** via `MultiViewProjector`:
+     - **View 1: Functional / Domain View** (`views/functional-view.json` and domain router `SKILL.md` hierarchy under `library/<category>/<subcategory>/`)
+     - **View 2: Platform / Family View** (`views/family-view.json`, Tier 1 hub routers `library/tools-and-platforms/<family-slug>/SKILL.md`, and Tier 2 virtual routers `views/routers/family-<family-slug>.md`)
+     - **View 3: Semantic Group View** (`views/semantic-group-view.json` for cross-cutting task clusters like `git-automation`, `fullstack-auth`, `database-migrations`)
+     - **View 4: Execution / Provider View** (`views/provider-view.json` indexing runtime transport protocols: `cli`, `mcp`, `rest_api`, `sdk`, `prompt_template`)
+  3. Compile additional semantic projections and content structures:
+     - Capability overlays specializing base capabilities (`extends`)
+     - Cross-cutting composite workflow packs (`composed_of`)
+  4. Generate inverted token search index (`audit/search-index.json`).
+  5. Enforce 100% relative link purity in markdown routers (rejecting absolute filesystem paths and `file:///` URLs).
+  6. Display execution provider badges (`CLI`, `MCP`, `REST`, `SDK`, `Prompt`) on platform family routers.
 - **Completion Gate**: Gates 5 and 6 report `PASSED`; dangling references: 0; forbidden absolute links: 0; catalog coverage: 100%.
 - **Specification**: [`library-rebuild-tasks/phase-05-multi-view-routers-reference-closure.md`](../../library-rebuild-tasks/phase-05-multi-view-routers-reference-closure.md)
 
@@ -228,7 +232,9 @@ sequenceDiagram
   1. Compile `audit/skills-registry.json` and verify bit-for-bit reproducibility across consecutive compilations with pinned timestamps:
      $$\text{SHA-256}(\text{Compilation}_1) \equiv \text{SHA-256}(\text{Compilation}_2)$$
   2. Test standalone project bundle materialization ($\mathcal{B}(S)$), proving transitive dependency closure ($\bigcup \text{Closure}(s)$) and zero missing prerequisites.
-  3. Verify the 6-stage collision-free runtime naming ladder (bare name $\to$ scope $\to$ category $\to$ subcategory $\to$ slug $\to$ hash fallback), proving $|Names| = |Skills|$.
+  3. Verify the collision-free runtime naming ladder implemented in `ProjectMaterializer._generate_flat_runtime_names()` (ADR-004 Section 9.2):
+     $$\text{Natural Name} \longrightarrow \text{Category Prefix} \longrightarrow \text{Canonical Scope} \longrightarrow \text{Scope + Category} \longrightarrow \text{Canonical Slug} \longrightarrow \text{Disambiguated Slug}$$
+     proving $|Names| = |Skills|$ with zero collisions across materialized project bundles.
   4. Perform non-destructive publication preflight to `~/.agents/skills/`, ensuring protected catalog paths (`library/**`, `audit/taxonomy-census/**`) remain completely clean and unmutated.
   5. Generate forward and reverse rollback manifests ($\mathcal{J}_{\text{forward}}$, $\mathcal{J}_{\text{rollback}}$).
 - **Completion Gate**: Gates 7, 8, and 9 report `PASSED`; `MigrationGateReport.all_passed == True`; publication cleared for execution.

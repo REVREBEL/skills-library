@@ -48,13 +48,13 @@ Validate bit-for-bit idempotent catalog compilation, verify that standalone proj
      - Verify transitive dependency closure completeness: $\forall s \in \mathcal{B}(S), \text{Dependencies}(s) \subseteq \mathcal{B}(S)$.
      - Reject bundles with missing transitive prerequisites (`MISSING_TRANSITIVE_DEPENDENCY`).
    - Test flattening hierarchical packages into flat runtime directories:
-     - Apply the **6-stage collision-free naming ladder**:
-       - Stage 1: Bare name (`<name>`)
-       - Stage 2: Scope prefix (`<scope>-<name>`)
-       - Stage 3: Category prefix (`<category>-<name>`)
-       - Stage 4: Subcategory prefix (`<subcategory>-<name>`)
-       - Stage 5: Fully qualified path slug (`<category>-<subcategory>-<name>`)
-       - Stage 6: Deterministic canonical hash fallback (`<name>-<sha256[:8]>`)
+     - Apply the **6-stage collision-free naming ladder** implemented in `ProjectMaterializer._generate_flat_runtime_names()` (ADR-004 Section 9.2):
+       - Stage 1: Natural leaf name (`<name>`, only if strictly unique across all entries in the bundle)
+       - Stage 2: Category prefix (`<category>-<name>`)
+       - Stage 3: Canonical scope prefix (`<scope>-<name>`)
+       - Stage 4: Scope + category prefix (`<scope>-<category>-<name>`, if category exists and differs from scope)
+       - Stage 5: Full canonical ID slug (`<canonical_id>.replace(":", "-")`)
+       - Stage 6: Disambiguated canonical ID slug (`<cid_slug>-bundle-unique`)
      - Prove $|Names| = |Skills|$ with zero collisions across the entire active catalog (`RUNTIME_NAME_COLLISION`).
    - Run `MigrationGateEvaluator.evaluate_gate_8_project_materialization(registry)`. Status must be `PASSED`.
 3. **Execute Runtime Publication Pre-Flight Simulation (Gate 9 Preflight)**:

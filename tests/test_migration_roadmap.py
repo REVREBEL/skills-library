@@ -180,6 +180,67 @@ class TestMigrationRoadmapContracts(unittest.TestCase):
         self.assertIn("SkillPackageManifest", content)
         self.assertIn("non-destructive", content.lower())
 
+    def test_master_roadmap_status_is_proposed_pending_rev132_approval(self):
+        """Verifies master roadmap status is 'Proposed, Pending REV-132 Approval'."""
+        content = self.roadmap_path.read_text(encoding="utf-8")
+        self.assertIn("- **Status**: Proposed, Pending REV-132 Approval", content)
+
+    def test_census_relative_link_resolves_from_docs_architecture(self):
+        """Verifies that the relative census link in MIGRATION_ROADMAP.md resolves correctly from docs/architecture/."""
+        content = self.roadmap_path.read_text(encoding="utf-8")
+        # Extract markdown link matching semantic-role-census.json
+        match = re.search(r"\[.*?\]\((.*?semantic-role-census\.json)\)", content)
+        self.assertIsNotNone(match, "Semantic role census relative link not found in roadmap")
+        rel_target = match.group(1)
+        resolved_path = (self.roadmap_path.parent / rel_target).resolve()
+        self.assertTrue(resolved_path.exists(), f"Census relative link '{rel_target}' does not resolve: {resolved_path}")
+        self.assertTrue(resolved_path.is_file(), f"Resolved census path is not a file: {resolved_path}")
+
+    def test_phase_05_restores_all_four_adr004_views_and_semantic_projections(self):
+        """Verifies Phase 05 restores all 4 ADR-004 projection views and treats overlays/packs as additional structures."""
+        roadmap_content = self.roadmap_path.read_text(encoding="utf-8")
+        p5_path = self.tasks_dir / "phase-05-multi-view-routers-reference-closure.md"
+        p5_content = p5_path.read_text(encoding="utf-8")
+
+        for content, doc_name in [(roadmap_content, "MIGRATION_ROADMAP.md"), (p5_content, "phase-05 task spec")]:
+            # View 1: Functional / Domain View
+            self.assertIn("views/functional-view.json", content, f"{doc_name} missing functional-view.json")
+            # View 2: Platform / Family View
+            self.assertIn("views/family-view.json", content, f"{doc_name} missing family-view.json")
+            # View 3: Semantic Group View
+            self.assertIn("views/semantic-group-view.json", content, f"{doc_name} missing semantic-group-view.json")
+            # View 4: Execution / Provider View
+            self.assertIn("views/provider-view.json", content, f"{doc_name} missing provider-view.json")
+
+            # Additional semantic projections / content structures
+            self.assertIn("extends", content, f"{doc_name} missing extends capability overlays")
+            self.assertIn("composed_of", content, f"{doc_name} missing composed_of workflow packs")
+
+        # Check virtual family routers and MultiViewProjector references in Phase 05
+        self.assertIn("MultiViewProjector", p5_content)
+        self.assertIn("views/routers/family-", p5_content)
+        self.assertIn("Tier 2", p5_content)
+
+    def test_phase_06_references_project_materializer_runtime_naming_ladder(self):
+        """Verifies Phase 06 references ProjectMaterializer._generate_flat_runtime_names() and the 6-stage candidate ladder."""
+        roadmap_content = self.roadmap_path.read_text(encoding="utf-8")
+        p6_path = self.tasks_dir / "phase-06-compilation-materialization-publication-preflight.md"
+        p6_content = p6_path.read_text(encoding="utf-8")
+
+        for content, doc_name in [(roadmap_content, "MIGRATION_ROADMAP.md"), (p6_content, "phase-06 task spec")]:
+            self.assertIn("ProjectMaterializer._generate_flat_runtime_names()", content,
+                          f"{doc_name} missing ProjectMaterializer._generate_flat_runtime_names() reference")
+            self.assertIn("ADR-004 Section 9.2", content,
+                          f"{doc_name} missing ADR-004 Section 9.2 reference")
+
+        # Verify candidate ladder stages in Phase 06 task spec
+        self.assertIn("Stage 1: Natural leaf name", p6_content)
+        self.assertIn("Stage 2: Category prefix", p6_content)
+        self.assertIn("Stage 3: Canonical scope prefix", p6_content)
+        self.assertIn("Stage 4: Scope + category prefix", p6_content)
+        self.assertIn("Stage 5: Full canonical ID slug", p6_content)
+        self.assertIn("Stage 6: Disambiguated canonical ID slug", p6_content)
+
 
 if __name__ == "__main__":
     unittest.main()

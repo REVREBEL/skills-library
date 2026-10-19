@@ -9,7 +9,7 @@
 
 ## 1. Objective
 
-Deterministically compile multi-view router projections and inverted token search indexes while guaranteeing universal reference closure across all dependencies, compositions, extensions, and aliases in the catalog. Enforce strict relative-path link purity and provider badging across all router documents.
+Deterministically compile all four ADR-004 discovery projection views, generated router hierarchies, and inverted token search indexes while guaranteeing universal reference closure across all dependencies, compositions, extensions, and aliases in the catalog. Treat overlays and cross-cutting workflow packs as additional semantic projections and content structures, and enforce strict relative-path link purity and provider badging across all router documents.
 
 ---
 
@@ -39,25 +39,36 @@ Deterministically compile multi-view router projections and inverted token searc
      - Check each base $b \in \text{extends}(u)$: verify $b \in V$. Dangling overlay target fails with `DANGLING_OVERLAY_TARGET`.
      - Check each target $a \in \text{aliased\_to}(u)$: verify $a \in V$. Dangling alias target fails with `DANGLING_ALIAS_TARGET`.
    - Run `MigrationGateEvaluator.evaluate_gate_5_reference_closure(registry)`. Ensure status is `PASSED`.
-2. **Generate Multi-View Router Projections**:
-   - Execute `MultiViewProjector.generate_projections(registry)`.
-   - **View 1 (Functional Domain Hierarchy)**:
+2. **Generate All Four Canonical ADR-004 Discovery Projections**:
+   - Execute `MultiViewProjector` methods over the catalog registry:
+   - **View 1: Functional / Domain View (`views/functional-view.json`)**:
+     - Hierarchical taxonomy: `domain` $\to$ `category` $\to$ `subcategory` $\to$ skill packages.
      - Generate router `SKILL.md` for each functional category (e.g. `library/development/SKILL.md`, `library/development/backend/SKILL.md`).
      - Group children by subcategory and progressive trigger boundaries.
-   - **View 2 (Platform Family Hubs)**:
+   - **View 2: Platform / Family View (`views/family-view.json`)**:
+     - Platform ecosystem organization: indexes both Tier 1 physical hubs (`library/tools-and-platforms/<family-slug>/`) and Tier 2 logical family members across the catalog.
      - Generate hub `SKILL.md` for each qualified Tier 1 platform family (e.g. `library/tools-and-platforms/github/SKILL.md`).
+     - Generate virtual projected markdown routers for Tier 2 logical families (`views/routers/family-<family-slug>.md`).
      - Display execution provider badges (`CLI`, `MCP`, `REST`, `SDK`, `Prompt`).
-   - **View 3 (Capability Overlays & Semantic Groups)**:
-     - Compile virtual cross-cutting indices and pack definitions.
-3. **Enforce Relative Link Purity in Router Documents**:
+   - **View 3: Semantic Group View (`views/semantic-group-view.json`)**:
+     - Organizes skills into cross-cutting, task-oriented capability clusters (e.g. `git-automation`, `database-migrations`, `seo-optimization`, `fullstack-auth`).
+     - Spans multiple domains to enable high-level workflow orchestrator discovery.
+   - **View 4: Execution / Provider View (`views/provider-view.json`)**:
+     - Organizes capabilities by transport protocol (`cli`, `mcp`, `rest_api`, `sdk`, `prompt_template`).
+     - Enables runtime filtering based on available execution environments and loaded MCP servers.
+3. **Compile Additional Semantic Projections & Content Structures**:
+   - Compile capability overlays specializing base capabilities (`extends`).
+   - Compile cross-cutting composite workflow packs (`composed_of`).
+   - Treat overlays and workflow packs as additional semantic projections and content structures, maintaining distinct separation from the 4 primary discovery views.
+4. **Enforce Relative Link Purity in Router Documents**:
    - Verify that all hyperlinks in generated router documents use strictly relative paths (e.g. `backend/database-migration/SKILL.md` or `../../development/git/SKILL.md`).
    - Reject any absolute filesystem path (`/Users/...`, `C:\...`) with `ABSOLUTE_PATH_IN_ROUTER`.
    - Reject any repository-root pseudo-URL (`file:///...`) with `FORBIDDEN_FILE_PROTOCOL_LINK`.
-4. **Generate Inverted Token Search Index**:
+5. **Generate Inverted Token Search Index**:
    - Run `CatalogCompiler.generate_search_index(registry)`.
    - Index 100% of active skills by name, title, keywords, tags, category, and tokens.
    - Output `audit/search-index.json`.
-5. **Execute Gate 6 Validation**:
+6. **Execute Gate 6 Validation**:
    - Run `MigrationGateEvaluator.evaluate_gate_6_view_reconciliation(registry)`.
    - Confirm 100% catalog coverage across projections.
    - Confirm zero broken links, zero dead routes, and zero forbidden link schemes.
@@ -67,9 +78,15 @@ Deterministically compile multi-view router projections and inverted token searc
 ## 5. Artifacts
 
 Create or update:
+- Canonical projection views:
+  - `views/functional-view.json`
+  - `views/family-view.json`
+  - `views/semantic-group-view.json`
+  - `views/provider-view.json`
 - Root router: `library/SKILL.md`
 - Category and Subcategory routers: `library/<category>/SKILL.md`, `library/<category>/<subcategory>/SKILL.md`
 - Platform Family Hub routers: `library/tools-and-platforms/<family-slug>/SKILL.md`
+- Tier 2 Virtual Family routers: `views/routers/family-<family-slug>.md`
 - Inverted search index: `audit/search-index.json`
 - Reference audit log: `audit/reference-closure-report.json`
 
