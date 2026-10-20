@@ -241,6 +241,40 @@ class TestMigrationRoadmapContracts(unittest.TestCase):
         self.assertIn("Stage 5: Full canonical ID slug", p6_content)
         self.assertIn("Stage 6: Disambiguated canonical ID slug", p6_content)
 
+    def test_migration_ordering_defers_live_cutover_until_post_gate_9(self):
+        """Verifies strict ordering across roadmap, sequence diagram, Phase 04, 05, 06, and cutover."""
+        roadmap_content = self.roadmap_path.read_text(encoding="utf-8")
+        p4_content = (self.tasks_dir / "phase-04-manifest-authenticity-staged-migration.md").read_text(encoding="utf-8")
+        p5_content = (self.tasks_dir / "phase-05-multi-view-routers-reference-closure.md").read_text(encoding="utf-8")
+        p6_content = (self.tasks_dir / "phase-06-compilation-materialization-publication-preflight.md").read_text(encoding="utf-8")
+
+        # 1. Sequence diagram ordering
+        self.assertIn("Phase 04: Manifest Authenticity & Staged Verification (Zero Live Mutation)", roadmap_content)
+        self.assertIn("Phase 05: Multi-View Routers & Reference Closure (Target State)", roadmap_content)
+        self.assertIn("Phase 06: Deterministic Compilation, Materialization & All 9 Gates", roadmap_content)
+        self.assertIn("Post-Gate Cutover & Verification (Explicit Batch Approval Required)", roadmap_content)
+
+        # 2. Phase 04: Zero live mutation, staging only, cutover deferred
+        self.assertIn("Zero Live Modification Invariant", p4_content)
+        self.assertIn("library/**", p4_content)
+        self.assertIn("deferred", p4_content.lower())
+        self.assertNotIn("Atomically move verified packages from staging into target live directories in `library/`", p4_content)
+
+        # 3. Phase 05: Validated against proposed target state
+        self.assertIn("Zero Live Modification Invariant", p5_content)
+        self.assertIn("proposed target state", p5_content.lower())
+
+        # 4. Phase 06 & Roadmap: Post-gate cutover with explicit batch approval, live cutover, post-cutover verification, rollback retention
+        self.assertIn("6.3 Post-Gate Live Cutover, Verification & Rollback Protocol", roadmap_content)
+        self.assertIn("Explicit Batch Approval", roadmap_content)
+        self.assertIn("Atomic Live Cutover", roadmap_content)
+        self.assertIn("Post-Cutover Gate Verification", roadmap_content)
+        self.assertIn("Rollback Capability Retention", roadmap_content)
+
+        self.assertIn("Post-Gate Live Cutover, Verification & Publication", p6_content)
+        self.assertIn("explicit batch approval", p6_content.lower())
+        self.assertIn("post-cutover verification", p6_content.lower())
+
 
 if __name__ == "__main__":
     unittest.main()

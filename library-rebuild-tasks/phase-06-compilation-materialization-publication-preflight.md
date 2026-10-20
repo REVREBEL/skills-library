@@ -67,6 +67,12 @@ Validate bit-for-bit idempotent catalog compilation, verify that standalone proj
    - Run `MigrationGateRunner.run_all_gates()`.
    - Verify that all 9 gates return `PASSED` and `report.all_passed == True`.
    - Output `audit/migration-gate-report.json`.
+5. **Post-Gate Live Cutover, Verification & Publication**:
+   - Require explicit batch approval before initiating any live catalog modifications.
+   - Execute atomic live cutover from authorized staging (`.staging/`) into live destinations in `library/**`.
+   - Immediately re-run `MigrationGateRunner.run_all_gates()` against the live catalog; all 9 gates must pass.
+   - Retain rollback capability ($\mathcal{J}_{\text{rollback}}$) to instantly restore pristine state if post-cutover verification detects any discrepancy.
+   - Execute runtime publication to `~/.agents/skills/` only after live catalog verification is certified.
 
 ---
 

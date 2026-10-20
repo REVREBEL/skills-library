@@ -111,8 +111,8 @@ sequenceDiagram
     autonumber
     participant Dev as Engineering / Agent
     participant Runner as MigrationGateRunner
-    participant Live as library/ (Live Catalog)
     participant Staging as Staging Root (.staging/)
+    participant Live as library/ (Live Catalog)
     participant Runtime as ~/.agents/skills/
 
     Note over Dev,Runner: Phase 01: Canonical Identity & Provenance
@@ -127,19 +127,24 @@ sequenceDiagram
     Dev->>Runner: Evaluate Gate 3 (Graph Topology & Single-Hop Aliases)
     Runner-->>Dev: Gate 3 Passed (Zero Cycles, Zero Alias Chaining)
 
-    Note over Dev,Live: Phase 04: Manifest Authenticity & Staged Migration
-    Dev->>Staging: Stage candidate packages with SkillPackageManifest
-    Dev->>Runner: Evaluate Gate 4 (Three-Tier Manifest & SHA-256 Cross-Exam)
-    Runner-->>Dev: Gate 4 Passed (Authenticity & Path Containment Verified)
-    Dev->>Live: Execute authorized physical moves from Staging
+    Note over Dev,Staging: Phase 04: Manifest Authenticity & Staged Verification (Zero Live Mutation)
+    Dev->>Staging: Prepare manifests & stage candidate packages
+    Dev->>Runner: Evaluate Gate 4 (Three-Tier Manifest & SHA-256 Authenticity)
+    Runner-->>Dev: Gate 4 Passed (Authenticity & Path Containment Verified; Live Untouched)
 
-    Note over Dev,Live: Phase 05: Multi-View Routers & Reference Closure
-    Dev->>Runner: Evaluate Gate 5 & Gate 6 (Routers, Views & Relative Links)
-    Runner-->>Dev: Gate 5 & 6 Passed (100% Reference Closure)
+    Note over Dev,Runner: Phase 05: Multi-View Routers & Reference Closure (Target State)
+    Dev->>Runner: Validate 4 Views, Routers & Closure against Proposed Target State
+    Runner-->>Dev: Gate 5 & 6 Passed (100% Target Reference Closure)
 
-    Note over Dev,Runtime: Phase 06: Compilation, Materialization & Publication
-    Dev->>Runner: Evaluate Gate 7, 8, 9 (Compilation, Collision-Free Ladder, Publication)
-    Runner-->>Dev: Gate 7, 8, 9 Passed (Rollback Manifest Ready)
+    Note over Dev,Runner: Phase 06: Deterministic Compilation, Materialization & All 9 Gates
+    Dev->>Runner: Evaluate Gate 7, 8, 9 & Run Full 9-Gate Catalog Suite
+    Runner-->>Dev: All 9 Gates Passed (Preflight Certified, Rollback Journals Prepared)
+
+    Note over Dev,Live: Post-Gate Cutover & Verification (Explicit Batch Approval Required)
+    Dev->>Dev: Require explicit batch approval
+    Dev->>Live: Execute atomic live cutover from Staging
+    Dev->>Runner: Verify resulting live catalog across all gates
+    Runner-->>Dev: Live catalog verified; retain rollback capability
     Dev->>Runtime: Publish atomic symbolic links to global discovery
 ```
 
@@ -187,46 +192,46 @@ sequenceDiagram
 
 ---
 
-### Phase 04: Manifest Authenticity, Resource Preservation & Staged Physical Migration
-- **Objective**: Execute physical package relocations under strict non-destructive preflight authorization with cryptographic SHA-256 manifest authenticity and path-containment verification.
+### Phase 04: Manifest Authenticity, Resource Preservation & Staged Verification
+- **Objective**: Prepare manifests, stage candidate packages in authorized staging directories, and verify file authenticity and path containment without modifying the live library.
 - **Enforced Gates**: **Gate 4** (Resource & Asset Preservation, Zero Data Loss).
 - **Key Work**:
   1. Authorize physical moves exclusively through complete, matching source and destination `SkillPackageManifest` records.
-  2. Perform Three-Tier Manifest Verification:
+  2. Stage candidate destination packages in an authorized staging directory (`staged_dir` within approved `staging_root`).
+  3. Perform Three-Tier Manifest Evidence Verification (Gate 4):
      - Tier 1: Manifest presence and path alignment.
      - Tier 2: Fresh on-disk recursive SHA-256 inventory generation and cross-examination (rejecting fabricated or stale manifests).
-     - Tier 3: Source-to-destination 1-to-1 checksum comparison ($\text{SHA-256}_{\text{source}} \equiv \text{SHA-256}_{\text{dest}}$).
-  3. Require candidate destination packages to be staged in an authorized staging directory (`staged_dir` within approved `staging_root`) before live catalog moves.
+     - Tier 3: Source-to-destination 1-to-1 checksum comparison ($\text{SHA-256}_{\text{source}} \equiv \text{SHA-256}_{\text{staged\_dest}}$).
   4. Enforce canonical path containment: reject path traversal (`..`), symlinks outside boundaries, or caller self-authorizing staging roots.
-  5. Execute atomic, reversible physical moves from verified staging into live `library/` directories only after Gate 4 authorization passes.
-- **Completion Gate**: Gate 4 reports `PASSED`; 100% of files and checksums accounted for; zero truncated assets; zero untracked live modifications.
+  5. Strictly preserve live catalog files: zero modifications, moves, or deletions in `library/**` during Phase 04. Physical cutover is deferred until all 9 validation gates pass and explicit batch approval is granted.
+- **Completion Gate**: Gate 4 reports `PASSED`; 100% of files and checksums accounted for; zero truncated assets; zero modifications to the live library.
 - **Specification**: [`library-rebuild-tasks/phase-04-manifest-authenticity-staged-migration.md`](../../library-rebuild-tasks/phase-04-manifest-authenticity-staged-migration.md)
 
 ---
 
-### Phase 05: Multi-View Router Generation & Universal Reference Closure
-- **Objective**: Deterministically compile all four ADR-004 discovery projection views, generated router hierarchies, and inverted token search indexes while guaranteeing universal reference closure across the entire catalog. Treat overlays and cross-cutting workflow packs as additional semantic projections and content structures.
+### Phase 05: Multi-View Router Generation & Universal Reference Closure (Target State)
+- **Objective**: Deterministically validate all four ADR-004 discovery projection views, generated router hierarchies, dependencies, and inverted token search indexes while guaranteeing universal reference closure against the proposed target state. Treat overlays and cross-cutting workflow packs as additional semantic projections and content structures.
 - **Enforced Gates**: **Gate 5** (Reference Closure & Dependencies) and **Gate 6** (Generated-View Reconciliation & Router Integrity).
 - **Key Work**:
-  1. Verify that every identifier in `depends_on`, `composed_of`, `extends`, `adapts`, and `aliased_to` resolves to an active catalog entry ($u \to \emptyset$ is fatal).
-  2. Compile all **4 canonical ADR-004 projection views** via `MultiViewProjector`:
+  1. Verify universal reference closure against proposed target state: every identifier in `depends_on`, `composed_of`, `extends`, `adapts`, and `aliased_to` resolves to an active catalog entry ($u \to \emptyset$ is fatal).
+  2. Compile and validate all **4 canonical ADR-004 projection views** against proposed target state via `MultiViewProjector`:
      - **View 1: Functional / Domain View** (`views/functional-view.json` and domain router `SKILL.md` hierarchy under `library/<category>/<subcategory>/`)
      - **View 2: Platform / Family View** (`views/family-view.json`, Tier 1 hub routers `library/tools-and-platforms/<family-slug>/SKILL.md`, and Tier 2 virtual routers `views/routers/family-<family-slug>.md`)
      - **View 3: Semantic Group View** (`views/semantic-group-view.json` for cross-cutting task clusters like `git-automation`, `fullstack-auth`, `database-migrations`)
      - **View 4: Execution / Provider View** (`views/provider-view.json` indexing runtime transport protocols: `cli`, `mcp`, `rest_api`, `sdk`, `prompt_template`)
-  3. Compile additional semantic projections and content structures:
+  3. Validate additional semantic projections and content structures against proposed target state:
      - Capability overlays specializing base capabilities (`extends`)
      - Cross-cutting composite workflow packs (`composed_of`)
-  4. Generate inverted token search index (`audit/search-index.json`).
-  5. Enforce 100% relative link purity in markdown routers (rejecting absolute filesystem paths and `file:///` URLs).
+  4. Generate and validate search index (`audit/search-index.json`).
+  5. Enforce 100% relative link purity in markdown routers against proposed target state (rejecting absolute filesystem paths and `file:///` URLs).
   6. Display execution provider badges (`CLI`, `MCP`, `REST`, `SDK`, `Prompt`) on platform family routers.
-- **Completion Gate**: Gates 5 and 6 report `PASSED`; dangling references: 0; forbidden absolute links: 0; catalog coverage: 100%.
+- **Completion Gate**: Gates 5 and 6 report `PASSED`; dangling references: 0; forbidden absolute links: 0; catalog coverage: 100% against proposed target state.
 - **Specification**: [`library-rebuild-tasks/phase-05-multi-view-routers-reference-closure.md`](../../library-rebuild-tasks/phase-05-multi-view-routers-reference-closure.md)
 
 ---
 
-### Phase 06: Deterministic Compilation, Project Materialization & Publication Pre-Flight
-- **Objective**: Validate bit-for-bit idempotent catalog compilation, verify collision-free runtime project materialization, and perform safe dry-run publication preflight.
+### Phase 06: Deterministic Compilation, Project Materialization & Full Gate Evaluation
+- **Objective**: Complete deterministic compilation, project materialization validation, publication preflight simulation, and full 9-gate catalog evaluation before any live cutover.
 - **Enforced Gates**: **Gate 7** (Deterministic Compilation Idempotency), **Gate 8** (Project Materialization & Collision-Free Naming Ladder), and **Gate 9** (Runtime Publication Pre-Flight).
 - **Key Work**:
   1. Compile `audit/skills-registry.json` and verify bit-for-bit reproducibility across consecutive compilations with pinned timestamps:
@@ -236,8 +241,9 @@ sequenceDiagram
      $$\text{Natural Name} \longrightarrow \text{Category Prefix} \longrightarrow \text{Canonical Scope} \longrightarrow \text{Scope + Category} \longrightarrow \text{Canonical Slug} \longrightarrow \text{Disambiguated Slug}$$
      proving $|Names| = |Skills|$ with zero collisions across materialized project bundles.
   4. Perform non-destructive publication preflight to `~/.agents/skills/`, ensuring protected catalog paths (`library/**`, `audit/taxonomy-census/**`) remain completely clean and unmutated.
-  5. Generate forward and reverse rollback manifests ($\mathcal{J}_{\text{forward}}$, $\mathcal{J}_{\text{rollback}}$).
-- **Completion Gate**: Gates 7, 8, and 9 report `PASSED`; `MigrationGateReport.all_passed == True`; publication cleared for execution.
+  5. Execute full 9-gate catalog evaluation via `MigrationGateRunner.run_all_gates()` verifying all 9 gates return `PASSED` (`report.all_passed == True`).
+  6. Prepare forward execution journal ($\mathcal{J}_{\text{forward}}$) and reverse rollback journal ($\mathcal{J}_{\text{rollback}}$).
+- **Completion Gate**: Gates 7, 8, and 9 report `PASSED`; all 9 validation gates return `PASSED`; `MigrationGateReport.all_passed == True`; preflight certified for post-gate cutover.
 - **Specification**: [`library-rebuild-tasks/phase-06-compilation-materialization-publication-preflight.md`](../../library-rebuild-tasks/phase-06-compilation-materialization-publication-preflight.md)
 
 ---
@@ -284,6 +290,14 @@ skills-library/
 1. **Zero Live Mutation**: During Gate 1 through Gate 9 evaluation, no files are copied, moved, deleted, or committed in `library/**` or `audit/taxonomy-census/**`.
 2. **Authorized Staging Roots Only**: `MigrationGateEvaluator` verifies that candidate packages reside exclusively within approved staging boundaries configured by the caller. Caller-supplied paths can never self-authorize outside designated roots.
 3. **Rollback Manifest Generation**: Before any physical execution starts, an atomic reverse journal ($\mathcal{J}_{\text{rollback}}$) is generated. If execution is interrupted, the reverse journal restores exact pre-migration state.
+
+### 6.3 Post-Gate Live Cutover, Verification & Rollback Protocol
+Physical catalog modification is strictly forbidden during preflight Phases 01 through 06. Live migration occurs exclusively after all validation gates pass and explicit batch approval is granted:
+1. **Explicit Batch Approval**: Live cutover cannot execute automatically. An explicit operational authorization command/token is required after `MigrationGateReport.all_passed == True`.
+2. **Atomic Live Cutover**: Candidate packages are moved from validated staging (`.staging/`) into target locations in `library/**` according to the approved migration plan.
+3. **Post-Cutover Gate Verification**: Immediately following live relocation, `MigrationGateRunner.run_all_gates()` is re-executed against the live catalog. All 9 gates must pass against the resulting live state.
+4. **Rollback Capability Retention**: The reverse execution journal ($\mathcal{J}_{\text{rollback}}$) is retained and active. If post-cutover verification fails, the system executes $\mathcal{J}_{\text{rollback}}$ immediately to restore pristine pre-migration catalog state.
+5. **Runtime Publication**: Only after post-cutover verification succeeds against the live catalog is atomic runtime publication to `~/.agents/skills/` executed.
 
 ---
 

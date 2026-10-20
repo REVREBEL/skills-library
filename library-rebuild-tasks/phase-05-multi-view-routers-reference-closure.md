@@ -9,16 +9,19 @@
 
 ## 1. Objective
 
-Deterministically compile all four ADR-004 discovery projection views, generated router hierarchies, and inverted token search indexes while guaranteeing universal reference closure across all dependencies, compositions, extensions, and aliases in the catalog. Treat overlays and cross-cutting workflow packs as additional semantic projections and content structures, and enforce strict relative-path link purity and provider badging across all router documents.
+Deterministically compile all four ADR-004 discovery projection views, generated router hierarchies, and inverted token search indexes while guaranteeing universal reference closure across all dependencies, compositions, extensions, and aliases in the proposed target state catalog. Treat overlays and cross-cutting workflow packs as additional semantic projections and content structures, and enforce strict relative-path link purity and provider badging across all router documents.
+
+**Zero Live Modification Invariant**: Validation and projection compilation in Phase 05 are evaluated against the proposed target state (incorporating staged candidate packages and registry model). Live catalog files in `library/**` remain untouched and pristine until post-Gate-9 batch approval.
 
 ---
 
 ## 2. Preconditions
 
 1. Phases 01 through 04 completed with Gates 1 through 4 reporting `PASSED`.
-2. Physical skill packages are stable at their verified locations.
-3. Catalog registry contains all active packages, canonical IDs, and relationship edges.
-4. Working tree under `audit/taxonomy-census/**` is clean.
+2. Candidate packages are staged and verified in an authorized staging directory (`.staging/`).
+3. Living catalog files (`library/**`) are pristine.
+4. Catalog registry model contains all proposed target state packages, canonical IDs, and relationship edges.
+5. Working tree under `audit/taxonomy-census/**` is clean.
 
 ---
 
@@ -32,14 +35,14 @@ Deterministically compile all four ADR-004 discovery projection views, generated
 
 ## 4. Step-by-Step Work
 
-1. **Verify Universal Reference Closure (Gate 5 Preflight)**:
-   - For every active skill package $u \in V$:
+1. **Verify Universal Reference Closure Against Proposed Target State (Gate 5 Preflight)**:
+   - For every active skill package $u \in V$ in the proposed target state catalog:
      - Check each dependency $d \in \text{depends\_on}(u)$: verify $d \in V$. Dangling dependency fails with `DANGLING_DEPENDENCY_REFERENCE`.
      - Check each component $c \in \text{composed\_of}(u)$: verify $c \in V$. Dangling component fails with `DANGLING_COMPOSITION_REFERENCE`.
      - Check each base $b \in \text{extends}(u)$: verify $b \in V$. Dangling overlay target fails with `DANGLING_OVERLAY_TARGET`.
      - Check each target $a \in \text{aliased\_to}(u)$: verify $a \in V$. Dangling alias target fails with `DANGLING_ALIAS_TARGET`.
    - Run `MigrationGateEvaluator.evaluate_gate_5_reference_closure(registry)`. Ensure status is `PASSED`.
-2. **Generate All Four Canonical ADR-004 Discovery Projections**:
+2. **Generate All Four Canonical ADR-004 Discovery Projections Against Proposed Target State**:
    - Execute `MultiViewProjector` methods over the catalog registry:
    - **View 1: Functional / Domain View (`views/functional-view.json`)**:
      - Hierarchical taxonomy: `domain` $\to$ `category` $\to$ `subcategory` $\to$ skill packages.

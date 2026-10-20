@@ -1,16 +1,18 @@
-# Task Spec — Phase 04: Manifest Authenticity, Resource Preservation & Staged Physical Migration
+# Task Spec — Phase 04: Manifest Authenticity, Resource Preservation & Staged Verification
 
 - **Status**: Authoritative (REV-132)
 - **Work Order**: Phase 04 of Skills Library Implementation Roadmap
 - **Enforced Gates**: **Gate 4: Resource & Asset Preservation (Zero Data Loss)**
 - **Architecture Reference**: [ADR-005 (REV-131)](../docs/architecture/decisions/ADR-005-architecture-validation-and-migration-gates.md)
-- **Security Invariant**: Canonical Path Containment & Cryptographic Manifest Authenticity
+- **Security Invariant**: Canonical Path Containment & Cryptographic Manifest Authenticity (Zero Live Mutation)
 
 ---
 
 ## 1. Objective
 
-Execute physical package relocations under strict non-destructive preflight authorization. Verify 100% preservation of all executable scripts, references, templates, schemas, and markdown documentation through cryptographic SHA-256 manifest authenticity, authorized staging preflight, and strict canonical path containment.
+Prepare manifests, stage candidate packages in authorized staging directories, and verify 100% preservation of all executable scripts, references, templates, schemas, and markdown documentation through cryptographic SHA-256 manifest authenticity, authorized staging preflight, and strict canonical path containment.
+
+**Zero Live Modification Invariant**: Live catalog files (`library/**`) must not be moved, deleted, created, or modified during Phase 04. Physical migration into `library/**` is deferred until all 9 validation gates pass in Phase 06 and explicit batch approval is received.
 
 ---
 
@@ -66,11 +68,10 @@ Execute physical package relocations under strict non-destructive preflight auth
 5. **Verify Non-Destructive Preflight Clearance**:
    - Run `MigrationGateRunner.run_gate(GateID.GATE_4_RESOURCE_PRESERVATION)`.
    - Ensure status is `PASSED`.
-6. **Execute Atomic Physical Relocation**:
-   - Generate forward execution journal ($\mathcal{J}_{\text{forward}}$) and reverse rollback journal ($\mathcal{J}_{\text{rollback}}$).
-   - Atomically move verified packages from staging into target live directories in `library/`.
-   - Re-run disk checksum verification on the live destination.
-   - If any step fails, execute $\mathcal{J}_{\text{rollback}}$ to restore exact prior state.
+6. **Certify Staged Package Preservation (Zero Live Modification)**:
+   - Generate forward execution journal ($\mathcal{J}_{\text{forward}}$) and reverse rollback journal ($\mathcal{J}_{\text{rollback}}$) for future authorized execution.
+   - Certify that staged packages match source inventories bit-for-bit.
+   - **Do not modify the live library**: All physical relocations into `library/**` remain deferred until all 9 gates pass in Phase 06 and explicit batch approval is granted. Living catalog files remain pristine.
 
 ---
 
@@ -97,12 +98,12 @@ Create or update:
 
 ## 7. Repository Checkpoint
 
-1. Branch name: `feature/migration-phase-04-physical-relocation`.
-2. Commit message: `feat(migration): complete phase 04 verified physical relocation and resource preservation`.
+1. Branch name: `feature/migration-phase-04-staged-verification`.
+2. Commit message: `feat(migration): complete phase 04 manifest authenticity and staged package verification`.
 3. Pull Request must include:
-   - Summary of moved packages, source paths, and destination paths.
-   - Cryptographic SHA-256 verification log proving zero asset loss.
-   - Gate 4 validation output showing 0 violations.
+   - Summary of verified staged packages, source paths, and target destination paths.
+   - Cryptographic SHA-256 verification log proving zero asset loss against staged packages.
+   - Gate 4 validation output showing 0 violations and 0 live catalog modifications.
 4. Leave PR open for review; do not proceed to Phase 05 until approved.
 
 ---
@@ -112,8 +113,9 @@ Create or update:
 Complete only when:
 - [ ] Complete source and destination manifests supplied for all planned moves.
 - [ ] Fresh recursive SHA-256 generation matches supplied manifests 100%.
-- [ ] Source and destination inventories match bit-for-bit.
-- [ ] Staging preflight passes without mutating live files.
+- [ ] Source and staged destination inventories match bit-for-bit.
+- [ ] Staging preflight passes without mutating live files (`library/**` remains pristine).
 - [ ] Canonical path containment is verified for all paths.
 - [ ] `MigrationGateRunner.run_gate(GateID.GATE_4_RESOURCE_PRESERVATION)` returns `PASSED`.
 - [ ] Automated regression tests pass: `PYTHONPATH=tools python3 -m unittest tests/test_migration_gates.py`.
+- [ ] Live physical cutover remains deferred pending Phase 06 completion and explicit batch approval.
