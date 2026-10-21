@@ -58,8 +58,8 @@ Validate bit-for-bit idempotent catalog compilation, verify that standalone proj
      - Prove $|Names| = |Skills|$ with zero collisions across the entire active catalog (`RUNTIME_NAME_COLLISION`).
    - Run `MigrationGateEvaluator.evaluate_gate_8_project_materialization(registry)`. Status must be `PASSED`.
 3. **Execute Runtime Publication Pre-Flight Simulation (Gate 9 Preflight)**:
-   - Perform a dry-run simulation of publishing symbolic links from `library/` to `~/.agents/skills/`.
-   - Verify that protected files in `~/.agents/skills/` (`SKILL.md`, `github-operations`, `skills-create-manage-update`) are never overwritten or removed.
+   - Perform a dry-run simulation of publishing symbolic links and package manifests without mutating live destinations.
+   - Verify that protected files in target environments (e.g., in `~/.agents/skills/`: `SKILL.md`, `github-operations`, `skills-create-manage-update`) are never overwritten or removed.
    - Confirm that working tree under protected paths (`library/**`, `audit/taxonomy-census/**`) is completely clean and unmutated (`PROTECTED_ASSETS_DIRTY`).
    - Generate forward execution journal ($\mathcal{J}_{\text{forward}}$) and reverse rollback journal ($\mathcal{J}_{\text{rollback}}$).
    - Run `MigrationGateEvaluator.evaluate_gate_9_publication_preflight(registry, repo_root)`. Status must be `PASSED`.
@@ -67,12 +67,18 @@ Validate bit-for-bit idempotent catalog compilation, verify that standalone proj
    - Run `MigrationGateRunner.run_all_gates()`.
    - Verify that all 9 gates return `PASSED` and `report.all_passed == True`.
    - Output `audit/migration-gate-report.json`.
-5. **Post-Gate Live Cutover, Verification & Publication**:
-   - Require explicit batch approval before initiating any live catalog modifications.
+5. **Post-Gate Live Cutover & Verification**:
+   - Require explicit migration authorization (batch cutover approval) before initiating any live catalog modifications.
    - Execute atomic live cutover from authorized staging (`.staging/`) into live destinations in `library/**`.
    - Immediately re-run `MigrationGateRunner.run_all_gates()` against the live catalog; all 9 gates must pass.
    - Retain rollback capability ($\mathcal{J}_{\text{rollback}}$) to instantly restore pristine state if post-cutover verification detects any discrepancy.
-   - Execute runtime publication to `~/.agents/skills/` only after live catalog verification is certified.
+6. **Decoupled Runtime Distribution (Optional Post-Validation Operation)**:
+   - Define runtime distribution as a separate, optional, post-validation operation executed only after post-cutover live catalog certification.
+   - Require independent publication authorization before distributing packages to destination environments.
+   - Support three target destination types via the upcoming deterministic package builder and runtime adapters:
+     - **Minimal Everyday Installation**: Curated global skills installed to `~/.agents/skills/`.
+     - **Project-Specific Git-Synced Installation**: Workspace-isolated projection (e.g. `.agents/skills/`) with complete transitive closure (`INV-9`).
+     - **External Upload Artifact**: Standalone archive (zip/tar.gz) or containerized bundle for external runtimes.
 
 ---
 
@@ -106,7 +112,9 @@ Create or update:
    - Materialization test results showing zero collisions and complete closure.
    - Publication preflight dry-run log and rollback manifest.
    - Full 9-gate evaluation report certifying catalog readiness.
-4. Final approval authorizes production runtime publication.
+4. Approval boundary:
+   - Migration authorization authorizes physical live catalog cutover into `library/**`.
+   - Publication authorization is a separate, optional post-validation approval authorizing distribution across destination runtimes via the deterministic package builder and runtime adapters.
 
 ---
 
