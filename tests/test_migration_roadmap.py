@@ -180,10 +180,10 @@ class TestMigrationRoadmapContracts(unittest.TestCase):
         self.assertIn("SkillPackageManifest", content)
         self.assertIn("non-destructive", content.lower())
 
-    def test_master_roadmap_status_is_proposed_pending_rev132_approval(self):
-        """Verifies master roadmap status is 'Proposed, Pending REV-132 Approval'."""
+    def test_master_roadmap_status_is_approved_and_authoritative(self):
+        """Verifies master roadmap status is 'Approved & Authoritative (REV-132 Accepted)'."""
         content = self.roadmap_path.read_text(encoding="utf-8")
-        self.assertIn("- **Status**: Proposed, Pending REV-132 Approval", content)
+        self.assertIn("- **Status**: Approved & Authoritative (REV-132 Accepted)", content)
 
     def test_census_relative_link_resolves_from_docs_architecture(self):
         """Verifies that the relative census link in MIGRATION_ROADMAP.md resolves correctly from docs/architecture/."""
@@ -252,7 +252,8 @@ class TestMigrationRoadmapContracts(unittest.TestCase):
         self.assertIn("Phase 04: Manifest Authenticity & Staged Verification (Zero Live Mutation)", roadmap_content)
         self.assertIn("Phase 05: Multi-View Routers & Reference Closure (Target State)", roadmap_content)
         self.assertIn("Phase 06: Deterministic Compilation, Materialization & All 9 Gates", roadmap_content)
-        self.assertIn("Post-Gate Cutover & Verification (Explicit Batch Approval Required)", roadmap_content)
+        self.assertIn("Post-Gate Cutover & Verification (Explicit Migration Authorization Required)", roadmap_content)
+        self.assertIn("Optional Post-Validation Runtime Distribution (Separate Publication Authorization Required)", roadmap_content)
 
         # 2. Phase 04: Zero live mutation, staging only, cutover deferred
         self.assertIn("Zero Live Modification Invariant", p4_content)
@@ -264,16 +265,57 @@ class TestMigrationRoadmapContracts(unittest.TestCase):
         self.assertIn("Zero Live Modification Invariant", p5_content)
         self.assertIn("proposed target state", p5_content.lower())
 
-        # 4. Phase 06 & Roadmap: Post-gate cutover with explicit batch approval, live cutover, post-cutover verification, rollback retention
+        # 4. Phase 06 & Roadmap: Post-gate cutover with explicit migration authorization, live cutover, post-cutover verification, rollback retention
         self.assertIn("6.3 Post-Gate Live Cutover, Verification & Rollback Protocol", roadmap_content)
-        self.assertIn("Explicit Batch Approval", roadmap_content)
+        self.assertIn("Explicit Migration Authorization", roadmap_content)
         self.assertIn("Atomic Live Cutover", roadmap_content)
         self.assertIn("Post-Cutover Gate Verification", roadmap_content)
         self.assertIn("Rollback Capability Retention", roadmap_content)
 
-        self.assertIn("Post-Gate Live Cutover, Verification & Publication", p6_content)
-        self.assertIn("explicit batch approval", p6_content.lower())
+        self.assertIn("Post-Gate Live Cutover & Verification", p6_content)
         self.assertIn("post-cutover verification", p6_content.lower())
+
+    def test_roadmap_defines_decoupled_runtime_distribution_and_three_destination_types(self):
+        """Verifies roadmap and Phase 06 define decoupled runtime distribution with 3 destination types and dual authorization."""
+        roadmap_content = self.roadmap_path.read_text(encoding="utf-8")
+        p6_path = self.tasks_dir / "phase-06-compilation-materialization-publication-preflight.md"
+        p6_content = p6_path.read_text(encoding="utf-8")
+
+        # 1. Approval status updated to Approved & Authoritative
+        self.assertIn("Approved & Authoritative (REV-132 Accepted)", roadmap_content)
+
+        # 2. Three runtime destination types defined
+        for content, doc_name in [(roadmap_content, "MIGRATION_ROADMAP.md"), (p6_content, "phase-06 task spec")]:
+            self.assertIn("Minimal Everyday Installation", content, f"{doc_name} missing Minimal Everyday Installation")
+            self.assertIn("Project-Specific Git-Synced", content, f"{doc_name} missing Project-Specific Git-Synced")
+            self.assertIn("External Upload Artifact", content, f"{doc_name} missing External Upload Artifact")
+
+            # Reference upcoming deterministic package builder and runtime adapters
+            self.assertIn("deterministic package builder", content.lower(), f"{doc_name} missing deterministic package builder")
+            self.assertIn("runtime adapters", content.lower(), f"{doc_name} missing runtime adapters")
+
+            # Dual authorization model (separate migration and publication authorizations)
+            self.assertIn("migration authorization", content.lower(), f"{doc_name} missing migration authorization")
+            self.assertIn("publication authorization", content.lower(), f"{doc_name} missing publication authorization")
+
+            # Publication authorization must identify certified catalog manifest digest
+            self.assertIn("certified", content.lower(), f"{doc_name} missing certified reference")
+            self.assertIn("digest", content.lower(), f"{doc_name} missing manifest digest reference")
+
+            # Explicit distinction: canonical discovery vs runtime installation
+            self.assertIn("canonical discovery", content.lower(), f"{doc_name} missing canonical discovery distinction")
+            self.assertIn("runtime installation", content.lower(), f"{doc_name} missing runtime installation distinction")
+
+        # 3. Dedicated section in roadmap
+        self.assertIn("6.4 Decoupled Runtime Distribution & Destination Types", roadmap_content)
+        self.assertIn("Optional Post-Validation Runtime Distribution", roadmap_content)
+        self.assertIn("Certified Manifest Digest Requirement", roadmap_content)
+        self.assertIn("Canonical Discovery vs. Runtime Installation Contracts", roadmap_content)
+
+        # 4. Mandatory Gate 9 preflight does not authorize or mandate distribution
+        self.assertIn("Mandatory Preflight vs. Optional Distribution", roadmap_content)
+        self.assertIn("does not authorize or mandate runtime distribution", roadmap_content)
+        self.assertIn("does not authorize or mandate runtime distribution", p6_content)
 
 
 if __name__ == "__main__":
