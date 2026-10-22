@@ -298,9 +298,24 @@ class TestMigrationRoadmapContracts(unittest.TestCase):
             self.assertIn("migration authorization", content.lower(), f"{doc_name} missing migration authorization")
             self.assertIn("publication authorization", content.lower(), f"{doc_name} missing publication authorization")
 
+            # Publication authorization must identify certified catalog manifest digest
+            self.assertIn("certified", content.lower(), f"{doc_name} missing certified reference")
+            self.assertIn("digest", content.lower(), f"{doc_name} missing manifest digest reference")
+
+            # Explicit distinction: canonical discovery vs runtime installation
+            self.assertIn("canonical discovery", content.lower(), f"{doc_name} missing canonical discovery distinction")
+            self.assertIn("runtime installation", content.lower(), f"{doc_name} missing runtime installation distinction")
+
         # 3. Dedicated section in roadmap
         self.assertIn("6.4 Decoupled Runtime Distribution & Destination Types", roadmap_content)
         self.assertIn("Optional Post-Validation Runtime Distribution", roadmap_content)
+        self.assertIn("Certified Manifest Digest Requirement", roadmap_content)
+        self.assertIn("Canonical Discovery vs. Runtime Installation Contracts", roadmap_content)
+
+        # 4. Mandatory Gate 9 preflight does not authorize or mandate distribution
+        self.assertIn("Mandatory Preflight vs. Optional Distribution", roadmap_content)
+        self.assertIn("does not authorize or mandate runtime distribution", roadmap_content)
+        self.assertIn("does not authorize or mandate runtime distribution", p6_content)
 
 
 if __name__ == "__main__":

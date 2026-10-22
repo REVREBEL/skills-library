@@ -236,6 +236,7 @@ sequenceDiagram
 ### Phase 06: Deterministic Compilation, Project Materialization & Full Gate Evaluation
 - **Objective**: Complete deterministic compilation, project materialization validation, publication preflight simulation, and full 9-gate catalog evaluation before any live cutover. Decouple downstream runtime distribution as an independent, optional post-validation operation.
 - **Enforced Gates**: **Gate 7** (Deterministic Compilation Idempotency), **Gate 8** (Project Materialization & Collision-Free Naming Ladder), and **Gate 9** (Runtime Publication Pre-Flight).
+- **Mandatory Preflight vs. Optional Distribution**: Gate 9 evaluation is mandatory during Phase 06 preflight to validate publication readiness, target path containment, and environmental safety invariants (ensuring zero dirty protected assets and valid rollback journals), but passing Gate 9 does not itself authorize or mandate runtime distribution.
 - **Key Work**:
   1. Compile `audit/skills-registry.json` and verify bit-for-bit reproducibility across consecutive compilations with pinned timestamps:
      $$\text{SHA-256}(\text{Compilation}_1) \equiv \text{SHA-256}(\text{Compilation}_2)$$
@@ -243,7 +244,7 @@ sequenceDiagram
   3. Verify the collision-free runtime naming ladder implemented in `ProjectMaterializer._generate_flat_runtime_names()` (ADR-004 Section 9.2):
      $$\text{Natural Name} \longrightarrow \text{Category Prefix} \longrightarrow \text{Canonical Scope} \longrightarrow \text{Scope + Category} \longrightarrow \text{Canonical Slug} \longrightarrow \text{Disambiguated Slug}$$
      proving $|Names| = |Skills|$ with zero collisions across materialized project bundles.
-  4. Perform non-destructive publication preflight simulation (Gate 9), ensuring protected catalog paths (`library/**`, `audit/taxonomy-census/**`) remain completely clean and unmutated.
+  4. Perform non-destructive publication preflight simulation (Gate 9), ensuring protected catalog paths (`library/**`, `audit/taxonomy-census/**`) remain completely clean and unmutated. Gate 9 validates publication readiness and safety without authorizing live distribution.
   5. Execute full 9-gate catalog evaluation via `MigrationGateRunner.run_all_gates()` verifying all 9 gates return `PASSED` (`report.all_passed == True`).
   6. Prepare forward execution journal ($\mathcal{J}_{\text{forward}}$) and reverse rollback journal ($\mathcal{J}_{\text{rollback}}$).
   7. Define runtime distribution as a separate, optional, post-validation operation supporting three distinct destination types (minimal everyday installation, project-specific Git-synced installation, and external upload artifact) orchestrated by the upcoming deterministic package builder and runtime adapters under separate publication authorization.
@@ -303,12 +304,24 @@ Physical catalog modification is strictly forbidden during preflight Phases 01 t
 4. **Rollback Capability Retention**: The reverse execution journal ($\mathcal{J}_{\text{rollback}}$) is retained and active. If post-cutover verification fails, the system executes $\mathcal{J}_{\text{rollback}}$ immediately to restore pristine pre-migration catalog state.
 
 ### 6.4 Decoupled Runtime Distribution & Destination Types
-Runtime distribution is defined as a separate, optional, post-validation operation decoupled from live catalog cutover. Publication requires separate, independent **publication authorization** and cannot occur until post-cutover live catalog verification is certified.
+Runtime distribution is defined as a separate, optional, post-validation operation decoupled from live catalog cutover. While Gate 9 validation is mandatory during compilation and preflight to verify publication readiness, safety, and rollbacks, passing Gate 9 does not authorize or mandate runtime distribution. Distribution requires an independent, explicit **publication authorization** that cannot occur until post-cutover live catalog verification is certified across all 9 gates.
 
+#### Cryptographic Certified Catalog Identification
+To prevent subsequent catalog mutations or working-tree drift from invalidating the pre-publication certification:
+1. **Certified Manifest Digest Requirement**: The publication authorization token/record must explicitly identify the cryptographic SHA-256 digest of the certified post-cutover catalog manifest (`audit/skills-registry.json` and package manifests).
+2. **Pre-Distribution Verification**: Prior to distributing or materializing any runtime package, the upcoming **deterministic package builder** must independently re-compute and verify the catalog manifest digest against the certified digest recorded in the publication authorization. Any divergence or catalog modification detected between certification and distribution immediately aborts distribution.
+
+#### Canonical Discovery vs. Runtime Installation Contracts
+A fundamental architectural boundary is maintained between catalog discovery and runtime installation:
+- **Canonical Discovery Contract**: The complete authoritative catalog (2,133 active skills) and its four generated ADR-004 discovery views (`views/functional-view.json`, `views/family-view.json`, `views/semantic-group-view.json`, and `views/provider-view.json`) along with domain router hierarchies remain universally discoverable, indexed, and queryable.
+- **Runtime Installation Contract**: Runtime installation is selective and workload-driven. No runtime destination is required to install the entire catalog. Each destination receives only its explicitly configured selection of skills along with complete transitive dependency closure (`INV-9`), preserving compact agent context windows and minimal storage footprints.
+
+#### Supported Destination Types
 Downstream distribution leverages the upcoming **deterministic package builder** and **runtime adapters** rather than hardcoding distribution paths prematurely. The distribution framework supports three standard destination types:
 
 1. **Minimal Everyday Installation**:
    - High-frequency, curated global skills published to global user runtime directory (e.g., `~/.agents/skills/`).
+   - Distinct from canonical discovery: only the curated daily toolset is installed on disk, while full discovery remains accessible via catalog views and routers.
    - Managed via atomic symbolic links or projected packages with protected system asset preservation.
 2. **Project-Specific Git-Synced Installation**:
    - Workspace-isolated projection (e.g., `.agents/skills/` within a target Git repository).
@@ -321,11 +334,12 @@ Downstream distribution leverages the upcoming **deterministic package builder**
 ```mermaid
 flowchart LR
     Staging[".staging/ Staged Packages"] -->|All 9 Gates Pass + Migration Auth| Live["library/ (Live Catalog)"]
-    Live -->|Post-Cutover Verification Certified| Certified["Certified Live Catalog"]
-    Certified -->|Separate Publication Auth| Dist["Runtime Distribution Layer"]
-    Dist --> D1["1. Minimal Everyday Installation (~/.agents/skills/)"]
-    Dist --> D2["2. Project-Specific Git-Synced (.agents/skills/)"]
-    Dist --> D3["3. External Upload Artifact (Standalone Bundle)"]
+    Live -->|Post-Cutover Verification Certified| Certified["Certified Live Catalog (Manifest Digest)"]
+    Certified -->|Publication Auth with Certified Digest| Builder["Deterministic Package Builder\n(Verifies Manifest Digest)"]
+    Builder --> Dist["Runtime Adapters"]
+    Dist --> D1["1. Minimal Everyday Installation (~/.agents/skills/)\n[Curated Everyday Selection]"]
+    Dist --> D2["2. Project-Specific Git-Synced (.agents/skills/)\n[Targeted Workspace Closure]"]
+    Dist --> D3["3. External Upload Artifact (Standalone Bundle)\n[Container / Archive Package]"]
 ```
 
 ---

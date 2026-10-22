@@ -59,6 +59,7 @@ Validate bit-for-bit idempotent catalog compilation, verify that standalone proj
    - Run `MigrationGateEvaluator.evaluate_gate_8_project_materialization(registry)`. Status must be `PASSED`.
 3. **Execute Runtime Publication Pre-Flight Simulation (Gate 9 Preflight)**:
    - Perform a dry-run simulation of publishing symbolic links and package manifests without mutating live destinations.
+   - Note: Gate 9 validates publication readiness, target path containment, and safety invariants, but does not authorize or mandate runtime distribution.
    - Verify that protected files in target environments (e.g., in `~/.agents/skills/`: `SKILL.md`, `github-operations`, `skills-create-manage-update`) are never overwritten or removed.
    - Confirm that working tree under protected paths (`library/**`, `audit/taxonomy-census/**`) is completely clean and unmutated (`PROTECTED_ASSETS_DIRTY`).
    - Generate forward execution journal ($\mathcal{J}_{\text{forward}}$) and reverse rollback journal ($\mathcal{J}_{\text{rollback}}$).
@@ -74,7 +75,9 @@ Validate bit-for-bit idempotent catalog compilation, verify that standalone proj
    - Retain rollback capability ($\mathcal{J}_{\text{rollback}}$) to instantly restore pristine state if post-cutover verification detects any discrepancy.
 6. **Decoupled Runtime Distribution (Optional Post-Validation Operation)**:
    - Define runtime distribution as a separate, optional, post-validation operation executed only after post-cutover live catalog certification.
-   - Require independent publication authorization before distributing packages to destination environments.
+   - Require independent publication authorization explicitly identifying the cryptographic SHA-256 manifest digest of the certified post-cutover catalog.
+   - Enforce that the upcoming deterministic package builder verifies the certified manifest digest prior to distributing packages to prevent drift from subsequent catalog modifications.
+   - Explicitly distinguish canonical discovery (the entire authoritative catalog and its 4 views remain discoverable) from runtime installation (destinations receive only their configured selection and dependencies).
    - Support three target destination types via the upcoming deterministic package builder and runtime adapters:
      - **Minimal Everyday Installation**: Curated global skills installed to `~/.agents/skills/`.
      - **Project-Specific Git-Synced Installation**: Workspace-isolated projection (e.g. `.agents/skills/`) with complete transitive closure (`INV-9`).
@@ -114,7 +117,7 @@ Create or update:
    - Full 9-gate evaluation report certifying catalog readiness.
 4. Approval boundary:
    - Migration authorization authorizes physical live catalog cutover into `library/**`.
-   - Publication authorization is a separate, optional post-validation approval authorizing distribution across destination runtimes via the deterministic package builder and runtime adapters.
+   - Publication authorization is a separate, optional post-validation approval identifying the certified catalog manifest digest and authorizing distribution across destination runtimes via the deterministic package builder and runtime adapters.
 
 ---
 
