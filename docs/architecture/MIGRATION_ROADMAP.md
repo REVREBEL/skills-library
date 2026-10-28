@@ -1,6 +1,6 @@
 # Skills Library Implementation Roadmap & Migration Plan
 
-- **Status**: Proposed, Pending REV-132 Approval
+- **Status**: Approved & Authoritative (REV-132 Accepted)
 - **Date**: 2026-10-18
 - **Work Order**: REV-132 (`9d8480d2-d995-44e0-b185-e869770d7346`)
 - **Supersedes**: Legacy Rebuild Tasks (Phases 01–13) & Held Duplicate Plan (REV-125)
@@ -140,12 +140,15 @@ sequenceDiagram
     Dev->>Runner: Evaluate Gate 7, 8, 9 & Run Full 9-Gate Catalog Suite
     Runner-->>Dev: All 9 Gates Passed (Preflight Certified, Rollback Journals Prepared)
 
-    Note over Dev,Live: Post-Gate Cutover & Verification (Explicit Batch Approval Required)
-    Dev->>Dev: Require explicit batch approval
+    Note over Dev,Live: Post-Gate Cutover & Verification (Explicit Migration Authorization Required)
+    Dev->>Dev: Require explicit migration authorization (live cutover approval)
     Dev->>Live: Execute atomic live cutover from Staging
     Dev->>Runner: Verify resulting live catalog across all gates
     Runner-->>Dev: Live catalog verified; retain rollback capability
-    Dev->>Runtime: Publish atomic symbolic links to global discovery
+
+    Note over Dev,Runtime: Optional Post-Validation Runtime Distribution (Separate Publication Authorization Required)
+    Dev->>Dev: Require separate publication authorization
+    Dev->>Runtime: Distribute to destination runtimes via deterministic package builder & adapters
 ```
 
 ---
@@ -231,8 +234,9 @@ sequenceDiagram
 ---
 
 ### Phase 06: Deterministic Compilation, Project Materialization & Full Gate Evaluation
-- **Objective**: Complete deterministic compilation, project materialization validation, publication preflight simulation, and full 9-gate catalog evaluation before any live cutover.
+- **Objective**: Complete deterministic compilation, project materialization validation, publication preflight simulation, and full 9-gate catalog evaluation before any live cutover. Decouple downstream runtime distribution as an independent, optional post-validation operation.
 - **Enforced Gates**: **Gate 7** (Deterministic Compilation Idempotency), **Gate 8** (Project Materialization & Collision-Free Naming Ladder), and **Gate 9** (Runtime Publication Pre-Flight).
+- **Mandatory Preflight vs. Optional Distribution**: Gate 9 evaluation is mandatory during Phase 06 preflight to validate publication readiness, target path containment, and environmental safety invariants (ensuring zero dirty protected assets and valid rollback journals), but passing Gate 9 does not itself authorize or mandate runtime distribution.
 - **Key Work**:
   1. Compile `audit/skills-registry.json` and verify bit-for-bit reproducibility across consecutive compilations with pinned timestamps:
      $$\text{SHA-256}(\text{Compilation}_1) \equiv \text{SHA-256}(\text{Compilation}_2)$$
@@ -240,9 +244,10 @@ sequenceDiagram
   3. Verify the collision-free runtime naming ladder implemented in `ProjectMaterializer._generate_flat_runtime_names()` (ADR-004 Section 9.2):
      $$\text{Natural Name} \longrightarrow \text{Category Prefix} \longrightarrow \text{Canonical Scope} \longrightarrow \text{Scope + Category} \longrightarrow \text{Canonical Slug} \longrightarrow \text{Disambiguated Slug}$$
      proving $|Names| = |Skills|$ with zero collisions across materialized project bundles.
-  4. Perform non-destructive publication preflight to `~/.agents/skills/`, ensuring protected catalog paths (`library/**`, `audit/taxonomy-census/**`) remain completely clean and unmutated.
+  4. Perform non-destructive publication preflight simulation (Gate 9), ensuring protected catalog paths (`library/**`, `audit/taxonomy-census/**`) remain completely clean and unmutated. Gate 9 validates publication readiness and safety without authorizing live distribution.
   5. Execute full 9-gate catalog evaluation via `MigrationGateRunner.run_all_gates()` verifying all 9 gates return `PASSED` (`report.all_passed == True`).
   6. Prepare forward execution journal ($\mathcal{J}_{\text{forward}}$) and reverse rollback journal ($\mathcal{J}_{\text{rollback}}$).
+  7. Define runtime distribution as a separate, optional, post-validation operation supporting three distinct destination types (minimal everyday installation, project-specific Git-synced installation, and external upload artifact) orchestrated by the upcoming deterministic package builder and runtime adapters under separate publication authorization.
 - **Completion Gate**: Gates 7, 8, and 9 report `PASSED`; all 9 validation gates return `PASSED`; `MigrationGateReport.all_passed == True`; preflight certified for post-gate cutover.
 - **Specification**: [`library-rebuild-tasks/phase-06-compilation-materialization-publication-preflight.md`](../../library-rebuild-tasks/phase-06-compilation-materialization-publication-preflight.md)
 
@@ -292,12 +297,50 @@ skills-library/
 3. **Rollback Manifest Generation**: Before any physical execution starts, an atomic reverse journal ($\mathcal{J}_{\text{rollback}}$) is generated. If execution is interrupted, the reverse journal restores exact pre-migration state.
 
 ### 6.3 Post-Gate Live Cutover, Verification & Rollback Protocol
-Physical catalog modification is strictly forbidden during preflight Phases 01 through 06. Live migration occurs exclusively after all validation gates pass and explicit batch approval is granted:
-1. **Explicit Batch Approval**: Live cutover cannot execute automatically. An explicit operational authorization command/token is required after `MigrationGateReport.all_passed == True`.
+Physical catalog modification is strictly forbidden during preflight Phases 01 through 06. Live migration occurs exclusively after all validation gates pass and explicit migration authorization is granted:
+1. **Explicit Migration Authorization**: Live cutover cannot execute automatically. An explicit operational migration authorization command/token is required after `MigrationGateReport.all_passed == True`.
 2. **Atomic Live Cutover**: Candidate packages are moved from validated staging (`.staging/`) into target locations in `library/**` according to the approved migration plan.
 3. **Post-Cutover Gate Verification**: Immediately following live relocation, `MigrationGateRunner.run_all_gates()` is re-executed against the live catalog. All 9 gates must pass against the resulting live state.
 4. **Rollback Capability Retention**: The reverse execution journal ($\mathcal{J}_{\text{rollback}}$) is retained and active. If post-cutover verification fails, the system executes $\mathcal{J}_{\text{rollback}}$ immediately to restore pristine pre-migration catalog state.
-5. **Runtime Publication**: Only after post-cutover verification succeeds against the live catalog is atomic runtime publication to `~/.agents/skills/` executed.
+
+### 6.4 Decoupled Runtime Distribution & Destination Types
+Runtime distribution is defined as a separate, optional, post-validation operation decoupled from live catalog cutover. While Gate 9 validation is mandatory during compilation and preflight to verify publication readiness, safety, and rollbacks, passing Gate 9 does not authorize or mandate runtime distribution. Distribution requires an independent, explicit **publication authorization** that cannot occur until post-cutover live catalog verification is certified across all 9 gates.
+
+#### Cryptographic Certified Catalog Identification
+To prevent subsequent catalog mutations or working-tree drift from invalidating the pre-publication certification:
+1. **Certified Manifest Digest Requirement**: The publication authorization token/record must explicitly identify the cryptographic SHA-256 digest of the certified post-cutover catalog manifest (`audit/skills-registry.json` and package manifests).
+2. **Pre-Distribution Verification**: Prior to distributing or materializing any runtime package, the upcoming **deterministic package builder** must independently re-compute and verify the catalog manifest digest against the certified digest recorded in the publication authorization. Any divergence or catalog modification detected between certification and distribution immediately aborts distribution.
+
+#### Canonical Discovery vs. Runtime Installation Contracts
+A fundamental architectural boundary is maintained between catalog discovery and runtime installation:
+- **Canonical Discovery Contract**: The complete authoritative catalog (2,133 active skills) and its four generated ADR-004 discovery views (`views/functional-view.json`, `views/family-view.json`, `views/semantic-group-view.json`, and `views/provider-view.json`) along with domain router hierarchies remain universally discoverable, indexed, and queryable.
+- **Runtime Installation Contract**: Runtime installation is selective and workload-driven. No runtime destination is required to install the entire catalog. Each destination receives only its explicitly configured selection of skills along with complete transitive dependency closure (`INV-9`), preserving compact agent context windows and minimal storage footprints.
+
+#### Supported Destination Types
+Downstream distribution leverages the upcoming **deterministic package builder** and **runtime adapters** rather than hardcoding distribution paths prematurely. The distribution framework supports three standard destination types:
+
+1. **Minimal Everyday Installation**:
+   - High-frequency, curated global skills published to global user runtime directory (e.g., `~/.agents/skills/`).
+   - Distinct from canonical discovery: only the curated daily toolset is installed on disk, while full discovery remains accessible via catalog views and routers.
+   - Managed via atomic symbolic links or projected packages with protected system asset preservation.
+2. **Project-Specific Git-Synced Installation**:
+   - Workspace-isolated projection (e.g., `.agents/skills/` within a target Git repository).
+   - Materialized with complete transitive dependency closure (`INV-9`) and collision-free flat runtime naming.
+   - Synchronized directly with source control workflows for deterministic team collaboration.
+3. **External Upload Artifact**:
+   - Standalone bundle, archive (zip/tar.gz), or containerized payload prepared for external platforms, CI pipelines, and cloud agent runtimes.
+   - Self-contained with embedded metadata, dependency closure, and runtime manifest.
+
+```mermaid
+flowchart LR
+    Staging[".staging/ Staged Packages"] -->|All 9 Gates Pass + Migration Auth| Live["library/ (Live Catalog)"]
+    Live -->|Post-Cutover Verification Certified| Certified["Certified Live Catalog (Manifest Digest)"]
+    Certified -->|Publication Auth with Certified Digest| Builder["Deterministic Package Builder\n(Verifies Manifest Digest)"]
+    Builder --> Dist["Runtime Adapters"]
+    Dist --> D1["1. Minimal Everyday Installation (~/.agents/skills/)\n[Curated Everyday Selection]"]
+    Dist --> D2["2. Project-Specific Git-Synced (.agents/skills/)\n[Targeted Workspace Closure]"]
+    Dist --> D3["3. External Upload Artifact (Standalone Bundle)\n[Container / Archive Package]"]
+```
 
 ---
 
