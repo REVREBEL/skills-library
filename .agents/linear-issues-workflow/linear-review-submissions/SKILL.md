@@ -12,8 +12,8 @@ Handoff completed GitHub Pull Requests to Linear for peer and automated review. 
 - Code has been pushed to GitHub and the PR URL and HEAD commit SHA are verified.
 - Ready to hand off initial implementation or revision work for review.
 - Do NOT use before code is pushed and verified on GitHub (use github-pr-submissions).
-- After completing the steps below, follow the directions and use linear-turn-completion.
-- If the code has been **approved to merge into main**, skip the below steps and move directly to the linear-final-completion skill.
+- At the end of **every** dispatched bridge turn, invoke `linear-turn-completion` with the current job metadata. Issue `Done` is handled separately by `linear-issue-closeout` only after approval.
+- If the code has been **approved to merge into main**, skip the below steps and move directly to the linear-issue-closeout skill.
 
 ## Procedure
 
@@ -47,3 +47,6 @@ Handoff completed GitHub Pull Requests to Linear for peer and automated review. 
 - Order matters strictly: push code -> verify PR and SHA -> post Linear submission comment -> set issue to In Review -> signal session completion.
 - Avoid redundant progress comments on Linear to prevent triggering bridge webhook loops.
 - Do not mark the issue as Done. The agent transitions issues to In Review; review agents or human leads handle Done.
+
+## Required end-of-turn step
+After finishing this turn's work, whether successful, blocked, informational or failed, **always** execute [`linear-turn-completion`](../linear-turn-completion/SKILL.md) for the current trusted bridge job/session. This is separate from the one-time authorized change of issue status to `Done`.

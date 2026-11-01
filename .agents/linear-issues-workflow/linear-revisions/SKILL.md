@@ -44,3 +44,6 @@ Process reviewer comments and revision requests for existing Linear issues and o
 - Do not create a new branch or open a second PR for review revisions. Always reuse the active branch and PR.
 - Do not dismiss reviewer findings merely to clear review flags without technical justification.
 - Avoid repeating new-work initialization steps on a revision.
+
+## Required end-of-turn step
+After finishing this turn's work, whether successful, blocked, informational or failed, **always** execute [`linear-turn-completion`](../linear-turn-completion/SKILL.md) for the current trusted bridge job/session. This is separate from the one-time authorized change of issue status to `Done`.

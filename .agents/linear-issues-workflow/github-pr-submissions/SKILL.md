@@ -18,11 +18,11 @@ Verify, push, and submit GitHub Pull Requests using target repository scripts an
 
 1. Commit and Verify Branch
    - Ensure all intended changes are committed with issue-linked commit messages (for example, feat(auth): add token validation [ENG-123]).
-   - Check if the repository defines a verification script (for example, .agents/scripts/verify-issue-branch.sh). If present, execute it.
+   - Prefer the installed local `bash .agents/skills/linear-issues-workflow/scripts/verify-issue-branch.sh <issue-id>` unless an approved repository-specific policy overrides it.
    - Inspect and resolve any verification failures before publishing. Do not force-push or bypass branch safeguards.
 
 2. Push Branch to Remote
-   - Check if the repository provides an approved push preparation script (for example, .agents/scripts/prepare-issue-pr.sh).
+   - Prefer the installed local `bash .agents/skills/linear-issues-workflow/scripts/prepare-issue-pr.sh <issue-id>` unless repository policy overrides it.
    - Confirm whether the script creates the PR or only pushes the branch.
    - If no script exists, push the issue branch to the configured remote origin using standard Git commands. Confirm the target PR base branch matches the repository standard (for example, main).
 
@@ -52,3 +52,6 @@ Verify, push, and submit GitHub Pull Requests using target repository scripts an
 - Never push directly to protected branches such as main or production.
 - Pushing code is not merging. Do not merge the PR into the target branch.
 - Never create multiple PRs for the same Linear issue.
+
+## Required end-of-turn step
+After finishing this turn's work, whether successful, blocked, informational or failed, **always** execute [`linear-turn-completion`](../linear-turn-completion/SKILL.md) for the current trusted bridge job/session. This is separate from the one-time authorized change of issue status to `Done`.
