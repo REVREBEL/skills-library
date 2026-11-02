@@ -11,7 +11,8 @@ if [[ -z "$ISSUE_ID" ]]; then
   exit 1
 fi
 
-"$SCRIPT_DIR/verify-issue-branch.sh" "$ISSUE_ID"
+# Run through Bash so repository checkouts do not require executable file modes.
+bash "$SCRIPT_DIR/verify-issue-branch.sh" "$ISSUE_ID"
 
 if [[ -n "$(git status --porcelain)" ]]; then
   echo 'ERROR: Commit all intended changes before publishing.'
