@@ -13,7 +13,7 @@ This document records the exact executable commands, AST parsing results, test s
 # Python Version: 3.14.7
 
 $ git rev-parse HEAD
-ae2c93a51ba530983d35a3d7422cc327a298f587
+9546edce4a09e8b426404bb748efb368570d4ffb
 
 # Pinned git snapshot coordinating with SKIL-16 and SKIL-13:
 195eda775d7a8dcad1837a1990bcba8259da3ea0
@@ -62,7 +62,7 @@ The 7 core architecture and contract test suites were executed:
 
 ```bash
 $ python3 -m unittest tests/test_semantic_census.py tests/test_semantic_object_model.py tests/test_registry_router_contracts.py tests/test_physical_ownership.py tests/test_migration_gates.py tests/test_family_eligibility.py tests/test_migration_roadmap.py
-Ran 213 tests in 4.599s - OK
+Ran 213 tests in 1.206s - OK
 # Exit Code: 0
 ```
 
@@ -81,7 +81,7 @@ Ran 213 tests in 4.599s - OK
 
 ## 5. Negative-Path Fail-Closed Verification
 
-Four negative-path validation checks were executed to prove that the harness fails closed when encountering invalid inputs:
+Five negative-path validation checks were executed to prove that the harness fails closed when encountering invalid inputs:
 
 ```bash
 $ python3 audit/zero-index/SKIL-15/scripts/verify_skil15_crosswalk.py --negative-only
@@ -94,6 +94,7 @@ $ python3 audit/zero-index/SKIL-15/scripts/verify_skil15_crosswalk.py --negative
 | 2. Malformed Script AST | Unparseable Python syntax (`def broken(\n`) | `SyntaxError` raised | Caught `SyntaxError` | **PASS** |
 | 3. Missing Archive Script | Querying nonexistent script filename | Recorded as `FILE_NOT_FOUND_IN_ARCHIVE` | Flagged as missing | **PASS** |
 | 4. Nonexistent Symbol | Checking fake symbol `NonexistentClass.fake_method` | `verify_symbol_in_file` returns `False` | Rejected with clear reason | **PASS** |
+| 5. Untested Symbol Linkage | Checking untested symbol `validate_library_integrity` | `verify_test_linkage` returns `False` | Rejected with `NO_DIRECT_CORE_UNIT_TEST_COVERAGE` | **PASS** |
 
 ---
 
@@ -104,7 +105,7 @@ The generator was run independently into two separate directories (`/tmp/skil15-
 | Artifact | Run 1 SHA-256 Digest | Run 2 SHA-256 Digest | Match Status |
 | :--- | :--- | :--- | :---: |
 | `archive-source-manifest.csv` | `c1d68ec8340f7188888cc14930f3076159d0836c0911514bbfe606f7980eeb7f` | `c1d68ec8340f7188888cc14930f3076159d0836c0911514bbfe606f7980eeb7f` | **MATCH** |
-| `script-reuse-crosswalk.csv` | `d892a73c72db6dcfd1cabf789d406edd05aa0f0cb668293eca83e405ffd49ed2` | `d892a73c72db6dcfd1cabf789d406edd05aa0f0cb668293eca83e405ffd49ed2` | **MATCH** |
+| `script-reuse-crosswalk.csv` | `db1722ca9196bdb512df8822e3148a7205b007a72058bf4358310a0d76e0f2d3` | `db1722ca9196bdb512df8822e3148a7205b007a72058bf4358310a0d76e0f2d3` | **MATCH** |
 | `module-capability-matrix.md` | `cd76e1e59de1323da660b8365bb9c1dcd7d88c30113c0f272a4cc10ad3eb687a` | `cd76e1e59de1323da660b8365bb9c1dcd7d88c30113c0f272a4cc10ad3eb687a` | **MATCH** |
 | `gaps-and-collisions.md` | `3355cadea784be9ce1eb70579a6c2552f6493deaaff2f7dd7484630d5444cc29` | `3355cadea784be9ce1eb70579a6c2552f6493deaaff2f7dd7484630d5444cc29` | **MATCH** |
 

@@ -234,6 +234,20 @@ def run_negative_path_checks(source_root: Path):
     if not fake_symbol_caught:
         raise RuntimeError("Negative Check 4 Failed: Fake symbol was not rejected by verify_symbol_in_file!")
 
+    # Check 5: Untested mapped symbol fails test linkage verification
+    from generate_skil15_crosswalk import verify_test_linkage
+    untested_symbol = "validate_library_integrity"
+    rel_untested_file = "tools/skill_library/validator.py"
+    test_ok, test_reason, _ = verify_test_linkage(source_root, rel_untested_file, untested_symbol)
+    untested_caught = (not test_ok) and (test_reason == "NO_DIRECT_CORE_UNIT_TEST_COVERAGE")
+    results.append({
+        "check": "Negative Test Linkage (Unsupported test coverage claim rejected)",
+        "passed": untested_caught,
+        "detail": f"verify_test_linkage correctly rejected untested symbol '{untested_symbol}': {test_reason}",
+    })
+    if not untested_caught:
+        raise RuntimeError("Negative Check 5 Failed: Untested symbol was not rejected by verify_test_linkage!")
+
     return results
 
 
@@ -299,7 +313,7 @@ def main():
         negative_results = run_negative_path_checks(source_root)
         for idx, res in enumerate(negative_results, 1):
             print(f"Check {idx}: {res['check']} -> PASS ({res['detail']})")
-        print("PASS: All 4 negative-path checks passed. Validation harness fails closed on invalid inputs.")
+        print(f"PASS: All {len(negative_results)} negative-path checks passed. Validation harness fails closed on invalid inputs.")
         sys.exit(0)
 
     # Full Verification & Deliverable Generation Pipeline
@@ -466,7 +480,7 @@ $ {test_result['display_cmd']}
 
 ## 5. Negative-Path Fail-Closed Verification
 
-Four negative-path validation checks were executed to prove that the harness fails closed when encountering invalid inputs:
+Five negative-path validation checks were executed to prove that the harness fails closed when encountering invalid inputs:
 
 ```bash
 $ python3 audit/zero-index/SKIL-15/scripts/verify_skil15_crosswalk.py --negative-only
@@ -479,6 +493,7 @@ $ python3 audit/zero-index/SKIL-15/scripts/verify_skil15_crosswalk.py --negative
 | 2. Malformed Script AST | Unparseable Python syntax (`def broken(\\n`) | `SyntaxError` raised | Caught `SyntaxError` | **PASS** |
 | 3. Missing Archive Script | Querying nonexistent script filename | Recorded as `FILE_NOT_FOUND_IN_ARCHIVE` | Flagged as missing | **PASS** |
 | 4. Nonexistent Symbol | Checking fake symbol `NonexistentClass.fake_method` | `verify_symbol_in_file` returns `False` | Rejected with clear reason | **PASS** |
+| 5. Untested Symbol Linkage | Checking untested symbol `validate_library_integrity` | `verify_test_linkage` returns `False` | Rejected with `NO_DIRECT_CORE_UNIT_TEST_COVERAGE` | **PASS** |
 
 ---
 
@@ -546,7 +561,7 @@ All acceptance criteria are calculated directly from verified evidence:
 | **Evidence-backed reuse** | **PASS** | Behavioral claims grounded in AST parsing, dynamic symbol resolution, and 213 passing unit tests in `tests/test_*.py`. Unsupported test claims downgraded to `UNVERIFIED`. |
 | **No duplicated work** | **PASS** | Every reuse/adaptation recommendation cites existing `tools/skill_library/` modules with explicit callable entrypoints and rationale. |
 | **Historical safety** | **PASS** | 31 legacy phase scripts classified as `HISTORICAL-ONLY`; 12 dangerous writers explicitly identified and prohibited. Historical noncanonical paths (`task-folder/agents/skills/`) distinguished from true nonexistent 404 paths. |
-| **Fail-closed verification** | **PASS** | Harness enforces fail-closed checks on unit tests, AST syntax errors, fake symbol mappings, and missing archive files. 4/4 negative-path checks passed. |
+| **Fail-closed verification** | **PASS** | Harness enforces fail-closed checks on unit tests, AST syntax errors, fake symbol mappings, untested symbol linkage, and missing archive files. 5/5 negative-path checks passed. |
 | **Determinism and safety** | **PASS** | Dual-run generation verified identical SHA-256 digests; zero workstation path or secret leaks. |
 | **Handoff (PR & Status)** | **NOT_TESTED** | Draft PR #158 open; issue in `In Review` awaiting reviewer approval upon revision submission. |
 

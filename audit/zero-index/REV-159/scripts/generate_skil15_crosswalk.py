@@ -96,9 +96,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/migration_gates.py",
         "current_function": "HistoricalProvenanceMapper.reconcile",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "NEEDS-FURTHER-TEST",
-        "rationale": "Historical Phase 02 utility checking legacy CSV headers and nullity. Behavioral equivalent in modern architecture is HistoricalProvenanceMapper.reconcile, which performs structured provenance mapping and manifest reconciliation; column heuristics warrant isolated testing against zero-index baseline before reuse.",
+        "rationale": "Historical Phase 02 utility checking legacy CSV headers and nullity. Conceptual equivalent in modern architecture is HistoricalProvenanceMapper.reconcile, which performs structured provenance mapping and manifest reconciliation; has_test marked UNVERIFIED pending isolated testing against zero-index baseline.",
         "suggested_zi_target": "ZI-03",
     },
     {
@@ -108,7 +108,7 @@ CROSSWALK_RECORDS = [
         "current_function": "ExecutionProviderBinding.validate",
         "has_test": "TRUE",
         "status": "ADAPT-EXISTING",
-        "rationale": "Evaluated deep Claude and tool couplings across legacy skills via regex text search. Modern provider qualification is codified in data contracts via ExecutionProviderBinding.validate and ExecutionProviderContract.validate_capability_providers (ADR-003). Any automated coupling scanner for unstructured skill text would be adapted in ZI-04.",
+        "rationale": "Evaluated deep Claude and tool couplings across legacy skills via regex text search. Modern provider qualification is codified in data contracts via ExecutionProviderBinding.validate (tested in tests/test_family_eligibility.py). Any automated coupling scanner for unstructured skill text would be adapted in ZI-04.",
         "suggested_zi_target": "ZI-04",
     },
     {
@@ -118,7 +118,7 @@ CROSSWALK_RECORDS = [
         "current_function": "ExecutionProviderContract.validate_capability_providers",
         "has_test": "TRUE",
         "status": "ADAPT-EXISTING",
-        "rationale": "Regex scanner for provider-specific dependencies (Anthropic, Bedrock, Vertex). Replaced in modern architecture by typed ProviderType enums and ExecutionProviderContract.validate_capability_providers in family_contract.py. Adaptable in ZI-04 if automated regex extraction from raw unparsed skill bodies is needed.",
+        "rationale": "Regex scanner for provider-specific dependencies (Anthropic, Bedrock, Vertex). Replaced by typed ProviderType enums and ExecutionProviderContract.validate_capability_providers in family_contract.py (tested in tests/test_family_eligibility.py). Adaptable in ZI-04 if automated regex extraction from raw unparsed skill bodies is needed.",
         "suggested_zi_target": "ZI-04",
     },
     {
@@ -126,9 +126,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/registry_contract.py",
         "current_function": "CatalogCompiler.compile",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "HISTORICAL-ONLY",
-        "rationale": "Phase 05 legacy functional taxonomy builder enforcing obsolete 2,103 leaf count and legacy category bins. Must NOT be treated as approved hybrid compiler; modern multi-view compilation is owned by CatalogCompiler.compile. Prohibited from live catalog execution.",
+        "rationale": "Phase 05 legacy functional taxonomy builder enforcing obsolete 2,103 leaf count and legacy category bins. Conceptual equivalence to CatalogCompiler.compile in modern architecture (which has contract tests), but historical script itself is retired, unexecuted in test suites, and prohibited from live catalog execution.",
         "suggested_zi_target": "RETIRED_DO_NOT_MIGRATE",
     },
     {
@@ -136,9 +136,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/registry_contract.py",
         "current_function": "AliasResolver.resolve",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "HISTORICAL-ONLY",
-        "rationale": "One-time artifact builder for Phase 06 skill consolidation (merges/splits). Superseded by AliasObject and AliasResolver.resolve / AliasResolver.adjudicate_duplicate_pair in registry_contract.py. Prohibited from live catalog execution.",
+        "rationale": "One-time artifact builder for Phase 06 skill consolidation (merges/splits). Conceptual equivalence to AliasResolver.resolve in modern architecture (which has contract tests), but historical script is retired, untested, and prohibited from live catalog execution.",
         "suggested_zi_target": "RETIRED_DO_NOT_MIGRATE",
     },
     {
@@ -146,9 +146,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/physical_layout.py",
         "current_function": "PhysicalLayoutValidator.validate_object_placement",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "HISTORICAL-ONLY",
-        "rationale": "Phase 07 oversized skill splitting generator. Physical layout boundaries, canonical placement, and package containment are now validated by PhysicalLayoutValidator.validate_object_placement and migration_gates.py. Prohibited from live execution.",
+        "rationale": "Phase 07 oversized skill splitting generator. Conceptual equivalence to PhysicalLayoutValidator.validate_object_placement, but historical script is retired, untested, and prohibited from live catalog execution.",
         "suggested_zi_target": "RETIRED_DO_NOT_MIGRATE",
     },
     {
@@ -156,9 +156,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/registry_contract.py",
         "current_function": "CatalogRegistry.add_entry",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "HISTORICAL-ONLY",
-        "rationale": "Constructed historical Phase 08 canonical registry CSVs using hardcoded phase schemas. Current canonical registration is managed through CatalogRegistry.add_entry and ObjectGraph.add_object. Prohibited from live execution.",
+        "rationale": "Constructed historical Phase 08 canonical registry CSVs using hardcoded phase schemas. Conceptual equivalence to CatalogRegistry.add_entry, but historical script is retired, untested, and prohibited from live catalog execution.",
         "suggested_zi_target": "RETIRED_DO_NOT_MIGRATE",
     },
     {
@@ -178,7 +178,7 @@ CROSSWALK_RECORDS = [
         "current_function": "FamilyCandidateEvaluator.evaluate",
         "has_test": "TRUE",
         "status": "ADAPT-EXISTING",
-        "rationale": "Evaluated application compatibility gates for Phase 03. Formalized into FamilyTier qualification and FamilyCandidateEvaluator.evaluate (utilizing FamilyQualificationGate.is_tier_1_eligible) in family_contract.py. Adaptable for ZI-04 gate automation.",
+        "rationale": "Evaluated application compatibility gates for Phase 03. Formalized into FamilyTier qualification and FamilyCandidateEvaluator.evaluate in family_contract.py (tested in tests/test_family_eligibility.py). Adaptable for ZI-04 gate automation.",
         "suggested_zi_target": "ZI-04",
     },
     {
@@ -186,9 +186,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/family_contract.py",
         "current_function": "FamilyCandidateEvaluator.evaluate",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "HISTORICAL-ONLY",
-        "rationale": "Dry-run script for Phase 04 provider neutralization. Active mutation of skill bodies is retired under Zero-Index immutability; provider neutrality is enforced via ExecutionProviderBinding.validate without mutating source markdown. Prohibited from live execution.",
+        "rationale": "Dry-run script for Phase 04 provider neutralization. Conceptual equivalence to FamilyCandidateEvaluator.evaluate in family_contract.py, but historical script is retired, untested, and prohibited from live catalog execution.",
         "suggested_zi_target": "RETIRED_DO_NOT_MIGRATE",
     },
     {
@@ -256,9 +256,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/validator.py",
         "current_function": "validate_library_integrity",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "HISTORICAL-ONLY",
-        "rationale": "One-time fix for registry validation check 16 in Phase 08. Formal library integrity and registry consistency are now validated by validate_library_integrity. Prohibited from live execution.",
+        "rationale": "One-time fix for registry check 16 in Phase 08. Conceptual equivalence to validate_library_integrity in modern architecture, but historical script is retired, untested, and prohibited from live execution.",
         "suggested_zi_target": "RETIRED_DO_NOT_MIGRATE",
     },
     {
@@ -266,9 +266,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/validator.py",
         "current_function": "validate_library_integrity",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "ADAPT-EXISTING",
-        "rationale": "Phase 11 full-library validation artifact generator. Validation logic has been formalized into validate_library_integrity; output reporting formatting can be adapted for zero-index validation reports in ZI-04.",
+        "rationale": "Phase 11 full-library validation artifact generator. Validation logic has been formalized into validate_library_integrity; mapped entrypoint is exercised in integration tests (test_runtime_publication.py) but lacks direct unit test execution in core 213 test suite (has_test marked UNVERIFIED).",
         "suggested_zi_target": "ZI-04",
     },
     {
@@ -276,9 +276,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/pilot.py",
         "current_function": "run_targeted_pilot",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "ADAPT-EXISTING",
-        "rationale": "Phase 12 pilot review artifact generator. Pilot sampling and execution logic has been formalized into run_targeted_pilot for operational review runs in ZI-05.",
+        "rationale": "Phase 12 pilot review artifact generator. Formalized into run_targeted_pilot; mapped entrypoint is exercised in scenario tests (test_scenarios.py) but lacks direct unit test execution in core 213 test suite (has_test marked UNVERIFIED).",
         "suggested_zi_target": "ZI-05",
     },
     {
@@ -286,9 +286,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/registry_contract.py",
         "current_function": "ProjectMaterializer.materialize_bundle",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "HISTORICAL-ONLY",
-        "rationale": "Partitioned legacy skills into 160 migration batches for Phase 08. Rebuild batching is complete; incremental staging and materialization are now handled via ProjectMaterializer.materialize_bundle and migration gates. Prohibited from live execution.",
+        "rationale": "Partitioned legacy skills into 160 migration batches for Phase 08. Conceptual equivalence to ProjectMaterializer.materialize_bundle in modern architecture (which has contract tests), but historical script is retired, untested, and prohibited from live execution.",
         "suggested_zi_target": "RETIRED_DO_NOT_MIGRATE",
     },
     {
@@ -366,9 +366,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill-library.py",
         "current_function": "main",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "REUSE-AS-IS",
-        "rationale": "Unified CLI management entrypoint active in repository at tools/skill-library.py, providing scan, intake, validate, sync, and publish subcommands.",
+        "rationale": "Unified CLI management entrypoint active in repository at tools/skill-library.py, providing scan, intake, validate, sync, and publish subcommands; CLI entrypoint itself lacks direct unit test execution in core 213 test suite (has_test marked UNVERIFIED).",
         "suggested_zi_target": "ACTIVE_IN_REPO",
     },
     {
@@ -426,9 +426,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "TestRuntimeGitClonePublication",
         "current_file": "tests/test_runtime_publication.py",
         "current_function": "TestRuntimeGitClonePublication",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "REUSE-AS-IS",
-        "rationale": "Integration test suite for git clone publication and runtime target synchronization. Active in tests/test_runtime_publication.py.",
+        "rationale": "Integration test suite for git clone publication and runtime target synchronization. Active in tests/test_runtime_publication.py; excluded from fast core 213 unit test suite due to live clone and mock environment prerequisites (has_test marked UNVERIFIED).",
         "suggested_zi_target": "ACTIVE_IN_REPO",
     },
     {
@@ -436,9 +436,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "TestGlobalRuntimePath",
         "current_file": "tests/test_scenarios.py",
         "current_function": "TestGlobalRuntimePath",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "REUSE-AS-IS",
-        "rationale": "Scenario and path validation test suite covering runtime distribution and global path handling. Active in tests/test_scenarios.py.",
+        "rationale": "Scenario and path validation test suite covering runtime distribution and global path handling. Active in tests/test_scenarios.py; excluded from fast core 213 unit test suite due to mock repo prerequisites (has_test marked UNVERIFIED).",
         "suggested_zi_target": "ACTIVE_IN_REPO",
     },
     {
@@ -566,9 +566,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/migration_gates.py",
         "current_function": "MigrationGateRunner.run_all_gates",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "NEEDS-FURTHER-TEST",
-        "rationale": "Cumulative reconciliation verifier checking discrepancy counts across historical phases. Logic has valuable diff heuristics that warrant isolated benchmarking against zero-index baseline before reuse.",
+        "rationale": "Cumulative reconciliation verifier checking discrepancy counts across historical phases. Conceptual equivalence to MigrationGateRunner.run_all_gates in modern architecture (which has contract tests), but historical script is retired, untested against zero-index baseline, and marked UNVERIFIED.",
         "suggested_zi_target": "ZI-03",
     },
     {
@@ -586,9 +586,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/registry_contract.py",
         "current_function": "FamilyRouterGenerator.generate_tier_1_hub_router",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "HISTORICAL-ONLY",
-        "rationale": "Phase 10 functional routing map verifier. Asserts legacy routing contracts and static counts; must NOT be treated as live Codex A/B/C runner or hybrid router compiler. Modern routers are generated deterministically by FamilyRouterGenerator.generate_tier_1_hub_router. Prohibited from live catalog execution.",
+        "rationale": "Phase 10 functional routing map verifier. Asserts legacy routing contracts and static counts; must NOT be treated as live Codex A/B/C runner or hybrid router compiler. Modern routers are generated deterministically by FamilyRouterGenerator.generate_tier_1_hub_router (which has contract tests), but historical script is retired, unexecuted in test suites, and prohibited from live catalog execution.",
         "suggested_zi_target": "RETIRED_DO_NOT_MIGRATE",
     },
     {
@@ -596,9 +596,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/validator.py",
         "current_function": "validate_library_integrity",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "HISTORICAL-ONLY",
-        "rationale": "Phase 11 library validation verifier. Checks were rewritten and integrated into validate_library_integrity. Prohibited from live catalog execution.",
+        "rationale": "Phase 11 library validation verifier. Conceptual equivalence to validate_library_integrity in modern architecture, but historical script is retired, untested, and prohibited from live execution.",
         "suggested_zi_target": "RETIRED_DO_NOT_MIGRATE",
     },
     {
@@ -606,9 +606,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/pilot.py",
         "current_function": "run_targeted_pilot",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "HISTORICAL-ONLY",
-        "rationale": "Phase 12 pilot review verifier. Replaced by operational pilot testing in run_targeted_pilot. Prohibited from live catalog execution.",
+        "rationale": "Phase 12 pilot review verifier. Conceptual equivalence to run_targeted_pilot in modern architecture, but historical script is retired, untested, and prohibited from live execution.",
         "suggested_zi_target": "RETIRED_DO_NOT_MIGRATE",
     },
 ]
@@ -664,6 +664,17 @@ def generate_archive_manifest(source_root: Path, output_dir: Path):
         writer.writerows(rows)
 
 
+CORE_CONTRACT_TEST_FILES = [
+    "tests/test_family_eligibility.py",
+    "tests/test_migration_gates.py",
+    "tests/test_migration_roadmap.py",
+    "tests/test_physical_ownership.py",
+    "tests/test_registry_router_contracts.py",
+    "tests/test_semantic_census.py",
+    "tests/test_semantic_object_model.py",
+]
+
+
 def verify_symbol_in_file(file_path: Path, symbol: str) -> tuple[bool, str]:
     """Dynamically verify that a callable symbol (function, class, or method) exists in file AST."""
     if not file_path.exists():
@@ -694,6 +705,50 @@ def verify_symbol_in_file(file_path: Path, symbol: str) -> tuple[bool, str]:
     return False, f"Unsupported symbol path structure: {symbol}"
 
 
+def verify_test_linkage(source_root: Path, current_file: str, current_function: str) -> tuple[bool, str, list[str]]:
+    """Dynamically verify that a mapped callable or test class is executed in the core 213 unit test suite."""
+    if current_file.startswith("tests/"):
+        if current_file not in CORE_CONTRACT_TEST_FILES:
+            return False, f"Test file {current_file} is not part of the 213-test core contract suite", []
+        test_path = source_root / current_file
+        if not test_path.exists():
+            return False, f"Test file does not exist: {test_path}", []
+        try:
+            tree = ast.parse(test_path.read_text(encoding="utf-8"))
+        except Exception as e:
+            return False, f"AST parse error in {test_path}: {e}", []
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.ClassDef, ast.FunctionDef)) and node.name == current_function:
+                return True, "CORE_TEST_CLASS_OR_FUNCTION_VERIFIED", [current_file]
+        return False, f"Symbol {current_function} not defined in {current_file}", []
+
+    parts = current_function.split(".")
+    found_in = []
+    core_paths = [source_root / tf for tf in CORE_CONTRACT_TEST_FILES]
+    for tf_path in core_paths:
+        if not tf_path.exists():
+            continue
+        try:
+            tree = ast.parse(tf_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if len(parts) == 2:
+            cls_name, method_name = parts
+            has_cls = any(isinstance(n, ast.Name) and n.id == cls_name for n in ast.walk(tree))
+            has_method = any(isinstance(n, ast.Attribute) and n.attr == method_name for n in ast.walk(tree))
+            if has_cls and has_method:
+                found_in.append(tf_path.name)
+        elif len(parts) == 1:
+            name = parts[0]
+            has_name = any(isinstance(n, ast.Name) and n.id == name for n in ast.walk(tree))
+            if has_name:
+                found_in.append(tf_path.name)
+
+    if found_in:
+        return True, "MAPPED_CALLABLE_TESTED_IN_CORE_SUITE", found_in
+    return False, "NO_DIRECT_CORE_UNIT_TEST_COVERAGE", []
+
+
 def generate_reuse_crosswalk(source_root: Path, output_dir: Path):
     crosswalk_path = output_dir / "script-reuse-crosswalk.csv"
     fieldnames = [
@@ -707,20 +762,41 @@ def generate_reuse_crosswalk(source_root: Path, output_dir: Path):
         "suggested_zi_target",
     ]
 
-    # Verify all mapped symbols exist in source repository
+    # Verify all mapped symbols exist in source repository and validate test coverage claims
     resolution_failures = []
+    test_claim_failures = []
     for record in CROSSWALK_RECORDS:
         cur_file = record["current_file"]
         cur_func = record["current_function"]
+        has_test_claim = record["has_test"]
+        status = record["status"]
+
         if cur_file == "HISTORICAL_REBUILD_ONLY" and cur_func == "NONE_RETIRED":
+            if has_test_claim != "FALSE":
+                test_claim_failures.append(f"{record['archived_script']}: retired script must have has_test == 'FALSE', got '{has_test_claim}'")
             continue
+
         target_path = source_root / cur_file
         ok, reason = verify_symbol_in_file(target_path, cur_func)
         if not ok:
             resolution_failures.append(f"{record['archived_script']} -> {cur_file}:{cur_func} ({reason})")
 
-    if resolution_failures:
-        msg = f"Symbol resolution failed for {len(resolution_failures)} mapped records:\n" + "\n".join(resolution_failures)
+        has_test_ok, test_reason, test_files = verify_test_linkage(source_root, cur_file, cur_func)
+
+        if has_test_claim == "TRUE":
+            # Must have verified test linkage in core test suite
+            if not has_test_ok:
+                test_claim_failures.append(f"{record['archived_script']} -> {cur_file}:{cur_func}: claimed has_test == 'TRUE' but {test_reason}")
+            # Conceptual equivalence must be kept distinct from executed test coverage:
+            # Historical-only and needs-further-test scripts cannot claim TRUE test coverage
+            if status in ("HISTORICAL-ONLY", "NEEDS-FURTHER-TEST"):
+                test_claim_failures.append(f"{record['archived_script']}: status '{status}' cannot claim has_test == 'TRUE' based on conceptual equivalence")
+        elif has_test_claim not in ("UNVERIFIED", "FALSE"):
+            test_claim_failures.append(f"{record['archived_script']}: invalid has_test claim '{has_test_claim}' (must be TRUE, UNVERIFIED, or FALSE)")
+
+    if resolution_failures or test_claim_failures:
+        errors = resolution_failures + test_claim_failures
+        msg = f"Crosswalk verification failed for {len(errors)} records:\n" + "\n".join(errors)
         raise RuntimeError(msg)
 
     with open(crosswalk_path, "w", newline="", encoding="utf-8") as f:
