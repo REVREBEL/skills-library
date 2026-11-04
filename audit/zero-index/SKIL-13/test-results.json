@@ -1,0 +1,138 @@
+{
+  "timestamp_utc": "2026-11-04T05:08:00Z",
+  "pinned_git_sha": "195eda775d7a8dcad1837a1990bcba8259da3ea0",
+  "summary": {
+    "total_test_modules": 9,
+    "total_test_cases_discovered": 253,
+    "passes": 248,
+    "failures": 2,
+    "errors": 3,
+    "overall_status": "FAILED",
+    "total_duration_sec": 166.7
+  },
+  "suite_breakdown": [
+    {
+      "suite_module": "tests.test_family_eligibility",
+      "file": "tests/test_family_eligibility.py",
+      "plane": "Semantic / Taxonomy",
+      "total_tests": 40,
+      "passes": 40,
+      "failures": 0,
+      "errors": 0,
+      "duration_sec": 0.102,
+      "status": "PASS",
+      "focus": "Census-backed evidence integrity, qualification tiers, disqualified sprawl, NotebookLM adjudication"
+    },
+    {
+      "suite_module": "tests.test_migration_gates",
+      "file": "tests/test_migration_gates.py",
+      "plane": "Lifecycle / Gates",
+      "total_tests": 56,
+      "passes": 56,
+      "failures": 0,
+      "errors": 0,
+      "duration_sec": 6.824,
+      "status": "PASS",
+      "focus": "Gates 1-9 implementation, INV-1 through INV-10 checks, provenance mapper reconciliation"
+    },
+    {
+      "suite_module": "tests.test_migration_roadmap",
+      "file": "tests/test_migration_roadmap.py",
+      "plane": "Composition / Governance",
+      "total_tests": 14,
+      "passes": 14,
+      "failures": 0,
+      "errors": 0,
+      "duration_sec": 0.036,
+      "status": "PASS (with PYTHONPATH=tools; fails with ImportError when unconfigured)",
+      "focus": "MIGRATION_ROADMAP.md structure, ADR-001-005 citations, 6 phases, legacy archive preservation"
+    },
+    {
+      "suite_module": "tests.test_physical_ownership",
+      "file": "tests/test_physical_ownership.py",
+      "plane": "Composition / Physical Layout",
+      "total_tests": 19,
+      "passes": 19,
+      "failures": 0,
+      "errors": 0,
+      "duration_sec": 0.002,
+      "status": "PASS",
+      "focus": "REV-125 duplicate pair resolution, physical plane boundaries, non-destructive freeze"
+    },
+    {
+      "suite_module": "tests.test_registry_router_contracts",
+      "file": "tests/test_registry_router_contracts.py",
+      "plane": "Semantic / Catalog Registry",
+      "total_tests": 39,
+      "passes": 39,
+      "failures": 0,
+      "errors": 0,
+      "duration_sec": 0.009,
+      "status": "PASS",
+      "focus": "REV-130 / ADR-004 Catalog registry, multi-view projections, alias resolution, materializer"
+    },
+    {
+      "suite_module": "tests.test_runtime_publication",
+      "file": "tests/test_runtime_publication.py",
+      "plane": "Deployment / Publication Engine",
+      "total_tests": 25,
+      "passes": 23,
+      "failures": [
+        {
+          "test": "test_21_accept_external_intake_enforcement_and_dispatch_failure",
+          "assertion": "self.assertFalse(cap_dispatch['workflow_triggered'])",
+          "line": 813,
+          "error_message": "AssertionError: True is not false",
+          "root_cause": "capture_dirty_target calls subprocess.run(['gh', 'workflow', 'run', ...]) without mocking. In environments where gh is present and authenticated, dispatch succeeds (or returns 0), violating the test's hardcoded assumption that dispatch fails."
+        },
+        {
+          "test": "test_24_skill_directory_rename_preserves_old_and_new_paths",
+          "assertion": "self.assertTrue(ev.is_valid_package)",
+          "line": 1122,
+          "error_message": "AssertionError: False is not true",
+          "root_cause": "Physical rename of skill directory from bug-hunter to bug-tracker leaves SKILL.md frontmatter name as bug-hunter. evaluate_candidate calls validate_single_skill which fails package validation due to directory/name mismatch, setting is_valid_package=False."
+        }
+      ],
+      "errors": 0,
+      "duration_sec": 159.804,
+      "status": "FAIL",
+      "focus": "14 core runtime requirements, git clone sync, intake capture, branch publication"
+    },
+    {
+      "suite_module": "tests.test_scenarios",
+      "file": "tests/test_scenarios.py",
+      "plane": "Lifecycle / Integration",
+      "total_tests": 15,
+      "passes": 15,
+      "failures": 0,
+      "errors": 0,
+      "duration_sec": 0.567,
+      "status": "PASS",
+      "focus": "End-to-end integration scenarios, candidate intake, review workflows, pilot simulation"
+    },
+    {
+      "suite_module": "tests.test_semantic_census",
+      "file": "tests/test_semantic_census.py",
+      "plane": "Semantic / Census Validation",
+      "total_tests": 10,
+      "passes": 10,
+      "failures": 0,
+      "errors": 0,
+      "duration_sec": 0.095,
+      "status": "PASS",
+      "focus": "REV-150 semantic role census dataset schema, category distributions, token densities"
+    },
+    {
+      "suite_module": "tests.test_semantic_object_model",
+      "file": "tests/test_semantic_object_model.py",
+      "plane": "Semantic / Object Graph",
+      "total_tests": 35,
+      "passes": 35,
+      "failures": 0,
+      "errors": 0,
+      "duration_sec": 0.006,
+      "status": "PASS",
+      "focus": "ADR-001 / ADR-002 semantic entities (Capability, Workflow, Primitive, Overlay, Adapter, Alias)"
+    }
+  ]
+}
