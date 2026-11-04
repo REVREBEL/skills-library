@@ -30,10 +30,10 @@ All acceptance criteria are calculated directly from verified evidence:
 | :--- | :---: | :--- |
 | **Complete archive coverage** | **PASS** | Exactly 52/52 items cataloged in `archive-source-manifest.csv`; 1:1 crosswalk in `script-reuse-crosswalk.csv`. |
 | **Evidence-backed reuse** | **PASS** | Behavioral claims grounded in AST parsing and 213 passing unit tests in `tests/test_*.py`. |
-| **No duplicated work** | **PASS** | Every reuse/adaptation recommendation cites existing `tools/skill_library/` modules with explicit rationale. |
-| **Historical safety** | **PASS** | 32 legacy phase scripts classified as `HISTORICAL-ONLY`; 12 dangerous writers explicitly identified and prohibited. |
+| **No duplicated work** | **PASS** | Every reuse/adaptation recommendation cites existing `tools/skill_library/` modules with explicit callable entrypoints and rationale. |
+| **Historical safety** | **PASS** | 32 legacy phase scripts classified as `HISTORICAL-ONLY`; 12 dangerous writers explicitly identified and prohibited. Historical noncanonical paths (`task-folder/agents/skills/`) distinguished from true nonexistent 404 paths. |
 | **Determinism and safety** | **PASS** | Dual-run generation verified identical SHA-256 digests; zero workstation path or secret leaks. |
-| **Handoff (PR & Status)** | **NOT_TESTED** | Awaiting PR publication and Linear issue transition to In Review. |
+| **Handoff (PR & Status)** | **NOT_TESTED** | Draft PR #158 open; awaiting reviewer approval upon revision submission. |
 
 ---
 
@@ -42,7 +42,7 @@ All acceptance criteria are calculated directly from verified evidence:
 1. **ZI-03 (Reconciliation & Ledger Baseline):**
    - Incorporate the manifest hashing principles from `generate_inventory.py` and discrepancy tracking from `verify_phase_08_cumulative.py` into living ledger audits.
 2. **ZI-04 (Architecture Validation & CI Hardening):**
-   - Formalize CI gates based on `tests/test_migration_gates.py` (G01–G08) and `family_contract.py` provider neutrality checks.
+   - Formalize CI gates based on `tests/test_migration_gates.py` (G01–G09) and `family_contract.py` provider neutrality checks.
    - Prohibit execution of any `HISTORICAL-ONLY` batch scripts in CI.
 3. **ZI-05 (Pilot & Publication Automation):**
    - Expand `tools/skill_library/pilot.py` with multi-provider sandbox runs derived from `gen_phase12_artifacts.py`.
