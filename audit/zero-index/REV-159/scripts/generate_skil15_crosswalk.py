@@ -12,6 +12,7 @@ This generator deterministically produces the 6 required audit deliverables:
 """
 
 import argparse
+import ast
 import csv
 import hashlib
 from pathlib import Path
@@ -165,9 +166,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/validate_semantic_census.py",
         "current_function": "main",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "REUSE-AS-IS",
-        "rationale": "Authoritative semantic role census generator runner located in tools/catalog_semantic_census.py, delegating directly to validate_semantic_census.main(). Active in repository and verified by tests/test_semantic_census.py.",
+        "rationale": "Authoritative semantic role census generator runner located in tools/catalog_semantic_census.py, delegating directly to validate_semantic_census.main(). Census data contracts verified by tests/test_semantic_census.py, but CLI main() entrypoint lacks direct unit test execution (has_test downgraded from static claim).",
         "suggested_zi_target": "ACTIVE_IN_REPO",
     },
     {
@@ -235,9 +236,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/ledger.py",
         "current_function": "ChangeLedger.record_change",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "HISTORICAL-ONLY",
-        "rationale": "One-time patch script reconciling cumulative discrepancy counts in Phase 08. Continuous auditing and ledger reconciliation are now owned by ChangeLedger.record_change. Prohibited from live catalog execution.",
+        "rationale": "One-time patch script reconciling cumulative discrepancy counts in Phase 08. Modern append-only ledger mechanics are tested in tests/test_ledger.py, but the specific historical reconciliation script behavior lacks direct unit test coverage (conceptual equivalence only; has_test downgraded from static claim). Prohibited from live catalog execution.",
         "suggested_zi_target": "RETIRED_DO_NOT_MIGRATE",
     },
     {
@@ -305,9 +306,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/skill_library/ledger.py",
         "current_function": "ChangeLedger.record_change",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "ADAPT-EXISTING",
-        "rationale": "Phase 01/02 change ledger builder. Codified into tools/skill_library/ledger.py as the official append-only JSONL ChangeLedger.record_change interface for ZI-03.",
+        "rationale": "Phase 01/02 change ledger builder. Codified into tools/skill_library/ledger.py as the official append-only JSONL ChangeLedger interface; unit tests in tests/test_ledger.py verify ChangeLedger, but historical script CLI/entrypoint is not directly exercised by test suites (has_test downgraded from static claim).",
         "suggested_zi_target": "ZI-03",
     },
     {
@@ -505,9 +506,9 @@ CROSSWALK_RECORDS = [
         "archived_function": "main",
         "current_file": "tools/validate_semantic_census.py",
         "current_function": "main",
-        "has_test": "TRUE",
+        "has_test": "UNVERIFIED",
         "status": "REUSE-AS-IS",
-        "rationale": "Authoritative semantic role census validation tool active in tools/validate_semantic_census.py and executed for census verification.",
+        "rationale": "Authoritative semantic role census validation tool active in tools/validate_semantic_census.py. Core census models and data contracts verified by tests/test_semantic_census.py, but CLI main() entrypoint lacks direct unit test execution (has_test downgraded from static claim).",
         "suggested_zi_target": "ACTIVE_IN_REPO",
     },
     {
@@ -663,7 +664,37 @@ def generate_archive_manifest(source_root: Path, output_dir: Path):
         writer.writerows(rows)
 
 
-def generate_reuse_crosswalk(output_dir: Path):
+def verify_symbol_in_file(file_path: Path, symbol: str) -> tuple[bool, str]:
+    """Dynamically verify that a callable symbol (function, class, or method) exists in file AST."""
+    if not file_path.exists():
+        return False, f"File does not exist: {file_path}"
+    try:
+        tree = ast.parse(file_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        return False, f"AST parse error in {file_path}: {e}"
+
+    parts = symbol.split(".")
+    if len(parts) == 1:
+        name = parts[0]
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name:
+                return True, "FUNCTION_EXISTS"
+            if isinstance(node, ast.ClassDef) and node.name == name:
+                return True, "CLASS_EXISTS"
+        return False, f"Top-level symbol '{name}' not found in {file_path}"
+    elif len(parts) == 2:
+        class_name, method_name = parts
+        for node in tree.body:
+            if isinstance(node, ast.ClassDef) and node.name == class_name:
+                for sub in node.body:
+                    if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)) and sub.name == method_name:
+                        return True, "METHOD_EXISTS"
+                return False, f"Method '{method_name}' not found in class '{class_name}' in {file_path}"
+        return False, f"Class '{class_name}' not found in {file_path}"
+    return False, f"Unsupported symbol path structure: {symbol}"
+
+
+def generate_reuse_crosswalk(source_root: Path, output_dir: Path):
     crosswalk_path = output_dir / "script-reuse-crosswalk.csv"
     fieldnames = [
         "archived_script",
@@ -675,6 +706,22 @@ def generate_reuse_crosswalk(output_dir: Path):
         "rationale",
         "suggested_zi_target",
     ]
+
+    # Verify all mapped symbols exist in source repository
+    resolution_failures = []
+    for record in CROSSWALK_RECORDS:
+        cur_file = record["current_file"]
+        cur_func = record["current_function"]
+        if cur_file == "HISTORICAL_REBUILD_ONLY" and cur_func == "NONE_RETIRED":
+            continue
+        target_path = source_root / cur_file
+        ok, reason = verify_symbol_in_file(target_path, cur_func)
+        if not ok:
+            resolution_failures.append(f"{record['archived_script']} -> {cur_file}:{cur_func} ({reason})")
+
+    if resolution_failures:
+        msg = f"Symbol resolution failed for {len(resolution_failures)} mapped records:\n" + "\n".join(resolution_failures)
+        raise RuntimeError(msg)
 
     with open(crosswalk_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -959,7 +1006,7 @@ def build_all(source_root: Path, output_dir: Path):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     generate_archive_manifest(source_root, output_dir)
-    generate_reuse_crosswalk(output_dir)
+    generate_reuse_crosswalk(source_root, output_dir)
     generate_module_matrix(output_dir)
     generate_gaps_and_collisions(output_dir)
 
