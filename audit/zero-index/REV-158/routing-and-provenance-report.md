@@ -15,7 +15,7 @@ In accordance with the work order:
 - All baseline numbers are **discovered from disk**, never assumed or hardcoded.
 - Historical rebuild work is preserved as dated provenance rather than current live state.
 - 100% of discovered `SKILL.md` files (5072 total) are categorized with zero silent exclusions.
-- Variances between historical denominators and snapshot counts are preserved and explicitly explained.
+- Variances between historical denominators and snapshot counts are preserved and explicitly explained with documented uncertainty.
 
 ---
 
@@ -67,16 +67,24 @@ The repository contains distinct historical and operational populations. The tab
 
 | Denominator ID | Population Name | Baseline Count | Snapshot Count | Variance | Disposition | Notes |
 |---|---|:---:|:---:|:---:|---|---|
-| **DENOM-01** | Historical Pre-Rebuild Inventory | 2331 | 2101 | -230 | EXPLAINED_VARIANCE | 230 packages moved to quarantine/archive during historical rebuild. |
+| **DENOM-01** | Historical Pre-Rebuild Inventory | 2331 | 2101 | -230 | UNVERIFIED_HISTORICAL_DELTA | Historical inventory ledger contains 2,331 rows. On disk, 2,101 active pre-rebuild packages are discovered in `task-folder/agents/skills`. 2,094 match directly, 45 match quarantine paths by substitution, and 192 reflect unlinked historical rows, restructuring, or deletions. Observed count delta (-230) and uncertainty are preserved without forced reconciliation. |
 | **DENOM-02** | Historical Rebuilt Active Leaves | 2103 | 2102 | -1 | EXPLAINED_VARIANCE | 1 multi-path alias deduplicated in Task 13 Runtime Manifest. |
 | **DENOM-03** | Runtime Manifest Managed Skills | 2102 | 2102 | 0 | RECONCILED | Exact 1:1 match with runtime-manifest.json. |
 | **DENOM-04** | Authoritative Semantic Census | 2133 | 2133 | 0 | RECONCILED | Exact 1:1 match with semantic-role-census.json. |
 | **DENOM-05** | Total Physical Routers | 28 | 28 | 0 | RECONCILED | 26 standard + 2 operational routers. |
 | **DENOM-06** | Total Discovered SKILL.md | 5072 | 5072 | 0 | RECONCILED | 100% discovered-path coverage with zero silent exclusions. |
 
+### Row-Level Historical Inventory Crosswalk Details (DENOM-01)
+Inspection of `audit/rebuild-phase-1-12/skills-inventory.csv` (2,331 rows) against current on-disk paths reveals:
+- **Direct Path Matches**: 2,094 rows match existing `task-folder/agents/skills/` directories on disk.
+- **Quarantine Path Matches**: 45 rows match existing `task-folder/agents/not-needed/` directories when substituting the parent path.
+- **Archive Path Matches**: 0 rows match `task-folder/agents/archived/` via direct substitution.
+- **Unlinked Rows / Structural Moves**: 192 rows represent historical ledger items that were moved, merged, renamed, or deleted during historical Phases 03–08 without an authoritative row-level mapping ledger.
+- **Conclusion**: The -230 variance is an observed historical delta with documented uncertainty. It is preserved as `UNVERIFIED_HISTORICAL_DELTA` rather than coerced to a zero-variance match.
+
 ---
 
-## 4. Parser and Module Comparison
+## 4. Parser and Module Comparison & Canonical URN Contract
 
 1. **`tools/skill_library/config.py`**:
    - Accurately declares all 10 top-level categories, 3 deep categories (15 subcategories), and 7 flat categories (29 subcategories).
@@ -87,5 +95,7 @@ The repository contains distinct historical and operational populations. The tab
 3. **`tools/skill_library/ledger.py` (`ChangeLedger`)**:
    - Confirmed append-only provenance in `audit/change-ledger.jsonl`.
 4. **`tools/skill_library/object_model.py` (`CanonicalIdentity`)**:
-   - Validates path-independent URN format for all canonical census entries (`urn:skill:<scope>:<slug>` or `urn:skill:<slug>`).
-   - Ensures zero manufactured URNs for non-canonical fixtures, nested references, and historical source files.
+   - Conforms strictly to ADR-001 and RFC 8141 URN structure: `urn:skill:<scope>:<slug>` (compact `<scope>:<slug>`).
+   - `CanonicalIdentity.parse()` enforces that an immutable scope namespace and a kebab-case slug must be present, separated by a colon (`:`). It explicitly **rejects** unscoped `urn:skill:<slug>`.
+   - **Provenance Verification**: In the pinned census (`semantic-role-census.json`), exactly 31 items (under `library/github-operations/` and `library/skills-create-manage-update/`) possess verified scoped canonical IDs that parse into valid URNs.
+   - **Zero Manufactured IDs**: The remaining 2,102 canonical census entries possess unscoped canonical IDs (slugs without a scope prefix). Under ADR-001 and work order requirements ("Canonical identity must not be inferred from a physical path when missing"), their canonical URNs are recorded as empty (`""`) and classified as unassigned/unscoped in `discrepancies.csv`, awaiting formal scope minting in Phase 2. Zero artificial scopes are inferred from directory paths.

@@ -12,6 +12,17 @@
     "zero_source_mutation": "PASS"
   },
   "baseline_timestamp_utc": "2026-11-02T04:00:00Z",
+  "dated_submission_status": {
+    "draft_pull_request_number": 154,
+    "draft_pull_request_status": "OPEN",
+    "draft_pull_request_url": "https://github.com/REVREBEL/skills-library/pull/154",
+    "linear_issue_identifier": "SKIL-16",
+    "linear_issue_uuid": "40277fb5-9590-43a2-9a7f-3a6d0c8c0401",
+    "linear_submission_comment_url": "https://linear.app/revrebel/issue/SKIL-16/zi-01-pin-canonical-source-and-zero-index-inventory#comment-6be44a71",
+    "review_status": "REVISION_IN_PROGRESS",
+    "status_date_utc": "2026-11-03T23:30:00Z",
+    "verified_by": "Antigravity Agent (SKIL-16 revision session)"
+  },
   "legacy_reference": "REV-158",
   "linear_issue_identifier": "SKIL-16",
   "linear_issue_uuid": "40277fb5-9590-43a2-9a7f-3a6d0c8c0401",
