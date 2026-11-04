@@ -6,17 +6,30 @@ This document records the exact executable commands, AST parsing results, test s
 
 ## 1. Pinned Snapshot & Environment Verification
 
+### Commit & Snapshot Disambiguation
+| Artifact / Pointer | Git Commit SHA | Description |
+| :--- | :--- | :--- |
+| **Audited Pinned Source Snapshot** | `195eda775d7a8dcad1837a1990bcba8259da3ea0` | Canonical repository snapshot coordinated with SKIL-16 and SKIL-13 |
+| **Verification Execution Base Commit** | `c1d69703ba99e1ae4f78bd3ffc79880364dd96b9` | Commit checked out during verification execution (`git rev-parse HEAD`) |
+| **Prior Review Target PR Head** | `c1d69703ba99e1ae4f78bd3ffc79880364dd96b9` | Head of PR #158 evaluated in pull request review 5769316490 |
+| **Submitted Revision PR Head** | *(updated on branch push)* | Target head commit of PR #158 incorporating review fixes |
+
+### Environment Verification Execution
 ```bash
 # Repo Root: skills-library
 # Active Branch: issue/skil-15-reconcile-52-archived-scripts
 # Base Branch: origin/main
-# Python Version: 3.14.7
+# Python Version: 3.15.2
+# Timestamp: 2026-11-04T19:14:13Z
 
 $ git rev-parse HEAD
-9546edce4a09e8b426404bb748efb368570d4ffb
+c1d69703ba99e1ae4f78bd3ffc79880364dd96b9
+# Exit Code: 0
 
-# Pinned git snapshot coordinating with SKIL-16 and SKIL-13:
-195eda775d7a8dcad1837a1990bcba8259da3ea0
+$ git status --porcelain
+M audit/zero-index/SKIL-15/scripts/generate_skil15_crosswalk.py
+ M audit/zero-index/SKIL-15/scripts/verify_skil15_crosswalk.py
+# Exit Code: 0
 ```
 
 ---
@@ -62,7 +75,7 @@ The 7 core architecture and contract test suites were executed:
 
 ```bash
 $ python3 -m unittest tests/test_semantic_census.py tests/test_semantic_object_model.py tests/test_registry_router_contracts.py tests/test_physical_ownership.py tests/test_migration_gates.py tests/test_family_eligibility.py tests/test_migration_roadmap.py
-Ran 213 tests in 1.206s - OK
+Ran 213 tests in 2.804s - OK
 # Exit Code: 0
 ```
 
@@ -81,7 +94,7 @@ Ran 213 tests in 1.206s - OK
 
 ## 5. Negative-Path Fail-Closed Verification
 
-Five negative-path validation checks were executed to prove that the harness fails closed when encountering invalid inputs:
+Six negative-path validation checks were executed to prove that the harness fails closed when encountering invalid inputs:
 
 ```bash
 $ python3 audit/zero-index/SKIL-15/scripts/verify_skil15_crosswalk.py --negative-only
@@ -95,6 +108,7 @@ $ python3 audit/zero-index/SKIL-15/scripts/verify_skil15_crosswalk.py --negative
 | 3. Missing Archive Script | Querying nonexistent script filename | Recorded as `FILE_NOT_FOUND_IN_ARCHIVE` | Flagged as missing | **PASS** |
 | 4. Nonexistent Symbol | Checking fake symbol `NonexistentClass.fake_method` | `verify_symbol_in_file` returns `False` | Rejected with clear reason | **PASS** |
 | 5. Untested Symbol Linkage | Checking untested symbol `validate_library_integrity` | `verify_test_linkage` returns `False` | Rejected with `NO_DIRECT_CORE_UNIT_TEST_COVERAGE` | **PASS** |
+| 6. False-Positive Test Linkage | AST check with class import + unrelated receiver method call (`other.record_change()`) | `is_callable_invoked_in_ast` returns `False` | Disconnected call rejected; no false-positive test linkage | **PASS** |
 
 ---
 

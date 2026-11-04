@@ -705,8 +705,125 @@ def verify_symbol_in_file(file_path: Path, symbol: str) -> tuple[bool, str]:
     return False, f"Unsupported symbol path structure: {symbol}"
 
 
+VERIFIED_CALLABLE_TEST_MAP = {
+    ("tools/skill_library/family_contract.py", "ExecutionProviderBinding.validate"): {
+        "test_file": "tests/test_family_eligibility.py",
+        "test_class": "TestProviderAdapterRules",
+        "test_methods": ["test_negative_provider_missing_binding_target"],
+    },
+    ("tools/skill_library/family_contract.py", "ExecutionProviderContract.validate_capability_providers"): {
+        "test_file": "tests/test_family_eligibility.py",
+        "test_class": "TestProviderAdapterRules",
+        "test_methods": [
+            "test_valid_multi_provider_binding_on_single_capability",
+            "test_valid_multiple_providers_of_same_type",
+            "test_negative_duplicate_provider_name_rejected",
+            "test_negative_provider_missing_binding_target",
+            "test_negative_canonical_slug_encoding_mechanism_rejected",
+        ],
+    },
+    ("tools/skill_library/family_contract.py", "FamilyCandidateEvaluator.evaluate"): {
+        "test_file": "tests/test_family_eligibility.py",
+        "test_class": "TestFamilyEligibilityGates",
+        "test_methods": [
+            "test_tier_1_platform_qualification_github",
+            "test_tier_1_platform_qualification_webflow",
+            "test_tier_1_platform_qualification_single_domain_high_density_1password",
+            "test_tier_2_community_multi_provider_notion",
+            "test_tier_3_ecosystem_super_code_python",
+            "test_tier_4_governed_specialist_linear",
+        ],
+    },
+    ("tools/skill_library/migration_gates.py", "SkillPackageManifest.from_directory"): {
+        "test_file": "tests/test_migration_gates.py",
+        "test_class": "TestGate4ResourcePreservation",
+        "test_methods": [
+            "test_gate4_source_to_destination_missing_supporting_asset",
+            "test_gate4_source_to_destination_checksum_mismatch",
+            "test_gate4_source_to_destination_exact_match_passes",
+            "test_gate4_migration_authorization_fails_when_destination_manifest_missing",
+            "test_gate4_migration_authorization_passes_with_matching_manifests",
+        ],
+    },
+}
+
+
+def is_callable_invoked_in_ast(tree: ast.AST, cls_name: str | None, method_name: str) -> bool:
+    """
+    Precisely determine whether `cls_name.method_name` (or top-level `method_name`)
+    is invoked as a callable via an ast.Call node.
+
+    Prevents false positives:
+      - Simple Name mentions (imports, type annotations, docstrings, uncalled variables) do NOT count.
+      - A class import plus unrelated other_object.method() call does NOT count.
+      - Requires either:
+        1. Direct class/static method call: ClassName.method(...)
+        2. Direct chained call: ClassName(...).method(...)
+        3. Instantiated receiver variable call: var = ClassName(...); ... var.method(...)
+        4. (If top-level function) Direct call: func_name(...)
+    """
+    if cls_name is None:
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == method_name:
+                return True
+        return False
+
+    # 1. Direct class method call or chained call
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            func = node.func
+            if isinstance(func, ast.Attribute) and func.attr == method_name:
+                if isinstance(func.value, ast.Name) and func.value.id == cls_name:
+                    return True
+                if isinstance(func.value, ast.Call):
+                    inner = func.value.func
+                    if isinstance(inner, ast.Name) and inner.id == cls_name:
+                        return True
+
+    # 2. Scope-aware receiver variable tracking
+    for scope_node in ast.walk(tree):
+        if isinstance(scope_node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Module)):
+            bound_vars: set[str] = set()
+            for stmt in ast.walk(scope_node):
+                if isinstance(stmt, ast.Assign):
+                    val = stmt.value
+                    if isinstance(val, ast.Call):
+                        cfunc = val.func
+                        if isinstance(cfunc, ast.Name) and cfunc.id == cls_name:
+                            for target in stmt.targets:
+                                if isinstance(target, ast.Name):
+                                    bound_vars.add(target.id)
+                elif isinstance(stmt, ast.AnnAssign):
+                    val = stmt.value
+                    if isinstance(val, ast.Call):
+                        cfunc = val.func
+                        if isinstance(cfunc, ast.Name) and cfunc.id == cls_name:
+                            if isinstance(stmt.target, ast.Name):
+                                bound_vars.add(stmt.target.id)
+                elif isinstance(stmt, ast.With):
+                    for item in stmt.items:
+                        ctx = item.context_expr
+                        if isinstance(ctx, ast.Call) and isinstance(ctx.func, ast.Name) and ctx.func.id == cls_name:
+                            if isinstance(item.optional_vars, ast.Name):
+                                bound_vars.add(item.optional_vars.id)
+
+            if bound_vars:
+                for stmt in ast.walk(scope_node):
+                    if isinstance(stmt, ast.Call):
+                        fn = stmt.func
+                        if isinstance(fn, ast.Attribute) and fn.attr == method_name:
+                            if isinstance(fn.value, ast.Name) and fn.value.id in bound_vars:
+                                return True
+
+    return False
+
+
 def verify_test_linkage(source_root: Path, current_file: str, current_function: str) -> tuple[bool, str, list[str]]:
-    """Dynamically verify that a mapped callable or test class is executed in the core 213 unit test suite."""
+    """
+    Dynamically verify that a mapped callable or test class is executed in the core 213 unit test suite.
+    Enforces precise AST call/receiver tracing and verified explicit callable-to-test mapping.
+    Simple name mentions or unrelated receiver calls are strictly rejected.
+    """
     if current_file.startswith("tests/"):
         if current_file not in CORE_CONTRACT_TEST_FILES:
             return False, f"Test file {current_file} is not part of the 213-test core contract suite", []
@@ -717,12 +834,56 @@ def verify_test_linkage(source_root: Path, current_file: str, current_function: 
             tree = ast.parse(test_path.read_text(encoding="utf-8"))
         except Exception as e:
             return False, f"AST parse error in {test_path}: {e}", []
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.ClassDef, ast.FunctionDef)) and node.name == current_function:
-                return True, "CORE_TEST_CLASS_OR_FUNCTION_VERIFIED", [current_file]
+        for node in tree.body:
+            if isinstance(node, ast.ClassDef) and node.name == current_function:
+                has_test_method = any(
+                    isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)) and sub.name.startswith("test_")
+                    for sub in node.body
+                )
+                if has_test_method:
+                    return True, "CORE_TEST_CLASS_VERIFIED", [current_file]
+                return False, f"Class {current_function} in {current_file} has no test methods", []
         return False, f"Symbol {current_function} not defined in {current_file}", []
 
     parts = current_function.split(".")
+    cls_name = parts[0] if len(parts) == 2 else None
+    method_name = parts[1] if len(parts) == 2 else parts[0]
+
+    # 1. Check verified explicit callable-to-test mapping if registered
+    explicit_key = (current_file, current_function)
+    if explicit_key in VERIFIED_CALLABLE_TEST_MAP:
+        mapping = VERIFIED_CALLABLE_TEST_MAP[explicit_key]
+        test_file = mapping["test_file"]
+        if test_file not in CORE_CONTRACT_TEST_FILES:
+            return False, f"Mapped test file {test_file} is not part of core contract suite", []
+        tf_path = source_root / test_file
+        if not tf_path.exists():
+            return False, f"Mapped test file not found: {tf_path}", []
+        try:
+            tree = ast.parse(tf_path.read_text(encoding="utf-8"))
+        except Exception as e:
+            return False, f"AST parse error in {tf_path}: {e}", []
+
+        target_class_name = mapping.get("test_class")
+        target_methods = set(mapping.get("test_methods", []))
+        invoked = False
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and (target_class_name is None or node.name == target_class_name):
+                for sub in node.body:
+                    if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                        if not target_methods or sub.name in target_methods:
+                            if is_callable_invoked_in_ast(sub, cls_name, method_name):
+                                invoked = True
+                                break
+            if invoked:
+                break
+
+        if invoked:
+            return True, "VERIFIED_TEST_CASE_MAPPING_INVOKES_CALLABLE", [test_file]
+        return False, f"Callable {current_function} not invoked in mapped test cases of {test_file}", []
+
+    # 2. General AST call tracing across all core contract test files
     found_in = []
     core_paths = [source_root / tf for tf in CORE_CONTRACT_TEST_FILES]
     for tf_path in core_paths:
@@ -732,17 +893,8 @@ def verify_test_linkage(source_root: Path, current_file: str, current_function: 
             tree = ast.parse(tf_path.read_text(encoding="utf-8"))
         except Exception:
             continue
-        if len(parts) == 2:
-            cls_name, method_name = parts
-            has_cls = any(isinstance(n, ast.Name) and n.id == cls_name for n in ast.walk(tree))
-            has_method = any(isinstance(n, ast.Attribute) and n.attr == method_name for n in ast.walk(tree))
-            if has_cls and has_method:
-                found_in.append(tf_path.name)
-        elif len(parts) == 1:
-            name = parts[0]
-            has_name = any(isinstance(n, ast.Name) and n.id == name for n in ast.walk(tree))
-            if has_name:
-                found_in.append(tf_path.name)
+        if is_callable_invoked_in_ast(tree, cls_name, method_name):
+            found_in.append(tf_path.name)
 
     if found_in:
         return True, "MAPPED_CALLABLE_TESTED_IN_CORE_SUITE", found_in

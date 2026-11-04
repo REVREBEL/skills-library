@@ -37,7 +37,7 @@ All acceptance criteria are calculated directly from verified evidence:
 | **Evidence-backed reuse** | **PASS** | Behavioral claims grounded in AST parsing, dynamic symbol resolution, and 213 passing unit tests in `tests/test_*.py`. Unsupported test claims downgraded to `UNVERIFIED`. |
 | **No duplicated work** | **PASS** | Every reuse/adaptation recommendation cites existing `tools/skill_library/` modules with explicit callable entrypoints and rationale. |
 | **Historical safety** | **PASS** | 31 legacy phase scripts classified as `HISTORICAL-ONLY`; 12 dangerous writers explicitly identified and prohibited. Historical noncanonical paths (`task-folder/agents/skills/`) distinguished from true nonexistent 404 paths. |
-| **Fail-closed verification** | **PASS** | Harness enforces fail-closed checks on unit tests, AST syntax errors, fake symbol mappings, untested symbol linkage, and missing archive files. 5/5 negative-path checks passed. |
+| **Fail-closed verification** | **PASS** | Harness enforces fail-closed checks on unit tests, AST syntax errors, fake symbol mappings, untested symbol linkage, false-positive test search rejection, and missing archive files. 6/6 negative-path checks passed. |
 | **Determinism and safety** | **PASS** | Dual-run generation verified identical SHA-256 digests; zero workstation path or secret leaks. |
 | **Handoff (PR & Status)** | **NOT_TESTED** | Draft PR #158 open; issue in `In Review` awaiting reviewer approval upon revision submission. |
 
