@@ -15,6 +15,14 @@ The test suite at pinned SHA `195eda775d7a8dcad1837a1990bcba8259da3ea0` is organ
 3. **Lifecycle & Gates Plane:** Migration gates 1–9, provenance mapping, and scenario simulations.
 4. **Deployment & Execution Plane:** Runtime branch publication, sparse checkout synchronization, and target intake capture.
 
+To establish complete and transparent baseline accounting, test execution was evaluated under two distinct execution profiles:
+- **Isolated Suite Execution:** Each test module executed in an independent subprocess with isolated environment and working directory (`python3 -m unittest <module>`).
+- **Full-Batch Execution:** All test modules executed sequentially in a single process via the repository CLI test runner (`python3 tools/skill-library.py test`).
+
+### 1.1 Isolated Suite Execution Matrix (Primary Defect Baseline)
+
+In isolated suite execution, ephemeral filesystem lock contention is eliminated, isolating the authentic defects strictly to two test cases in `test_runtime_publication.py`:
+
 | Architectural Plane | Module | File Path | Tests | Pass | Fail | Error | Duration (s) | Exit Code | Status |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
 | **Semantic Plane** | `test_semantic_object_model` | `tests/test_semantic_object_model.py` | 35 | 35 | 0 | 0 | 0.006 | 0 | **PASS** |
@@ -28,9 +36,29 @@ The test suite at pinned SHA `195eda775d7a8dcad1837a1990bcba8259da3ea0` is organ
 | **Deployment & Execution** | `test_runtime_publication` | `tests/test_runtime_publication.py` | 25 | 23 | 2 | 0 | 159.804 | 1 | **FAIL** (*2) |
 | **TOTAL (Isolated Execution)** | **9 Modules** | — | **253** | **251** | **2** | **0** | **167.445** | **1** | **FAIL** |
 
-*Notes:*
-- (*1) `test_migration_roadmap.py` requires `PYTHONPATH=tools` (or invocation via `tools/skill-library.py test`) because it omits `sys.path.insert(0, tools)`. When run via vanilla `python3 -m unittest discover`, it fails at discovery with `ModuleNotFoundError: No module named 'skill_library'`.
-- (*2) When run as a full sequential test run in a single process (`python3 tools/skill-library.py test`), `test_runtime_publication` exhibits 3 temporary git repository collision/lock errors in `setUp` (`test_01`, `test_02`, `test_03`) resulting in `failures=2, errors=3`. In isolated execution, `test_01`–`test_03` pass completely, isolating the authentic defects strictly to `test_21` and `test_24`.
+### 1.2 Full-Batch Execution Matrix (`tools/skill-library.py test`)
+
+In single-process sequential batch execution, three temporary Git repository setup collisions occur during rapid repository initialization on macOS APFS:
+
+| Architectural Plane | Module | File Path | Tests | Pass | Fail | Error | Duration (s) | Exit Code | Status |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Semantic Plane** | `test_semantic_object_model` | `tests/test_semantic_object_model.py` | 35 | 35 | 0 | 0 | — | 0 | **PASS** |
+| **Semantic Plane** | `test_family_eligibility` | `tests/test_family_eligibility.py` | 40 | 40 | 0 | 0 | — | 0 | **PASS** |
+| **Semantic Plane** | `test_semantic_census` | `tests/test_semantic_census.py` | 10 | 10 | 0 | 0 | — | 0 | **PASS** |
+| **Composition & Governance** | `test_registry_router_contracts` | `tests/test_registry_router_contracts.py` | 39 | 39 | 0 | 0 | — | 0 | **PASS** |
+| **Composition & Governance** | `test_physical_ownership` | `tests/test_physical_ownership.py` | 19 | 19 | 0 | 0 | — | 0 | **PASS** |
+| **Composition & Governance** | `test_migration_roadmap` | `tests/test_migration_roadmap.py` | 14 | 14 | 0 | 0 | — | 0 | **PASS** (*1) |
+| **Lifecycle & Gates** | `test_migration_gates` | `tests/test_migration_gates.py` | 56 | 56 | 0 | 0 | — | 0 | **PASS** |
+| **Lifecycle & Gates** | `test_scenarios` | `tests/test_scenarios.py` | 15 | 15 | 0 | 0 | — | 0 | **PASS** |
+| **Deployment & Execution** | `test_runtime_publication` | `tests/test_runtime_publication.py` | 25 | 20 | 2 | 3 | — | 1 | **FAIL** (*3) |
+| **TOTAL (Batch Execution)** | **9 Modules** | — | **253** | **248** | **2** | **3** | **166.700** | **1** | **FAIL** |
+
+*Execution Notes:*
+- (*1) `test_migration_roadmap.py` requires `PYTHONPATH=tools` (or invocation via `tools/skill-library.py test`) because it omits `sys.path.insert(0, tools)`. When run via unconfigured `python3 -m unittest discover`, it fails at module load with `ModuleNotFoundError: No module named 'skill_library'`.
+- (*2) Authentic defects in `test_runtime_publication.py`:
+  - `test_21_accept_external_intake_enforcement_and_dispatch_failure`: Line 813 fails with `AssertionError: True is not false` because `capture_dirty_target` executes unmocked `gh workflow run runtime-intake.yml`. In an authenticated workstation environment, the command dispatches, causing `workflow_triggered` to return `True`.
+  - `test_24_skill_directory_rename_preserves_old_and_new_paths`: Line 1122 fails with `AssertionError: False is not true` because physical rename of folder `bug-hunter` -> `bug-tracker` leaves frontmatter name as `bug-hunter`, causing `validate_single_skill` to set `is_valid_package=False`.
+- (*3) Batch execution errors: In single-process batch execution, tests `test_01`, `test_02`, and `test_03` of `TestRuntimeGitClonePublication` encounter `CalledProcessError: Command '['git', 'commit', '-m', 'Initial baseline']' returned non-zero exit status 128` during `setUp` due to high-frequency temporary repository creation on macOS APFS in `/var/folders/`. When run in isolation, all three setup steps pass cleanly.
 
 ---
 
@@ -103,7 +131,7 @@ The test suite at pinned SHA `195eda775d7a8dcad1837a1990bcba8259da3ea0` is organ
   - Rejection of overlapping candidates without human approval.
   - Targeted pilot workflow simulations (`run_targeted_pilot`).
 
-### 2.9 `tests/test_runtime_publication.py` (25 Tests - 23 PASS, 2 FAIL)
+### 2.9 `tests/test_runtime_publication.py` (25 Tests - 23 PASS, 2 FAIL in Isolation)
 - **Passes (23 Tests):**
   - Requirement 1: publish-runtime root tree matches `main:library/` exactly.
   - Requirement 2: non-canonical paths (`docs/`, `tools/`, `intake/`, `config/`, `audit/`) absent from runtime.
@@ -122,5 +150,22 @@ The test suite at pinned SHA `195eda775d7a8dcad1837a1990bcba8259da3ea0` is organ
   - Requirement 23: whole skill deletion preserved as intake event.
   - Requirement 25: intake CLI `--strict` gate fails on invalid/rejected candidates.
 - **Failures (2 Tests):**
-  - **Requirement 21 (`test_21_accept_external_intake_enforcement_and_dispatch_failure`):** Fails because `gh workflow run` is invoked without mocking.
+  - **Requirement 21 (`test_21_accept_external_intake_enforcement_and_dispatch_failure`):** Fails because `gh workflow run` is invoked without mocking. On authenticated workstations, the workflow is actually dispatched to GitHub Actions (observed Run ID `41776764840`, concluded in failure within 12s on remote runner without mutating repo assets).
   - **Requirement 24 (`test_24_skill_directory_rename_preserves_old_and_new_paths`):** Fails because physical directory rename triggers directory/frontmatter mismatch in `validate_single_skill`, marking `is_valid_package=False`.
+
+---
+
+## 3. External Side Effect Boundary & Isolation Guard
+
+During baseline execution of `test_runtime_publication.py:test_21`, the unmocked execution of `capture_dirty_target()` triggered a real remote workflow dispatch via the host's authenticated `gh` CLI:
+- **Dispatched Workflow:** `Runtime Intake Pipeline` (`.github/workflows/runtime-intake.yml`)
+- **Remote Run ID:** `41776764840`
+- **Dispatch Timestamp:** `2026-11-04T05:02:17Z`
+- **Remote Conclusion:** `failure` (duration: 12 seconds; failed at step `Convert Incoming Snapshot to Intake Branch` due to non-existent incoming branch)
+- **Repository Mutation Audit:** Confirmed zero remote mutations. No pull requests were opened, no remote branches created or modified, and zero repository files altered.
+
+**Mandatory Diagnostic Isolation Guard:**
+Any future diagnostic execution of `test_runtime_publication.py` must either:
+1. Provide a mocked `subprocess.run` interceptor for `gh`, OR
+2. Execute in an unauthenticated subshell where `GH_TOKEN` and `GITHUB_TOKEN` are unset, and a non-dispatching dummy stub for `gh` is prepended to `PATH`.
+Do not rerun `test_21` on an authenticated workstation without an isolation harness.

@@ -13,7 +13,7 @@ Inspection of `.github/workflows/` at the pinned baseline commit reveals three d
 1. **`ci.yml` (`Test and Validate`):**
    - **Triggers:** Push to `main`, `feature/**`; Pull Request targeting `main`.
    - **Runner:** `ubuntu-latest`.
-   - **Toolchain:** Python 3.15, Git (authenticated as `github-actions[bot]`).
+   - **Toolchain Specification:** Python 3.15, Git (authenticated as `github-actions[bot]`).
    - **Job Steps:**
      1. Checkout repository with `fetch-depth: 0`.
      2. Set up Python 3.15 (`actions/setup-python@v7`).
@@ -37,9 +37,9 @@ Inspection of `.github/workflows/` at the pinned baseline commit reveals three d
 
 ---
 
-## 2. Step-by-Step CI Execution from Pinned SHA
+## 2. Step-by-Step CI Execution from Pinned SHA (Baseline Simulation)
 
-We simulated each step of `ci.yml` directly against the pinned checkout at `/tmp/skil13-pinned-worktree`:
+We simulated each step of `ci.yml` directly against the pinned checkout at `/tmp/skil13-pinned-worktree` using the audited workstation toolchain (Python 3.14.7, Git 2.47.0):
 
 ### Step 4: `python3 tools/skill-library.py publish-runtime`
 - **Command:** `python3 tools/skill-library.py publish-runtime`
@@ -55,9 +55,9 @@ We simulated each step of `ci.yml` directly against the pinned checkout at `/tmp
   FAILED (failures=2, errors=3)
   ```
 - **Failure Analysis:**
-  - `test_runtime_publication.TestRuntimeGitClonePublication.test_21_accept_external_intake_enforcement_and_dispatch_failure`: FAILED (`AssertionError: True is not false` on `cap_dispatch["workflow_triggered"]`).
-  - `test_runtime_publication.TestRuntimeGitClonePublication.test_24_skill_directory_rename_preserves_old_and_new_paths`: FAILED (`AssertionError: False is not true` on `ev.is_valid_package`).
-  - Batch execution setup errors in `test_01`, `test_02`, `test_03` of `TestRuntimeGitClonePublication`: subprocess `git commit` exited 128 due to lock or configuration race condition during high-frequency temporary repository initialization. When isolated, `test_01`–`test_03` pass cleanly.
+  - `test_runtime_publication.TestRuntimeGitClonePublication.test_21_accept_external_intake_enforcement_and_dispatch_failure`: FAILED (`AssertionError: True is not false` on `cap_dispatch["workflow_triggered"]` due to unmocked `gh` CLI invocation).
+  - `test_runtime_publication.TestRuntimeGitClonePublication.test_24_skill_directory_rename_preserves_old_and_new_paths`: FAILED (`AssertionError: False is not true` on `ev.is_valid_package` due to directory/frontmatter name divergence on rename).
+  - Batch execution setup errors in `test_01`, `test_02`, `test_03` of `TestRuntimeGitClonePublication`: subprocess `git commit` exited 128 due to lock contention during rapid temporary repository initialization on APFS. In isolated execution, `test_01`–`test_03` pass cleanly.
 
 ### Step 6: `python3 tools/skill-library.py validate`
 - **Command:** `python3 tools/skill-library.py validate`
@@ -90,8 +90,21 @@ We simulated each step of `ci.yml` directly against the pinned checkout at `/tmp
 ## 3. Discovered CI Environment Assumptions & Gaps
 
 1. **Python Version Drift:**  
-   `ci.yml` pins `python-version: '3.15'`, whereas Python 3.14/3.13 is current across host workstations. Python 3.15 is currently an unreleased development branch.
+   `ci.yml` pins `python-version: '3.15'`, whereas Python 3.14/3.13 is standard across host workstations. Python 3.15 is an unreleased development branch.
 2. **Missing Test Mocking in CI Pipeline:**  
    The regression suite expects `test` to pass in CI, but due to unmocked external commands (`gh`) and strict directory-name matching on renames, `python3 tools/skill-library.py test` fails.
 3. **Target Validation in Headless CI:**  
    `validator.py` attempts to inspect local target checkouts defined in `config/runtime-targets.json` (`~/.agents/skills`). In headless GitHub Actions runners, this path does not exist or lacks matching commits unless `--skip-targets` is supplied.
+
+---
+
+## 4. CI Qualification & Provenance Delineation
+
+To avoid ambiguity between audit branch status and baseline repository health:
+- **Baseline Source Health (SHA `195eda775d`):**  
+  Simulated execution of the full `ci.yml` pipeline against the pinned snapshot fails at Step 5 (`test`, exit 1) and Step 6 (`validate`, exit 1). The baseline codebase does **not** possess a green continuous integration pass.
+- **Evidence-Only PR Status (PR #159):**  
+  GitHub Actions status checks on PR #159 show green/passing. This is strictly because PR #159 introduces read-only documentation artifacts under `audit/zero-index/SKIL-13/` without modifying functional code in `library/`, `tools/`, or `tests/`. Branch protection and CI path filtering do not invoke full library validation or test execution on docs-only commits. A green check on PR #159 must not be construed as validation of the underlying architecture code.
+- **Toolchain Provenance Record:**  
+  - Diagnostic Execution: Python 3.14.7 (Clang 15.0.0, arm64 Darwin 24.3.0 macOS 15.3), Git 2.47.0.
+  - Specified CI Target: Python 3.15 on `ubuntu-latest` (`actions/setup-python@v7`).

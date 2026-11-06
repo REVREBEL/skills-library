@@ -27,12 +27,16 @@ Testing from pinned SHA `195eda775d7a8dcad1837a1990bcba8259da3ea0` identified th
       self.assertFalse(cap_dispatch["workflow_triggered"])
   AssertionError: True is not false
   ```
-- **Root Cause:**
+- **Root Cause & External Side-Effect Impact:**
   In `tools/skill_library/intake_capture.py` (lines 383–395), `capture_dirty_target` executes:
   ```python
   subprocess.run(["gh", "workflow", "run", "runtime-intake.yml", ...], check=False)
   ```
   The test environment did not mock `subprocess.run` or `gh`. When executed on an authorized machine with GitHub CLI configured, `gh` returns exit code 0, causing `workflow_triggered` to be `True`. The test author hard-coded `self.assertFalse(cap_dispatch["workflow_triggered"])` assuming dispatch would fail without mock isolation.
+- **Remote Dispatch Evidence:**
+  This call triggered real GitHub Actions Run ID `41776764840` at `2026-11-04T05:02:17Z`. The workflow failed after 12 seconds at step `Convert Incoming Snapshot to Intake Branch` because the branch existed only locally. Audit confirmed zero mutations to remote branches, pull requests, or repository files.
+- **Mandatory Isolation Guard:**
+  To guarantee complete test isolation, future diagnostic or test execution of `test_runtime_publication.py` must either mock `subprocess.run` or execute in an environment where `GH_TOKEN`/`GITHUB_TOKEN` are unset and a non-dispatching dummy `gh` stub is prepended to `PATH`.
 
 ---
 
@@ -83,7 +87,7 @@ Testing from pinned SHA `195eda775d7a8dcad1837a1990bcba8259da3ea0` identified th
   ```python
   sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
   ```
-  `test_migration_roadmap.py` omits `sys.path.insert()`. When run with `PYTHONPATH=tools`, all 14 tests in the suite pass.
+  `test_migration_roadmap.py` omits `sys.path.insert()`. When run with `PYTHONPATH=tools` (or via `tools/skill-library.py test`), all 14 tests in the suite pass.
 
 ---
 

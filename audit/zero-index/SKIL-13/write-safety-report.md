@@ -43,7 +43,7 @@ To ensure strict zero-mutation guarantees during diagnostic evaluation of pinned
   # (Empty output - zero byte differential)
   ```
 
-### 2.2 Active Task Workspace (`/Users/garystringham/github-revrebel/skills-library`)
+### 2.2 Active Task Workspace (`<workspace-root>/skills-library`)
 
 - **Pre-Execution Verification:**
   ```bash
@@ -63,7 +63,7 @@ To ensure strict zero-mutation guarantees during diagnostic evaluation of pinned
 
 ## 3. Tool Mutation Audit
 
-| Command / Tool Invoked | Mode | Destination Touched | Write Safety Result |
+| Command / Tool Invoked | Mode | Destination Touched | Local Write Safety Result |
 | :--- | :--- | :--- | :---: |
 | `python3 tools/skill-library.py test` | Diagnostic Test Suite | Ephemeral `/var/folders/` temp directories | **VERIFIED CLEAN** |
 | `python3 tools/skill-library.py validate` | Read-only Living Library Validator | None (in-memory AST & link audit) | **VERIFIED CLEAN** |
@@ -72,4 +72,28 @@ To ensure strict zero-mutation guarantees during diagnostic evaluation of pinned
 | `check_imports.py` | Import Diagnostics | Memory only | **VERIFIED CLEAN** |
 | `run_all_test_modules.py` | Isolated Subprocess Runner | Ephemeral test sandboxes | **VERIFIED CLEAN** |
 
-**Conclusion:** Complete write-safety compliance achieved. Zero unintended modifications occurred during the diagnostic assessment.
+---
+
+## 4. External Side-Effect & Workflow Dispatch Analysis
+
+During execution of `test_runtime_publication.py:test_21_accept_external_intake_enforcement_and_dispatch_failure`, the baseline code in `tools/skill_library/intake_capture.py` executed:
+```python
+subprocess.run(["gh", "workflow", "run", "runtime-intake.yml", ...], check=False)
+```
+Because the host environment contained an authenticated GitHub CLI (`gh`), this invocation triggered an actual external workflow dispatch:
+- **Dispatched Workflow:** `Runtime Intake Pipeline` (`.github/workflows/runtime-intake.yml`)
+- **Remote Run ID:** `41776764840`
+- **Dispatch Timestamp:** `2026-11-04T05:02:17Z`
+- **Actor:** `garystringham`
+- **Remote Execution Outcome:** Completed with status `failure` after 12 seconds. The workflow failed at step `process-incoming: Convert Incoming Snapshot to Intake Branch` because the test's temporary incoming branch did not exist on the remote GitHub repository.
+- **Remote Repository Mutation Audit:** Confirmed zero remote mutations. No pull requests were opened, no remote branches were created or updated, and zero repository files were modified.
+
+### Mandatory Diagnostic Isolation Guardrail
+While local workspace write safety was 100% clean and the remote run caused zero repository mutations, this finding establishes that `test_runtime_publication.py` possesses an unmocked network/auth side effect.
+
+To prevent unintended remote workflow dispatches during future diagnostic or regression runs:
+1. **Network & Auth Sandbox:** Unset `GH_TOKEN` and `GITHUB_TOKEN` before running `test_runtime_publication.py`.
+2. **CLI Stubbing:** Ensure a dummy non-dispatching stub for `gh` is placed earlier in `PATH` or inject a mock into `subprocess.run`.
+3. **Execution Policy:** Diagnostic audits must never re-run `test_21` on an authenticated workstation without an isolation harness.
+
+**Conclusion:** Local write-safety compliance was verified 100% clean (zero modified tracked files). External side-effect boundaries have been audited, documented, and mitigated with explicit isolation guardrails.
