@@ -18,11 +18,12 @@
     "draft_pull_request_url": "https://github.com/REVREBEL/skills-library/pull/154",
     "linear_issue_identifier": "SKIL-16",
     "linear_issue_uuid": "40277fb5-9590-43a2-9a7f-3a6d0c8c0401",
-    "linear_submission_comment_url": "https://linear.app/revrebel/issue/SKIL-16/zi-01-pin-canonical-source-and-zero-index-inventory#comment-6be44a71",
+    "linear_submission_comment_url": "https://linear.app/revrebel/issue/SKIL-16/zi-01-pin-canonical-source-and-zero-index-inventory",
     "review_status": "REVISION_IN_PROGRESS",
-    "status_date_utc": "2026-11-03T23:30:00Z",
-    "verified_by": "Antigravity Agent (SKIL-16 revision session)"
+    "status_date_utc": "2026-11-04T14:00:00Z",
+    "verified_by": "Antigravity Agent (SKIL-16 follow-up revision session)"
   },
+  "exclusions": [],
   "legacy_reference": "REV-158",
   "linear_issue_identifier": "SKIL-16",
   "linear_issue_uuid": "40277fb5-9590-43a2-9a7f-3a6d0c8c0401",
@@ -30,7 +31,7 @@
     "catalog_compiler": "tools/skill_library/registry_contract.py:CatalogCompiler v1.0.0",
     "config_spec": "tools/skill_library/config.py",
     "object_model": "tools/skill_library/object_model.py (10 first-class types)",
-    "python_runtime": "3.14.7",
+    "python_runtime": "3.15.2",
     "semantic_census_validator": "tools/validate_semantic_census.py"
   },
   "pinned_branch": "origin/main",
@@ -47,7 +48,10 @@
     "runtime_manifest_population": 2102,
     "task_example_total_skill_md": 49,
     "task_folder_total_skill_md": 2359,
-    "total_discovered_skill_md": 5072
+    "total_discovered_skill_md": 5072,
+    "total_excluded_skill_files": 0,
+    "total_filesystem_raw_skills": 5072,
+    "total_git_tracked_skills": 5072
   },
   "remote_url": "https://github.com/REVREBEL/skills-library.git",
   "repository": "REVREBEL/skills-library",
@@ -60,6 +64,14 @@
     "library_nested_reference": 496,
     "library_router": 28,
     "test_fixture": 49
+  },
+  "source_verification": {
+    "expected_pinned_sha": "195eda775d7a8dcad1837a1990bcba8259da3ea0",
+    "sha_match": true,
+    "source_root_path": "/private/tmp/skil16-pinned-source",
+    "verification_status": "PASS",
+    "verified_head_sha": "195eda775d7a8dcad1837a1990bcba8259da3ea0",
+    "working_tree_clean": true
   },
   "task_id": "SKIL-16",
   "type_breakdown": {

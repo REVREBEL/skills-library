@@ -12,10 +12,11 @@
 
 This report details the comprehensive zero-index routing and provenance audit conducted under **SKIL-16**.
 In accordance with the work order:
-- All baseline numbers are **discovered from disk**, never assumed or hardcoded.
+- All baseline numbers are **discovered from disk and verified against git tracked source**, never assumed or hardcoded.
 - Historical rebuild work is preserved as dated provenance rather than current live state.
 - 100% of discovered `SKILL.md` files (5072 total) are categorized with zero silent exclusions.
 - Variances between historical denominators and snapshot counts are preserved and explicitly explained with documented uncertainty.
+- Pinned commit SHA `195eda775d7a8dcad1837a1990bcba8259da3ea0` is verified via `git rev-parse HEAD` on an isolated clean checkout.
 
 ---
 
@@ -72,7 +73,7 @@ The repository contains distinct historical and operational populations. The tab
 | **DENOM-03** | Runtime Manifest Managed Skills | 2102 | 2102 | 0 | RECONCILED | Exact 1:1 match with runtime-manifest.json. |
 | **DENOM-04** | Authoritative Semantic Census | 2133 | 2133 | 0 | RECONCILED | Exact 1:1 match with semantic-role-census.json. |
 | **DENOM-05** | Total Physical Routers | 28 | 28 | 0 | RECONCILED | 26 standard + 2 operational routers. |
-| **DENOM-06** | Total Discovered SKILL.md | 5072 | 5072 | 0 | RECONCILED | 100% discovered-path coverage with zero silent exclusions. |
+| **DENOM-06** | Total Discovered SKILL.md | 5072 | 5072 | 0 | RECONCILED | 100% discovered-path coverage with zero silent exclusions verified against git ls-files. |
 
 ### Row-Level Historical Inventory Crosswalk Details (DENOM-01)
 Inspection of `audit/rebuild-phase-1-12/skills-inventory.csv` (2,331 rows) against current on-disk paths reveals:

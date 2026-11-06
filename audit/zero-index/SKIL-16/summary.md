@@ -21,7 +21,7 @@ All baseline populations were discovered directly from disk without re-running o
 | **Handoff (Draft PR)** | Evidence-only branch and Draft PR | **NOT_TESTED*** | Verified open as Draft PR [#154](https://github.com/REVREBEL/skills-library/pull/154) (see dated submission status below) |
 | **Handoff (Linear Update)** | Linear issue updated with verified SHA, findings, and submission | **NOT_TESTED*** | Verified posted on Linear issue [SKIL-16](https://linear.app/revrebel/issue/SKIL-16/zi-01-pin-canonical-source-and-zero-index-inventory) (see dated submission status below) |
 
-*\*Note: Handoff checks were marked `NOT_TESTED` at initial baseline generation prior to remote PR creation. The verified post-generation submission status is recorded below without retroactively mutating the historical generation baseline.*
+*Note: Handoff checks were marked `NOT_TESTED` at initial baseline generation prior to remote PR creation. The verified post-generation submission status is recorded below without retroactively mutating the historical generation baseline.*
 
 ---
 
