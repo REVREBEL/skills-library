@@ -10,8 +10,8 @@ This document records the exact executable commands, AST parsing results, test s
 | Artifact / Pointer | Git Commit SHA | Description |
 | :--- | :--- | :--- |
 | **Audited Pinned Source Snapshot** | `195eda775d7a8dcad1837a1990bcba8259da3ea0` | Canonical repository snapshot coordinated with SKIL-16 and SKIL-13 |
-| **Verification Execution Base Commit** | `c1d69703ba99e1ae4f78bd3ffc79880364dd96b9` | Commit checked out during verification execution (`git rev-parse HEAD`) |
-| **Prior Review Target PR Head** | `c1d69703ba99e1ae4f78bd3ffc79880364dd96b9` | Head of PR #158 evaluated in pull request review 5769316490 |
+| **Verification Execution Base Commit** | `d050cc97b404b54924ffeff62fdbf01d4b32a927` | Commit checked out during verification execution (`git rev-parse HEAD`) |
+| **Prior Review Target PR Head** | `1539e925751ef03c81b102f2cf7a70449be9da97` | Head of PR #158 evaluated in pull request review 5802535665 |
 | **Submitted Revision PR Head** | *(updated on branch push)* | Target head commit of PR #158 incorporating review fixes |
 
 ### Environment Verification Execution
@@ -20,15 +20,14 @@ This document records the exact executable commands, AST parsing results, test s
 # Active Branch: issue/skil-15-reconcile-52-archived-scripts
 # Base Branch: origin/main
 # Python Version: 3.15.2
-# Timestamp: 2026-11-04T19:14:13Z
+# Timestamp: 2026-11-06T16:00:39Z
 
 $ git rev-parse HEAD
-c1d69703ba99e1ae4f78bd3ffc79880364dd96b9
+d050cc97b404b54924ffeff62fdbf01d4b32a927
 # Exit Code: 0
 
 $ git status --porcelain
-M audit/zero-index/SKIL-15/scripts/generate_skil15_crosswalk.py
- M audit/zero-index/SKIL-15/scripts/verify_skil15_crosswalk.py
+(clean working tree)
 # Exit Code: 0
 ```
 
@@ -75,7 +74,7 @@ The 7 core architecture and contract test suites were executed:
 
 ```bash
 $ python3 -m unittest tests/test_semantic_census.py tests/test_semantic_object_model.py tests/test_registry_router_contracts.py tests/test_physical_ownership.py tests/test_migration_gates.py tests/test_family_eligibility.py tests/test_migration_roadmap.py
-Ran 213 tests in 2.804s - OK
+Ran 213 tests in 1.424s - OK
 # Exit Code: 0
 ```
 
@@ -90,11 +89,13 @@ Ran 213 tests in 2.804s - OK
 
 **Total:** **213 tests ran, 213 PASSED, 0 failures, 0 errors.**
 
+> **Methodological Clarification (`has_test`):** In all crosswalk tables and audit deliverables, `has_test=TRUE` denotes verified **static call linkage** to passing core contract test suites via AST call and receiver tracing. It does **NOT** denote dynamic runtime code coverage or line-by-line branch instrumentation.
+
 ---
 
 ## 5. Negative-Path Fail-Closed Verification
 
-Six negative-path validation checks were executed to prove that the harness fails closed when encountering invalid inputs:
+Eight negative-path validation checks were executed to prove that the harness fails closed when encountering invalid inputs, corrupt metadata, or invalid call sequences:
 
 ```bash
 $ python3 audit/zero-index/SKIL-15/scripts/verify_skil15_crosswalk.py --negative-only
@@ -109,6 +110,8 @@ $ python3 audit/zero-index/SKIL-15/scripts/verify_skil15_crosswalk.py --negative
 | 4. Nonexistent Symbol | Checking fake symbol `NonexistentClass.fake_method` | `verify_symbol_in_file` returns `False` | Rejected with clear reason | **PASS** |
 | 5. Untested Symbol Linkage | Checking untested symbol `validate_library_integrity` | `verify_test_linkage` returns `False` | Rejected with `NO_DIRECT_CORE_UNIT_TEST_COVERAGE` | **PASS** |
 | 6. False-Positive Test Linkage | AST check with class import + unrelated receiver method call (`other.record_change()`) | `is_callable_invoked_in_ast` returns `False` | Disconnected call rejected; no false-positive test linkage | **PASS** |
+| 7. Non-Git Directory Provenance | `get_git_metadata` invoked on non-Git scratch directory | `RuntimeError` raised | Caught `RuntimeError`; fail-closed with zero fallback | **PASS** |
+| 8. Statement Order & Reassignment | Reassigned receiver call & pre-assignment call in AST | `is_callable_invoked_in_ast` returns `False` | Out-of-order & reassigned calls rejected; linear order enforced | **PASS** |
 
 ---
 
@@ -120,7 +123,7 @@ The generator was run independently into two separate directories (`/tmp/skil15-
 | :--- | :--- | :--- | :---: |
 | `archive-source-manifest.csv` | `c1d68ec8340f7188888cc14930f3076159d0836c0911514bbfe606f7980eeb7f` | `c1d68ec8340f7188888cc14930f3076159d0836c0911514bbfe606f7980eeb7f` | **MATCH** |
 | `script-reuse-crosswalk.csv` | `db1722ca9196bdb512df8822e3148a7205b007a72058bf4358310a0d76e0f2d3` | `db1722ca9196bdb512df8822e3148a7205b007a72058bf4358310a0d76e0f2d3` | **MATCH** |
-| `module-capability-matrix.md` | `cd76e1e59de1323da660b8365bb9c1dcd7d88c30113c0f272a4cc10ad3eb687a` | `cd76e1e59de1323da660b8365bb9c1dcd7d88c30113c0f272a4cc10ad3eb687a` | **MATCH** |
+| `module-capability-matrix.md` | `475ebcad1d5ff3955886f13577b024c1c867801db1e1f4bf8fcb35a3998c3372` | `475ebcad1d5ff3955886f13577b024c1c867801db1e1f4bf8fcb35a3998c3372` | **MATCH** |
 | `gaps-and-collisions.md` | `3355cadea784be9ce1eb70579a6c2552f6493deaaff2f7dd7484630d5444cc29` | `3355cadea784be9ce1eb70579a6c2552f6493deaaff2f7dd7484630d5444cc29` | **MATCH** |
 
 **Reproducibility Verdict:** 100% BIT-FOR-BIT IDENTICAL (0 variance across runs).

@@ -748,18 +748,111 @@ VERIFIED_CALLABLE_TEST_MAP = {
 }
 
 
+def _check_linear_statements(stmts: list[ast.stmt], cls_name: str, method_name: str, bound_vars: dict[str, str]) -> bool:
+    """
+    Sequentially traverse statement lists, tracking variable bindings statement-by-statement,
+    unbinding variables upon reassignment, and checking callable invocations only when bound
+    at that exact point in the statement execution stream.
+    """
+    for stmt in stmts:
+        # 1. Check all calls made within this statement
+        for node in ast.walk(stmt):
+            if isinstance(node, ast.Call):
+                func = node.func
+                if isinstance(func, ast.Attribute) and func.attr == method_name:
+                    # Direct class/static method call: ClassName.method(...)
+                    if isinstance(func.value, ast.Name) and func.value.id == cls_name:
+                        return True
+                    # Direct chained call: ClassName(...).method(...)
+                    if (
+                        isinstance(func.value, ast.Call)
+                        and isinstance(func.value.func, ast.Name)
+                        and func.value.func.id == cls_name
+                    ):
+                        return True
+                    # Receiver variable call: var.method(...) where var is currently bound to cls_name
+                    if isinstance(func.value, ast.Name) and bound_vars.get(func.value.id) == cls_name:
+                        return True
+
+        # 2. Update or unbind variable bindings based on this statement
+        if isinstance(stmt, ast.Assign):
+            is_class_call = (
+                isinstance(stmt.value, ast.Call)
+                and isinstance(stmt.value.func, ast.Name)
+            )
+            assigned_cls = stmt.value.func.id if is_class_call else None
+            for target in stmt.targets:
+                if isinstance(target, ast.Name):
+                    if assigned_cls == cls_name:
+                        bound_vars[target.id] = cls_name
+                    else:
+                        bound_vars.pop(target.id, None)
+
+        elif isinstance(stmt, ast.AnnAssign):
+            is_class_call = (
+                stmt.value is not None
+                and isinstance(stmt.value, ast.Call)
+                and isinstance(stmt.value.func, ast.Name)
+            )
+            assigned_cls = stmt.value.func.id if is_class_call else None
+            if isinstance(stmt.target, ast.Name):
+                if assigned_cls == cls_name:
+                    bound_vars[stmt.target.id] = cls_name
+                else:
+                    bound_vars.pop(stmt.target.id, None)
+
+        elif isinstance(stmt, ast.With):
+            # Check withitems for context manager instantiation
+            with_bound = dict(bound_vars)
+            for item in stmt.items:
+                ctx = item.context_expr
+                if isinstance(ctx, ast.Call) and isinstance(ctx.func, ast.Name):
+                    if isinstance(item.optional_vars, ast.Name):
+                        if ctx.func.id == cls_name:
+                            with_bound[item.optional_vars.id] = cls_name
+                        else:
+                            with_bound.pop(item.optional_vars.id, None)
+            if _check_linear_statements(stmt.body, cls_name, method_name, with_bound):
+                return True
+
+        elif isinstance(stmt, (ast.If, ast.While, ast.For, ast.AsyncFor)):
+            if _check_linear_statements(stmt.body, cls_name, method_name, dict(bound_vars)):
+                return True
+            if hasattr(stmt, "orelse") and stmt.orelse:
+                if _check_linear_statements(stmt.orelse, cls_name, method_name, dict(bound_vars)):
+                    return True
+
+        elif isinstance(stmt, (ast.Try, getattr(ast, "TryStar", ast.Try))):
+            if _check_linear_statements(stmt.body, cls_name, method_name, dict(bound_vars)):
+                return True
+            for handler in stmt.handlers:
+                if _check_linear_statements(handler.body, cls_name, method_name, dict(bound_vars)):
+                    return True
+            if stmt.orelse:
+                if _check_linear_statements(stmt.orelse, cls_name, method_name, dict(bound_vars)):
+                    return True
+            if stmt.finalbody:
+                if _check_linear_statements(stmt.finalbody, cls_name, method_name, dict(bound_vars)):
+                    return True
+
+    return False
+
+
 def is_callable_invoked_in_ast(tree: ast.AST, cls_name: str | None, method_name: str) -> bool:
     """
     Precisely determine whether `cls_name.method_name` (or top-level `method_name`)
-    is invoked as a callable via an ast.Call node.
+    is invoked as a callable via an ast.Call node within statement execution order.
 
-    Prevents false positives:
+    Enforces linear statement ordering and variable reassignment tracking:
       - Simple Name mentions (imports, type annotations, docstrings, uncalled variables) do NOT count.
       - A class import plus unrelated other_object.method() call does NOT count.
+      - Calls prior to assignment do NOT count.
+      - Calls after reassignment to an unrelated class do NOT count.
       - Requires either:
         1. Direct class/static method call: ClassName.method(...)
         2. Direct chained call: ClassName(...).method(...)
         3. Instantiated receiver variable call: var = ClassName(...); ... var.method(...)
+           where var is bound to ClassName at that point in the statement stream.
         4. (If top-level function) Direct call: func_name(...)
     """
     if cls_name is None:
@@ -768,52 +861,11 @@ def is_callable_invoked_in_ast(tree: ast.AST, cls_name: str | None, method_name:
                 return True
         return False
 
-    # 1. Direct class method call or chained call
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Call):
-            func = node.func
-            if isinstance(func, ast.Attribute) and func.attr == method_name:
-                if isinstance(func.value, ast.Name) and func.value.id == cls_name:
-                    return True
-                if isinstance(func.value, ast.Call):
-                    inner = func.value.func
-                    if isinstance(inner, ast.Name) and inner.id == cls_name:
-                        return True
-
-    # 2. Scope-aware receiver variable tracking
+    # Check linear statement order within every function, method, or module body
     for scope_node in ast.walk(tree):
-        if isinstance(scope_node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Module)):
-            bound_vars: set[str] = set()
-            for stmt in ast.walk(scope_node):
-                if isinstance(stmt, ast.Assign):
-                    val = stmt.value
-                    if isinstance(val, ast.Call):
-                        cfunc = val.func
-                        if isinstance(cfunc, ast.Name) and cfunc.id == cls_name:
-                            for target in stmt.targets:
-                                if isinstance(target, ast.Name):
-                                    bound_vars.add(target.id)
-                elif isinstance(stmt, ast.AnnAssign):
-                    val = stmt.value
-                    if isinstance(val, ast.Call):
-                        cfunc = val.func
-                        if isinstance(cfunc, ast.Name) and cfunc.id == cls_name:
-                            if isinstance(stmt.target, ast.Name):
-                                bound_vars.add(stmt.target.id)
-                elif isinstance(stmt, ast.With):
-                    for item in stmt.items:
-                        ctx = item.context_expr
-                        if isinstance(ctx, ast.Call) and isinstance(ctx.func, ast.Name) and ctx.func.id == cls_name:
-                            if isinstance(item.optional_vars, ast.Name):
-                                bound_vars.add(item.optional_vars.id)
-
-            if bound_vars:
-                for stmt in ast.walk(scope_node):
-                    if isinstance(stmt, ast.Call):
-                        fn = stmt.func
-                        if isinstance(fn, ast.Attribute) and fn.attr == method_name:
-                            if isinstance(fn.value, ast.Name) and fn.value.id in bound_vars:
-                                return True
+        if isinstance(scope_node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Module)):
+            if _check_linear_statements(scope_node.body, cls_name, method_name, {}):
+                return True
 
     return False
 
@@ -987,6 +1039,13 @@ The repository-native architecture formalized under ADR-001 through ADR-005 esta
 | `pilot.py` | Targeted Operational Pilot | Pilot Review Protocol | `run_targeted_pilot` |
 | `scanner.py` | Filesystem Inventory Scanner | Inventory Discovery | `scan_candidate_directory`, `scan_runtime`, `run_full_scan` |
 | `tools/skill-library.py` | Unified CLI Entrypoint | Operator Interface | Top-level CLI `main()` dispatching to `scan`, `intake`, `validate`, `sync`, `publish` |
+
+### 1.1 Methodological Definition of Test Linkage (`has_test`)
+
+In all crosswalk tables and audit deliverables:
+- **`has_test = TRUE`**: Represents **static call linkage** to passing core contract test suites. The mapped callable or test class is confirmed via AST call and receiver tracing to be invoked within the 213 unit tests (`tests/test_*.py`). It does **NOT** denote dynamic runtime code coverage or line-by-line branch coverage instrumentation.
+- **`has_test = UNVERIFIED`**: Represents architectural conceptual equivalence where modern core classes have contract tests, but the specific historical script entrypoint or utility lacks direct unit test execution, or the historical script is retired/prohibited from execution.
+- **`has_test = FALSE`**: Represents historical batch writers, in-place regex mutators, or ad-hoc scripts with no test coverage whatsoever.
 
 ---
 

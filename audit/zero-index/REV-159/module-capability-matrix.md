@@ -27,6 +27,13 @@ The repository-native architecture formalized under ADR-001 through ADR-005 esta
 | `scanner.py` | Filesystem Inventory Scanner | Inventory Discovery | `scan_candidate_directory`, `scan_runtime`, `run_full_scan` |
 | `tools/skill-library.py` | Unified CLI Entrypoint | Operator Interface | Top-level CLI `main()` dispatching to `scan`, `intake`, `validate`, `sync`, `publish` |
 
+### 1.1 Methodological Definition of Test Linkage (`has_test`)
+
+In all crosswalk tables and audit deliverables:
+- **`has_test = TRUE`**: Represents **static call linkage** to passing core contract test suites. The mapped callable or test class is confirmed via AST call and receiver tracing to be invoked within the 213 unit tests (`tests/test_*.py`). It does **NOT** denote dynamic runtime code coverage or line-by-line branch coverage instrumentation.
+- **`has_test = UNVERIFIED`**: Represents architectural conceptual equivalence where modern core classes have contract tests, but the specific historical script entrypoint or utility lacks direct unit test execution, or the historical script is retired/prohibited from execution.
+- **`has_test = FALSE`**: Represents historical batch writers, in-place regex mutators, or ad-hoc scripts with no test coverage whatsoever.
+
 ---
 
 ## 2. Detailed Module Inspection & API Verification

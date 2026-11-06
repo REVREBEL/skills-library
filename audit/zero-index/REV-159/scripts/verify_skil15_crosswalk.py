@@ -30,7 +30,7 @@ def compute_sha256(file_path: Path) -> str:
     return hashlib.sha256(file_path.read_bytes()).hexdigest()
 
 
-def run_git_capture(source_root: Path, args: list[str]) -> tuple[str, int]:
+def run_git_capture(source_root: Path, args: list[str]) -> tuple[str, str, int]:
     """Execute git command with clean environment and DEVELOPER_DIR on macOS."""
     env = dict(os.environ)
     env["DEVELOPER_DIR"] = "/Library/Developer/CommandLineTools"
@@ -44,42 +44,45 @@ def run_git_capture(source_root: Path, args: list[str]) -> tuple[str, int]:
             text=True,
             env=env,
         )
-        return proc.stdout.strip(), proc.returncode
+        return proc.stdout.strip(), proc.stderr.strip(), proc.returncode
     except Exception as e:
-        return f"ERROR: {e}", 1
+        return "", f"ERROR: {e}", 1
 
 
-def get_git_commit_sha(source_root: Path) -> str:
-    """Retrieve current Git commit SHA without shell template strings."""
-    stdout, code = run_git_capture(source_root, ["rev-parse", "HEAD"])
-    if code == 0 and stdout:
-        return stdout
+def get_git_metadata(source_root: Path) -> dict[str, str]:
+    """
+    Retrieve live Git provenance metadata. Fails closed if source_root is not a valid
+    Git repository or if any Git invocation fails. Absolutely no fallback values permitted.
+    """
+    # 1. Commit SHA
+    stdout, stderr, code = run_git_capture(source_root, ["rev-parse", "HEAD"])
+    if code != 0 or not stdout:
+        raise RuntimeError(
+            f"Git invocation failed (exit code {code}) for 'git rev-parse HEAD': {stderr or stdout}"
+        )
+    commit_sha = stdout
 
-    head_file = source_root / ".git" / "HEAD"
-    if head_file.exists():
-        ref = head_file.read_text(encoding="utf-8").strip()
-        if ref.startswith("ref: "):
-            ref_path = source_root / ".git" / ref[5:]
-            if ref_path.exists():
-                return ref_path.read_text(encoding="utf-8").strip()
-        return ref
-    return "c1d69703ba99e1ae4f78bd3ffc79880364dd96b9"
+    # 2. Branch name
+    stdout, stderr, code = run_git_capture(source_root, ["rev-parse", "--abbrev-ref", "HEAD"])
+    if code != 0 or not stdout:
+        raise RuntimeError(
+            f"Git invocation failed (exit code {code}) for 'git rev-parse --abbrev-ref HEAD': {stderr or stdout}"
+        )
+    branch = stdout
 
+    # 3. Status porcelain
+    stdout, stderr, code = run_git_capture(source_root, ["status", "--porcelain"])
+    if code != 0:
+        raise RuntimeError(
+            f"Git invocation failed (exit code {code}) for 'git status --porcelain': {stderr or stdout}"
+        )
+    status_porcelain = stdout if stdout else "(clean working tree)"
 
-def get_git_branch(source_root: Path) -> str:
-    """Retrieve current Git branch name."""
-    stdout, code = run_git_capture(source_root, ["rev-parse", "--abbrev-ref", "HEAD"])
-    if code == 0 and stdout:
-        return stdout
-    return "issue/skil-15-reconcile-52-archived-scripts"
-
-
-def get_git_status(source_root: Path) -> str:
-    """Retrieve porcelain status."""
-    stdout, code = run_git_capture(source_root, ["status", "--porcelain"])
-    if code == 0:
-        return stdout if stdout else "(clean working tree)"
-    return "(status capture failed)"
+    return {
+        "commit_sha": commit_sha,
+        "branch": branch,
+        "status": status_porcelain,
+    }
 
 
 def scan_for_leaks(directory: Path) -> list[str]:
@@ -294,6 +297,49 @@ def run_negative_path_checks(source_root: Path):
     if not fp_rejected:
         raise RuntimeError("Negative Check 6 Failed: False-positive pattern was wrongly accepted as test linkage!")
 
+    # Check 7: Non-Git directory fails closed on Git provenance capture
+    import tempfile
+    non_git_caught = False
+    err_detail = ""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        try:
+            get_git_metadata(Path(tmp_dir))
+        except RuntimeError as e:
+            non_git_caught = True
+            err_detail = str(e)
+    results.append({
+        "check": "Negative Git Provenance (Non-Git directory fails closed)",
+        "passed": non_git_caught,
+        "detail": f"get_git_metadata correctly raised RuntimeError on non-Git directory: {err_detail[:65]}...",
+    })
+    if not non_git_caught:
+        raise RuntimeError("Negative Check 7 Failed: Non-Git directory did not raise RuntimeError in get_git_metadata!")
+
+    # Check 8: Out-of-order and reassigned receiver calls rejected by is_callable_invoked_in_ast
+    reassigned_ast = ast.parse(
+        "def test_reassigned():\n"
+        "    obj = ChangeLedger()\n"
+        "    obj = SomeOtherClass()\n"
+        "    obj.record_change()\n"
+    )
+    reassigned_rejected = not is_callable_invoked_in_ast(reassigned_ast, "ChangeLedger", "record_change")
+
+    outoforder_ast = ast.parse(
+        "def test_out_of_order():\n"
+        "    obj.record_change()\n"
+        "    obj = ChangeLedger()\n"
+    )
+    outoforder_rejected = not is_callable_invoked_in_ast(outoforder_ast, "ChangeLedger", "record_change")
+
+    order_check_passed = reassigned_rejected and outoforder_rejected
+    results.append({
+        "check": "Negative Statement Order & Reassignment (Out-of-order & reassigned calls rejected)",
+        "passed": order_check_passed,
+        "detail": "is_callable_invoked_in_ast correctly rejected both reassigned receiver calls and pre-assignment calls",
+    })
+    if not order_check_passed:
+        raise RuntimeError("Negative Check 8 Failed: Statement order/reassignment check failed to reject invalid call sequence!")
+
     return results
 
 
@@ -363,9 +409,10 @@ def main():
         sys.exit(0)
 
     # Full Verification & Deliverable Generation Pipeline
-    git_sha = get_git_commit_sha(source_root)
-    git_branch = get_git_branch(source_root)
-    git_status = get_git_status(source_root)
+    git_meta = get_git_metadata(source_root)
+    git_sha = git_meta["commit_sha"]
+    git_branch = git_meta["branch"]
+    git_status = git_meta["status"]
     timestamp_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     py_version = sys.version.split()[0]
 
@@ -459,7 +506,7 @@ This document records the exact executable commands, AST parsing results, test s
 | :--- | :--- | :--- |
 | **Audited Pinned Source Snapshot** | `195eda775d7a8dcad1837a1990bcba8259da3ea0` | Canonical repository snapshot coordinated with SKIL-16 and SKIL-13 |
 | **Verification Execution Base Commit** | `{git_sha}` | Commit checked out during verification execution (`git rev-parse HEAD`) |
-| **Prior Review Target PR Head** | `c1d69703ba99e1ae4f78bd3ffc79880364dd96b9` | Head of PR #158 evaluated in pull request review 5769316490 |
+| **Prior Review Target PR Head** | `1539e925751ef03c81b102f2cf7a70449be9da97` | Head of PR #158 evaluated in pull request review 5802535665 |
 | **Submitted Revision PR Head** | *(updated on branch push)* | Target head commit of PR #158 incorporating review fixes |
 
 ### Environment Verification Execution
@@ -537,11 +584,13 @@ $ {test_result['display_cmd']}
 
 **Total:** **{test_result['test_count']} tests ran, {test_result['test_count']} PASSED, 0 failures, 0 errors.**
 
+> **Methodological Clarification (`has_test`):** In all crosswalk tables and audit deliverables, `has_test=TRUE` denotes verified **static call linkage** to passing core contract test suites via AST call and receiver tracing. It does **NOT** denote dynamic runtime code coverage or line-by-line branch instrumentation.
+
 ---
 
 ## 5. Negative-Path Fail-Closed Verification
 
-Six negative-path validation checks were executed to prove that the harness fails closed when encountering invalid inputs:
+Eight negative-path validation checks were executed to prove that the harness fails closed when encountering invalid inputs, corrupt metadata, or invalid call sequences:
 
 ```bash
 $ python3 audit/zero-index/SKIL-15/scripts/verify_skil15_crosswalk.py --negative-only
@@ -556,6 +605,8 @@ $ python3 audit/zero-index/SKIL-15/scripts/verify_skil15_crosswalk.py --negative
 | 4. Nonexistent Symbol | Checking fake symbol `NonexistentClass.fake_method` | `verify_symbol_in_file` returns `False` | Rejected with clear reason | **PASS** |
 | 5. Untested Symbol Linkage | Checking untested symbol `validate_library_integrity` | `verify_test_linkage` returns `False` | Rejected with `NO_DIRECT_CORE_UNIT_TEST_COVERAGE` | **PASS** |
 | 6. False-Positive Test Linkage | AST check with class import + unrelated receiver method call (`other.record_change()`) | `is_callable_invoked_in_ast` returns `False` | Disconnected call rejected; no false-positive test linkage | **PASS** |
+| 7. Non-Git Directory Provenance | `get_git_metadata` invoked on non-Git scratch directory | `RuntimeError` raised | Caught `RuntimeError`; fail-closed with zero fallback | **PASS** |
+| 8. Statement Order & Reassignment | Reassigned receiver call & pre-assignment call in AST | `is_callable_invoked_in_ast` returns `False` | Out-of-order & reassigned calls rejected; linear order enforced | **PASS** |
 
 ---
 
@@ -607,7 +658,7 @@ All 52 archived scripts were retrieved, verified byte-for-byte, parsed via Pytho
 | **Total** | **{total_records}** | **100.0%** | **Complete Archive Coverage** |
 
 ### Test Claim Distribution:
-- `TRUE`: {has_test_counts['TRUE']} records (grounded in direct unit test suite execution)
+- `TRUE`: {has_test_counts['TRUE']} records (verified static call linkage to passing core contract test suites)
 - `FALSE`: {has_test_counts['FALSE']} records (legacy mutators/phase writers with no tests)
 - `UNVERIFIED`: {has_test_counts['UNVERIFIED']} records (downgraded from static claims; conceptual equivalence present but specific entrypoint lacks direct unit test execution)
 
@@ -620,10 +671,10 @@ All acceptance criteria are calculated directly from verified evidence:
 | Acceptance Criterion | Calculated Status | Verification Evidence |
 | :--- | :---: | :--- |
 | **Complete archive coverage** | **PASS** | Exactly 52/52 items cataloged in `archive-source-manifest.csv`; 1:1 crosswalk in `script-reuse-crosswalk.csv`. |
-| **Evidence-backed reuse** | **PASS** | Behavioral claims grounded in AST parsing, dynamic symbol resolution, and 213 passing unit tests in `tests/test_*.py`. Unsupported test claims downgraded to `UNVERIFIED`. |
+| **Evidence-backed reuse** | **PASS** | Behavioral claims grounded in AST parsing, dynamic symbol resolution, and 213 passing unit tests in `tests/test_*.py`. Claims of `has_test=TRUE` reflect verified static call linkage to passing test suites. Unsupported test claims downgraded to `UNVERIFIED`. |
 | **No duplicated work** | **PASS** | Every reuse/adaptation recommendation cites existing `tools/skill_library/` modules with explicit callable entrypoints and rationale. |
 | **Historical safety** | **PASS** | 31 legacy phase scripts classified as `HISTORICAL-ONLY`; 12 dangerous writers explicitly identified and prohibited. Historical noncanonical paths (`task-folder/agents/skills/`) distinguished from true nonexistent 404 paths. |
-| **Fail-closed verification** | **PASS** | Harness enforces fail-closed checks on unit tests, AST syntax errors, fake symbol mappings, untested symbol linkage, false-positive test search rejection, and missing archive files. 6/6 negative-path checks passed. |
+| **Fail-closed verification** | **PASS** | Harness enforces fail-closed checks on unit tests, AST syntax errors, fake symbol mappings, untested symbol linkage, false-positive test search rejection, missing archive files, non-Git directory provenance capture, and out-of-order/reassigned receiver calls. 8/8 negative-path checks passed. |
 | **Determinism and safety** | **PASS** | Dual-run generation verified identical SHA-256 digests; zero workstation path or secret leaks. |
 | **Handoff (PR & Status)** | **NOT_TESTED** | Draft PR #158 open; issue in `In Review` awaiting reviewer approval upon revision submission. |
 

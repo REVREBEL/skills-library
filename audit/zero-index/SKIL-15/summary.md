@@ -21,7 +21,7 @@ All 52 archived scripts were retrieved, verified byte-for-byte, parsed via Pytho
 | **Total** | **52** | **100.0%** | **Complete Archive Coverage** |
 
 ### Test Claim Distribution:
-- `TRUE`: 11 records (grounded in direct unit test suite execution)
+- `TRUE`: 11 records (verified static call linkage to passing core contract test suites)
 - `FALSE`: 20 records (legacy mutators/phase writers with no tests)
 - `UNVERIFIED`: 21 records (downgraded from static claims; conceptual equivalence present but specific entrypoint lacks direct unit test execution)
 
@@ -34,10 +34,10 @@ All acceptance criteria are calculated directly from verified evidence:
 | Acceptance Criterion | Calculated Status | Verification Evidence |
 | :--- | :---: | :--- |
 | **Complete archive coverage** | **PASS** | Exactly 52/52 items cataloged in `archive-source-manifest.csv`; 1:1 crosswalk in `script-reuse-crosswalk.csv`. |
-| **Evidence-backed reuse** | **PASS** | Behavioral claims grounded in AST parsing, dynamic symbol resolution, and 213 passing unit tests in `tests/test_*.py`. Unsupported test claims downgraded to `UNVERIFIED`. |
+| **Evidence-backed reuse** | **PASS** | Behavioral claims grounded in AST parsing, dynamic symbol resolution, and 213 passing unit tests in `tests/test_*.py`. Claims of `has_test=TRUE` reflect verified static call linkage to passing test suites. Unsupported test claims downgraded to `UNVERIFIED`. |
 | **No duplicated work** | **PASS** | Every reuse/adaptation recommendation cites existing `tools/skill_library/` modules with explicit callable entrypoints and rationale. |
 | **Historical safety** | **PASS** | 31 legacy phase scripts classified as `HISTORICAL-ONLY`; 12 dangerous writers explicitly identified and prohibited. Historical noncanonical paths (`task-folder/agents/skills/`) distinguished from true nonexistent 404 paths. |
-| **Fail-closed verification** | **PASS** | Harness enforces fail-closed checks on unit tests, AST syntax errors, fake symbol mappings, untested symbol linkage, false-positive test search rejection, and missing archive files. 6/6 negative-path checks passed. |
+| **Fail-closed verification** | **PASS** | Harness enforces fail-closed checks on unit tests, AST syntax errors, fake symbol mappings, untested symbol linkage, false-positive test search rejection, missing archive files, non-Git directory provenance capture, and out-of-order/reassigned receiver calls. 8/8 negative-path checks passed. |
 | **Determinism and safety** | **PASS** | Dual-run generation verified identical SHA-256 digests; zero workstation path or secret leaks. |
 | **Handoff (PR & Status)** | **NOT_TESTED** | Draft PR #158 open; issue in `In Review` awaiting reviewer approval upon revision submission. |
 
