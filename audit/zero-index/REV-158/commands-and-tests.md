@@ -69,10 +69,10 @@ python3 audit/zero-index/SKIL-16/scripts/verify_inventory.py \
 | Deliverable Artifact | File Bytes | SHA-256 Checksum |
 |---|:---:|---|
 | `baseline.json` | 3579 | `f13dd905e9360b32806057ed20a57fdaaae7dc3dddc6905889214106b9ca68f0` |
-| `objects.csv` | 2281851 | `06a9416dc0c6dc7948178f7627aa31b9b28ee8c72d109ccbbe69b76fa364f49e` |
+| `objects.csv` | 2276778 | `176f28b57028e52ff9e174ef33a2692d54ef313ba2b576f3944ee459f488e3d4` |
 | `package-manifests.json` | 12126213 | `47b9041a0f5e2c317af2cb7354418b535ef350fcbecd2327cf35023228fa2688` |
-| `population-reconciliation.csv` | 2598 | `e938353a7932efc25f1229f23cfe4d4b51d0e536efe3ac226909baa5d2a6f9e4` |
-| `discrepancies.csv` | 1669399 | `81bd43f2b0e26891e3a7d45e0525891ac2647d259c814598002a19d5fe538424` |
+| `population-reconciliation.csv` | 2591 | `2eefa85376e282d0fadf30092a06cf1f127ab40080861530bffdb78f90774f34` |
+| `discrepancies.csv` | 1664385 | `b18d4fd18dba5aea27bba031dd6a493a605535def540734d5d60890486b172bb` |
 | `routing-and-provenance-report.md` | 7432 | `99337b93a51975e66b91118025e58b13e890d29a96f55a71d994c572ca6e8a0a` |
 
 ---
@@ -83,20 +83,20 @@ A secondary verification run was executed into an isolated scratch directory (`s
 Checksums for normalized payload files were computed and compared across the two distinct directories:
 
 ```text
-Run 1 objects.csv:               06a9416dc0c6dc7948178f7627aa31b9b28ee8c72d109ccbbe69b76fa364f49e
-Run 2 objects.csv:               06a9416dc0c6dc7948178f7627aa31b9b28ee8c72d109ccbbe69b76fa364f49e
+Run 1 objects.csv:               176f28b57028e52ff9e174ef33a2692d54ef313ba2b576f3944ee459f488e3d4
+Run 2 objects.csv:               176f28b57028e52ff9e174ef33a2692d54ef313ba2b576f3944ee459f488e3d4
 Result:                          MATCH (Byte-Equal)
 
 Run 1 package-manifests.json:    47b9041a0f5e2c317af2cb7354418b535ef350fcbecd2327cf35023228fa2688
 Run 2 package-manifests.json:    47b9041a0f5e2c317af2cb7354418b535ef350fcbecd2327cf35023228fa2688
 Result:                          MATCH (Byte-Equal)
 
-Run 1 population-reconciliation: e938353a7932efc25f1229f23cfe4d4b51d0e536efe3ac226909baa5d2a6f9e4
-Run 2 population-reconciliation: e938353a7932efc25f1229f23cfe4d4b51d0e536efe3ac226909baa5d2a6f9e4
+Run 1 population-reconciliation: 2eefa85376e282d0fadf30092a06cf1f127ab40080861530bffdb78f90774f34
+Run 2 population-reconciliation: 2eefa85376e282d0fadf30092a06cf1f127ab40080861530bffdb78f90774f34
 Result:                          MATCH (Byte-Equal)
 
-Run 1 discrepancies.csv:         81bd43f2b0e26891e3a7d45e0525891ac2647d259c814598002a19d5fe538424
-Run 2 discrepancies.csv:         81bd43f2b0e26891e3a7d45e0525891ac2647d259c814598002a19d5fe538424
+Run 1 discrepancies.csv:         b18d4fd18dba5aea27bba031dd6a493a605535def540734d5d60890486b172bb
+Run 2 discrepancies.csv:         b18d4fd18dba5aea27bba031dd6a493a605535def540734d5d60890486b172bb
 Result:                          MATCH (Byte-Equal)
 ```
 
