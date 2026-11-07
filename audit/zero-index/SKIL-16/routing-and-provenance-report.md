@@ -1,70 +1,35 @@
-# Routing and Provenance Audit Report (SKIL-16)
+# Zero-Index Routing & Provenance Report (SKIL-16)
 
-**Pinned Commit SHA**: `195eda775d7a8dcad1837a1990bcba8259da3ea0`  
-**Target Repository**: `REVREBEL/skills-library` (`origin/main`)  
-**Audit Baseline Date**: `2026-11-02`  
-**Linear Issue**: [SKIL-16](https://linear.app/revrebel/issue/SKIL-16/zi-01-pin-canonical-source-and-zero-index-inventory) (`40277fb5-9590-43a2-9a7f-3a6d0c8c0401`)  
-**Legacy Work Order Reference**: REV-158  
+**Pinned Commit**: `195eda775d7a8dcad1837a1990bcba8259da3ea0`  
+**Repository**: `REVREBEL/skills-library` (`origin/main`)  
+**Baseline Date**: `2026-11-02`  
+**Linear Issue**: [SKIL-16](https://linear.app/revrebel/issue/SKIL-16/zi-01-pin-canonical-source-and-zero-index-inventory) (Legacy: REV-158)  
 
 ---
 
-## 1. Executive Summary & Objective
+## 1. Executive Summary & Zero-Index Methodology
 
-This report details the comprehensive zero-index routing and provenance audit conducted under **SKIL-16**.
-In accordance with the work order:
 - All baseline numbers are **discovered from disk and verified against git tracked source**, never assumed or hardcoded.
-- Historical rebuild work is preserved as dated provenance rather than current live state.
+- Historical rebuild counts and ledgers are referenced as dated provenance rather than current live state.
 - 100% of discovered `SKILL.md` files (5072 total) are categorized with zero silent exclusions.
 - Variances between historical denominators and snapshot counts are preserved and explicitly explained with documented uncertainty.
 - Pinned commit SHA `195eda775d7a8dcad1837a1990bcba8259da3ea0` is verified via `git rev-parse HEAD` on an isolated clean checkout.
 
 ---
 
-## 2. Router Hierarchy & Routing Contracts
+## 2. Canonical Identity & RFC 8141 URN Contract
 
-The repository's navigation structure is defined across **28 total routers** under `library/`:
-- **1 Root Master Router**: `library/SKILL.md`
-- **10 Primary Category Routers**:
-  - `library/business-and-operations/SKILL.md`
-  - `library/content-and-documentation/SKILL.md`
-  - `library/data-and-ai/SKILL.md`
-  - `library/design-and-experience/SKILL.md`
-  - `library/development/SKILL.md`
-  - `library/infrastructure-and-ops/SKILL.md`
-  - `library/marketing-and-seo/SKILL.md`
-  - `library/meta-and-agent-skills/SKILL.md`
-  - `library/quality-and-security/SKILL.md`
-  - `library/workflow-and-automation/SKILL.md`
-- **15 Deep Subcategory Routers**:
-  - `design-and-experience/design-systems/SKILL.md`
-  - `design-and-experience/motion-and-graphics/SKILL.md`
-  - `design-and-experience/taste-and-critique/SKILL.md`
-  - `design-and-experience/ui-ux/SKILL.md`
-  - `development/backend/SKILL.md`
-  - `development/frontend/SKILL.md`
-  - `development/fullstack/SKILL.md`
-  - `development/mobile/SKILL.md`
-  - `development/software-architecture/SKILL.md`
-  - `development/systems/SKILL.md`
-  - `marketing-and-seo/content-and-campaigns/SKILL.md`
-  - `marketing-and-seo/cro/SKILL.md`
-  - `marketing-and-seo/geo-and-local-seo/SKILL.md`
-  - `marketing-and-seo/on-page-seo/SKILL.md`
-  - `marketing-and-seo/technical-seo/SKILL.md`
-- **2 Operational System Routers**:
-  - `library/github-operations/SKILL.md` (18 managed operational leaf skills)
-  - `library/skills-create-manage-update/SKILL.md` (13 managed lifecycle leaf skills)
+Under ADR-001 and the canonical object model (`tools/skill_library/object_model.py:CanonicalIdentity.parse`), a valid canonical URN strictly requires the format `urn:skill:<scope>:<slug>` or `<scope>:<slug>`. Unscoped single tokens (e.g. `urn:skill:<slug>`) are invalid and fail parsing.
 
-### Router Traversability & Link Integrity
-- **Total Inbound Router Links Mapped**: 2277
-- **Broken Relative Links in Router Definitions**: 0 (all destination paths resolve to active filesystem targets).
-- **Nested Sub-Skills**: 496 `SKILL.md` files exist nested inside complex multi-module leaf packages (e.g. `super-code/<lang>/SKILL.md`, `gtm-agents-main/plugins/*`, `design-it/*`). These are classified as `nested_reference` and preserve their parent package context.
+- **Verified Scoped Canonical Identifiers**: Exactly **31** canonical census entries possess verified scoped IDs and receive valid URNs (`urn:skill:github-operations:<slug>`: 18, `urn:skill:skills-create-manage-update:<slug>`: 13).
+- **Unscoped Canonical Identifiers**: Exactly **2,102** canonical census entries possess unscoped canonical IDs (e.g. `data-analytics-workflow-automation`). In accordance with work order requirements (*'Canonical identity must not be inferred from a physical path when missing'*), these entries have unassigned URNs (`canonical_urn: ""`) and are logged as informational entries in `discrepancies.csv` awaiting formal Phase 2 scope minting. Zero artificial URNs are manufactured from directory paths.
+- **Routers & Nested References**: Routers (28) and nested sub-skill references (496) are not canonical skill packages and carry `canonical_urn: ""` by design.
 
 ---
 
-## 3. Provenance & Denominator Reconciliation
+## 3. Discovered Population & Provenance Reconciliation
 
-The repository contains distinct historical and operational populations. The table below delineates their explicit provenance and measured variance:
+The repository contains distinct historical and operational populations. The table below reconciles all denominators:
 
 | Denominator ID | Population Name | Baseline Count | Snapshot Count | Variance | Disposition | Notes |
 |---|---|:---:|:---:|:---:|---|---|
@@ -77,26 +42,33 @@ The repository contains distinct historical and operational populations. The tab
 
 ### Row-Level Historical Inventory Crosswalk Details (DENOM-01)
 Inspection of `audit/rebuild-phase-1-12/skills-inventory.csv` (2,331 rows) against current on-disk paths reveals:
-- **Direct Path Matches**: 2,094 rows match existing `task-folder/agents/skills/` directories on disk.
-- **Quarantine Path Matches**: 45 rows match existing `task-folder/agents/not-needed/` directories when substituting the parent path.
-- **Archive Path Matches**: 0 rows match `task-folder/agents/archived/` via direct substitution.
-- **Unlinked Rows / Structural Moves**: 192 rows represent historical ledger items that were moved, merged, renamed, or deleted during historical Phases 03–08 without an authoritative row-level mapping ledger.
-- **Conclusion**: The -230 variance is an observed historical delta with documented uncertainty. It is preserved as `UNVERIFIED_HISTORICAL_DELTA` rather than coerced to a zero-variance match.
+- **Direct Path Matches**: 2,094 rows match existing packages in `task-folder/agents/skills/`.
+- **Quarantine Substitutions**: 45 rows match packages located in `task-folder/agents/not-needed/`.
+- **Unlinked Historical Rows**: 192 rows do not map to active paths (reflecting deduplication, merges, restructuring, or deletions during Phases 01-12).
+- **Disposition**: Classified as `UNVERIFIED_HISTORICAL_DELTA`. Because historical rebuild documentation does not provide an authoritative row-level reconciliation ledger, the -230 variance is preserved as an empirical observation rather than forcing artificial reconciliation.
 
 ---
 
-## 4. Parser and Module Comparison & Canonical URN Contract
+## 4. Router Link Integrity & Graph Traversal
 
-1. **`tools/skill_library/config.py`**:
-   - Accurately declares all 10 top-level categories, 3 deep categories (15 subcategories), and 7 flat categories (29 subcategories).
-   - `get_all_routers()` successfully discovers all 26 standard routers on disk.
-2. **`tools/skill_library/manifest.py` (`RuntimeManifest`)**:
-   - Successfully loads `audit/runtime-manifest.json` (2102 managed entries).
-   - Validated that `manifest.py` enforces flat naming collision resolution (`<cat>-<name>`).
-3. **`tools/skill_library/ledger.py` (`ChangeLedger`)**:
-   - Confirmed append-only provenance in `audit/change-ledger.jsonl`.
-4. **`tools/skill_library/object_model.py` (`CanonicalIdentity`)**:
-   - Conforms strictly to ADR-001 and RFC 8141 URN structure: `urn:skill:<scope>:<slug>` (compact `<scope>:<slug>`).
-   - `CanonicalIdentity.parse()` enforces that an immutable scope namespace and a kebab-case slug must be present, separated by a colon (`:`). It explicitly **rejects** unscoped `urn:skill:<slug>`.
-   - **Provenance Verification**: In the pinned census (`semantic-role-census.json`), exactly 31 items (under `library/github-operations/` and `library/skills-create-manage-update/`) possess verified scoped canonical IDs that parse into valid URNs.
-   - **Zero Manufactured IDs**: The remaining 2,102 canonical census entries possess unscoped canonical IDs (slugs without a scope prefix). Under ADR-001 and work order requirements ("Canonical identity must not be inferred from a physical path when missing"), their canonical URNs are recorded as empty (`""`) and classified as unassigned/unscoped in `discrepancies.csv`, awaiting formal scope minting in Phase 2. Zero artificial scopes are inferred from directory paths.
+- **Total Configured Routers**: 26 standard hierarchical routers (via `tools/skill_library/config.py:get_all_routers`)
+- **Operational Routers**: 2 operational routers (`library/github-operations/SKILL.md`, `library/skills-create-manage-update/SKILL.md`)
+- **Total Library Routers Evaluated**: 28
+- **Broken Inbound/Outbound Relative Links**: 0
+- **Router Link Verification Status**: **PASS** (All internal relative markdown links resolve to valid on-disk targets).
+
+---
+
+## 5. Subtree Scope Distribution
+
+| Scope Category | Discovered `SKILL.md` Count | Relative Percentage | Classification Purpose |
+|---|:---:|:---:|---|
+| `canonical_library` | 2133 | 42.1% | Active, managed canonical skills in `library/` |
+| `library_router` | 28 | 0.6% | Category, subcategory & operational routing indexes in `library/` |
+| `library_nested_reference` | 496 | 9.8% | Nested sub-skills and plugin reference definitions in `library/` |
+| `historical_pre_rebuild` | 2101 | 41.4% | Pre-rebuild raw skill packages in `task-folder/agents/skills/` |
+| `historical_quarantine` | 238 | 4.7% | Deprecated/unused packages in `task-folder/agents/not-needed/` |
+| `historical_archived` | 20 | 0.4% | Archived packages in `task-folder/agents/archived/` |
+| `test_fixture` | 49 | 1.0% | Task example test fixtures in `task-example/` |
+| `agent_workflow_infrastructure` | 7 | 0.1% | Operational agent workflow tools in `.agents/` |
+| **Total Discovered** | **5072** | **100.0%** | **Complete repository zero-index inventory** |

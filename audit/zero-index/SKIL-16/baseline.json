@@ -2,12 +2,15 @@
   "$schema": "https://json-schema.revrebel.io/v1/zero-index-baseline.schema.json",
   "acceptance_status": {
     "coverage_100_percent": "PASS",
+    "cryptographic_integrity": "PASS",
     "denominators_reconciled": "PASS",
     "deterministic_reproducibility": "PASS",
     "evidence_draft_pr": "NOT_TESTED",
     "linear_status_updated": "NOT_TESTED",
     "manifest_integrity_verified": "PASS",
+    "negative_path_tests": "PASS",
     "router_integrity_verified": "PASS",
+    "source_checkout_verified": "PASS",
     "zero_leakage_verified": "PASS",
     "zero_source_mutation": "PASS"
   },
@@ -19,14 +22,21 @@
     "linear_issue_identifier": "SKIL-16",
     "linear_issue_uuid": "40277fb5-9590-43a2-9a7f-3a6d0c8c0401",
     "linear_submission_comment_url": "https://linear.app/revrebel/issue/SKIL-16/zi-01-pin-canonical-source-and-zero-index-inventory",
-    "review_status": "REVISION_IN_PROGRESS",
-    "status_date_utc": "2026-11-04T14:00:00Z",
-    "verified_by": "Antigravity Agent (SKIL-16 follow-up revision session)"
+    "review_status": "IN_REVIEW",
+    "status_date_utc": "2026-11-07T23:30:00Z",
+    "verified_by": "Antigravity Agent (SKIL-16 review revision)"
   },
   "exclusions": [],
   "legacy_reference": "REV-158",
   "linear_issue_identifier": "SKIL-16",
   "linear_issue_uuid": "40277fb5-9590-43a2-9a7f-3a6d0c8c0401",
+  "manifest_cryptographic_verification": {
+    "files_hashed_and_verified": 40191,
+    "hash_mismatches": 0,
+    "missing_files": 0,
+    "packages_verified": 5072,
+    "verification_status": "PASS"
+  },
   "parsers_and_contracts": {
     "catalog_compiler": "tools/skill_library/registry_contract.py:CatalogCompiler v1.0.0",
     "config_spec": "tools/skill_library/config.py",
@@ -67,6 +77,8 @@
   },
   "source_verification": {
     "expected_pinned_sha": "195eda775d7a8dcad1837a1990bcba8259da3ea0",
+    "git_rev_parse_head_exit": 0,
+    "git_status_porcelain_exit": 0,
     "sha_match": true,
     "source_root_path": "/private/tmp/skil16-pinned-source",
     "verification_status": "PASS",
@@ -81,14 +93,39 @@
     "canonical_leaf_capability": 1701,
     "canonical_leaf_manual_review": 22,
     "canonical_leaf_workflow": 391,
-    "example_fixture": 49,
     "historical_source_skill": 2101,
     "nested_reference": 496,
-    "operational_workflow_skill": 7,
     "overlay": 6,
     "primitive": 1,
     "quarantined_package": 238,
     "reference": 5,
-    "router": 28
+    "router": 28,
+    "test_fixture": 49,
+    "workflow_infrastructure": 7
+  },
+  "verification_harness_summary": {
+    "live_git": {
+      "actual_head": "195eda775d7a8dcad1837a1990bcba8259da3ea0",
+      "expected_sha": "195eda775d7a8dcad1837a1990bcba8259da3ea0",
+      "head_exit_code": 0,
+      "ls_exit_code": 0,
+      "raw_status_lines": 0,
+      "sha_match": true,
+      "source_root": "/private/tmp/skil16-pinned-source",
+      "status_exit_code": 0,
+      "status_pass": true,
+      "tracked_skills_count": 5072,
+      "working_tree_clean": true
+    },
+    "manifest_integrity": {
+      "files_verified": 40191,
+      "packages_verified": 5072,
+      "status": "PASS"
+    },
+    "negative_tests": {
+      "neg_manifest_tamper": true,
+      "neg_nongit_dir": true,
+      "neg_wrong_sha": true
+    }
   }
 }

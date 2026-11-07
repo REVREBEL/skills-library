@@ -14,7 +14,7 @@ All baseline populations were discovered directly from disk without re-running o
 |---|---|:---:|---|
 | **100% Discovered-Path Coverage** | Every discovered `SKILL.md` matched to exactly one inventory row; zero silent exclusions | **PASS** | `objects.csv` (5072 rows matching all 5072 files) |
 | **Count Reconciliation** | Per-class totals equal enumerated population; separate historical denominators attributed to snapshot | **PASS** | `population-reconciliation.csv` (all 6 denominators accounted for with preserved variances and documented uncertainty) |
-| **Integrity** | Every referenced file exists for manifest hashing; reproducible SHA-256; zero source mutation | **PASS** | `package-manifests.json`, pristine `origin/main` worktree |
+| **Integrity** | Every referenced file exists for manifest hashing; reproducible SHA-256; zero source mutation | **PASS** | `package-manifests.json` (100% of 5072 packages and 40191 files cryptographically verified on disk) |
 | **Reference Check** | Every router/dependency link classified resolved, external, or pending | **PASS** | `routing-and-provenance-report.md`, `discrepancies.csv` |
 | **Repeatability** | Two independent runs on pinned SHA produce byte-equal normalized manifest outputs | **PASS** | Cross-directory dual-run hash check documented in `commands-and-tests.md` |
 | **Safety** | Zero protected file changes; zero workstation path or secret leakage in committed evidence | **PASS** | Sanitization regex audit passed clean (0 leaks) |
