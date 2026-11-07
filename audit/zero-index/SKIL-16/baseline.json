@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.revrebel.io/v1/zero-index-baseline.schema.json",
+  "acceptance_status": {
+    "coverage_100_percent": "PASS",
+    "cryptographic_integrity": "PASS",
+    "denominators_reconciled": "PASS",
+    "deterministic_reproducibility": "PASS",
+    "evidence_draft_pr": "NOT_TESTED",
+    "linear_status_updated": "NOT_TESTED",
+    "manifest_integrity_verified": "PASS",
+    "negative_path_tests": "PASS",
+    "router_integrity_verified": "PASS",
+    "source_checkout_verified": "PASS",
+    "zero_leakage_verified": "PASS",
+    "zero_source_mutation": "PASS"
+  },
+  "baseline_timestamp_utc": "2026-11-02T04:00:00Z",
+  "dated_submission_status": {
+    "draft_pull_request_number": 154,
+    "draft_pull_request_status": "OPEN",
+    "draft_pull_request_url": "https://github.com/REVREBEL/skills-library/pull/154",
+    "linear_issue_identifier": "SKIL-16",
+    "linear_issue_uuid": "40277fb5-9590-43a2-9a7f-3a6d0c8c0401",
+    "linear_submission_comment_url": "https://linear.app/revrebel/issue/SKIL-16/zi-01-pin-canonical-source-and-zero-index-inventory",
+    "review_status": "IN_REVIEW",
+    "status_date_utc": "2026-11-07T23:30:00Z",
+    "verified_by": "Antigravity Agent (SKIL-16 review revision)"
+  },
+  "exclusions": [],
+  "legacy_reference": "REV-158",
+  "linear_issue_identifier": "SKIL-16",
+  "linear_issue_uuid": "40277fb5-9590-43a2-9a7f-3a6d0c8c0401",
+  "manifest_cryptographic_verification": {
+    "files_hashed_and_verified": 40191,
+    "hash_mismatches": 0,
+    "missing_files": 0,
+    "packages_verified": 5072,
+    "verification_status": "PASS"
+  },
+  "parsers_and_contracts": {
+    "catalog_compiler": "tools/skill_library/registry_contract.py:CatalogCompiler v1.0.0",
+    "config_spec": "tools/skill_library/config.py",
+    "object_model": "tools/skill_library/object_model.py (10 first-class types)",
+    "python_runtime": "3.15.2",
+    "semantic_census_validator": "tools/validate_semantic_census.py"
+  },
+  "pinned_branch": "origin/main",
+  "pinned_commit_author": "Gary <gary@revrebel.io>",
+  "pinned_commit_date": "2026-11-01T12:57:56-08:00",
+  "pinned_commit_sha": "195eda775d7a8dcad1837a1990bcba8259da3ea0",
+  "populations": {
+    "agent_workflow_total_skill_md": 7,
+    "canonical_census_population": 2133,
+    "historical_pre_rebuild_inventory": 2331,
+    "historical_rebuilt_active_leaves": 2103,
+    "library_routers_total": 28,
+    "library_total_skill_md": 2657,
+    "runtime_manifest_population": 2102,
+    "task_example_total_skill_md": 49,
+    "task_folder_total_skill_md": 2359,
+    "total_discovered_skill_md": 5072,
+    "total_excluded_skill_files": 0,
+    "total_filesystem_raw_skills": 5072,
+    "total_git_tracked_skills": 5072
+  },
+  "remote_url": "https://github.com/REVREBEL/skills-library.git",
+  "repository": "REVREBEL/skills-library",
+  "scope_breakdown": {
+    "agent_workflow_infrastructure": 7,
+    "canonical_library": 2133,
+    "historical_archived": 20,
+    "historical_pre_rebuild": 2101,
+    "historical_quarantine": 238,
+    "library_nested_reference": 496,
+    "library_router": 28,
+    "test_fixture": 49
+  },
+  "source_verification": {
+    "expected_pinned_sha": "195eda775d7a8dcad1837a1990bcba8259da3ea0",
+    "git_rev_parse_head_exit": 0,
+    "git_status_porcelain_exit": 0,
+    "sha_match": true,
+    "source_root_path": "/private/tmp/skil16-pinned-source",
+    "verification_status": "PASS",
+    "verified_head_sha": "195eda775d7a8dcad1837a1990bcba8259da3ea0",
+    "working_tree_clean": true
+  },
+  "task_id": "SKIL-16",
+  "type_breakdown": {
+    "adapter": 4,
+    "alias": 3,
+    "archived_package": 20,
+    "canonical_leaf_capability": 1701,
+    "canonical_leaf_manual_review": 22,
+    "canonical_leaf_workflow": 391,
+    "historical_source_skill": 2101,
+    "nested_reference": 496,
+    "overlay": 6,
+    "primitive": 1,
+    "quarantined_package": 238,
+    "reference": 5,
+    "router": 28,
+    "test_fixture": 49,
+    "workflow_infrastructure": 7
+  },
+  "verification_harness_summary": {
+    "live_git": {
+      "actual_head": "195eda775d7a8dcad1837a1990bcba8259da3ea0",
+      "expected_sha": "195eda775d7a8dcad1837a1990bcba8259da3ea0",
+      "head_exit_code": 0,
+      "ls_exit_code": 0,
+      "raw_status_lines": 0,
+      "sha_match": true,
+      "source_root": "/private/tmp/skil16-pinned-source",
+      "status_exit_code": 0,
+      "status_pass": true,
+      "tracked_skills_count": 5072,
+      "working_tree_clean": true
+    },
+    "manifest_integrity": {
+      "files_verified": 40191,
+      "packages_verified": 5072,
+      "status": "PASS"
+    },
+    "negative_tests": {
+      "neg_manifest_tamper": true,
+      "neg_nongit_dir": true,
+      "neg_wrong_sha": true
+    }
+  }
+}
