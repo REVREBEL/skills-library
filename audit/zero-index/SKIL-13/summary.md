@@ -17,7 +17,7 @@ In accordance with the zero-index charter:
 - **Authentic defects, environment couplings, and specification gaps were rigorously cataloged for subsequent resolution.**
 
 ### Key Findings:
-1. **Module & Core Engine Health:** All 15 modules in `tools/skill_library/` import cleanly with zero syntax errors, type errors, or broken dependencies.
+1. **Module & Core Engine Health:** All 15 modules in `tools/skill_library/` import cleanly without observed syntax or import-time dependency errors. No static type checker was run, so these checks do not establish absence of type errors.
 2. **Test Suite Accounting & Execution Delineation:** Discovered 253 automated tests across 9 test modules, evaluated under two transparent execution profiles:
    - **Isolated Suite Execution (`python3 -m unittest <module>`):** 251 Passed (99.2%), 2 Failed (0.8%), 0 Errors. The 2 authentic defects are strictly localized to `test_runtime_publication.py` (`test_21` due to unmocked `gh` CLI dispatch; `test_24` due to directory-to-frontmatter mismatch on external rename).
    - **Full-Batch Execution (`python3 tools/skill-library.py test`):** 248 Passed (98.0%), 2 Failed (0.8%), 3 Setup Errors (1.2%). The 3 errors are localized to `TestRuntimeGitClonePublication.setUp` (`test_01`, `test_02`, `test_03`) resulting from ephemeral APFS filesystem lock contention during high-frequency temporary Git repository initialization in a single process.
