@@ -102,7 +102,7 @@ Testing from pinned SHA `195eda775d7a8dcad1837a1990bcba8259da3ea0` identified th
   ```
 - **Root Cause:**
   1. The git reference `refs/heads/runtime` in the local checkout points to an earlier tree (`418c857507`) rather than `HEAD:library` (`66a84f272f`).
-  2. The configured target `universal-global` points to `~/.agents/skills`, which is evaluated during validation unless `--skip-targets` is supplied.
+  2. The configured target `universal-global` points to `~/.agents/skills`. The pinned workstation had an existing, out-of-sync checkout and therefore recorded a target mismatch. In a headless runner where this path does not exist, the validator skips that target instead of failing or requiring `--skip-targets`.
 
 ### Gap 2: High-Concurrency Subprocess Git Locking in Batch Tests
 - **Observed Behavior:**
