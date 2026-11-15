@@ -1,0 +1,98 @@
+{
+  "timestamp_utc": "2026-11-04T05:08:00Z",
+  "ticket": "SKIL-13",
+  "milestone": "00 | Zero-index evidence baseline",
+  "pinned_git_sha": "195eda775d7a8dcad1837a1990bcba8259da3ea0",
+  "worktree": {
+    "path": "/tmp/skil13-pinned-worktree",
+    "mode": "read-only detached worktree",
+    "clean_status": true,
+    "untracked_files_count": 0,
+    "modified_files_count": 0
+  },
+  "host_environment": {
+    "operating_system": "macOS",
+    "kernel_release": "24.3.0",
+    "kernel_version": "Darwin Kernel Version 24.3.0: Fri Dec  6 18:23:44 PST 2024; root:xnu-11215.81.4~3/RELEASE_ARM64_T6000",
+    "architecture": "arm64",
+    "platform_identifier": "macOS-15.3-arm64-arm-64bit"
+  },
+  "runtime_toolchain": {
+    "python_executable": "/usr/local/bin/python3",
+    "python_version": "3.14.7",
+    "python_compiler": "Clang 15.0.0 (clang-1500.3.9.4)",
+    "git_version": "git version 2.47.0 (Apple Git-150)",
+    "github_cli_available": true
+  },
+  "discovered_ci_workflows": [
+    {
+      "name": "ci.yml",
+      "workflow_name": "Test and Validate",
+      "path": ".github/workflows/ci.yml",
+      "size_bytes": 1387,
+      "line_count": 53,
+      "triggers": [
+        "push (main, feature/**)",
+        "pull_request (main)"
+      ],
+      "runner": "ubuntu-latest",
+      "python_version": "3.15",
+      "steps": [
+        "Checkout repository (actions/checkout@v7, fetch-depth: 0)",
+        "Set up Python (actions/setup-python@v7, python-version: 3.15)",
+        "Configure Git Identity (github-actions[bot])",
+        "Generate Local Runtime Publication Ref (python3 tools/skill-library.py publish-runtime)",
+        "Run Test Suite (python3 tools/skill-library.py test)",
+        "Run Living Library Validator (python3 tools/skill-library.py validate)",
+        "Validate Semantic Census and Freshness (python3 tools/catalog_semantic_census.py && git diff --exit-code audit/taxonomy-census/)"
+      ]
+    },
+    {
+      "name": "publish-runtime.yml",
+      "workflow_name": "Publish Runtime Branch",
+      "path": ".github/workflows/publish-runtime.yml",
+      "size_bytes": 829,
+      "line_count": 36,
+      "triggers": [
+        "push (library/**)",
+        "workflow_dispatch"
+      ],
+      "runner": "ubuntu-latest",
+      "permissions": "contents: write",
+      "steps": [
+        "Checkout main repository (actions/checkout@v7, fetch-depth: 0)",
+        "Set up Python (actions/setup-python@v7, python-version: 3.15)",
+        "Publish Runtime Branch (python3 tools/skill-library.py publish-runtime --push)"
+      ]
+    },
+    {
+      "name": "runtime-intake.yml",
+      "workflow_name": "Runtime Intake Pipeline",
+      "path": ".github/workflows/runtime-intake.yml",
+      "size_bytes": 2242,
+      "line_count": 82,
+      "triggers": [
+        "workflow_dispatch (incoming_branch)"
+      ],
+      "runner": "ubuntu-latest",
+      "permissions": "contents: write, pull-requests: write",
+      "steps": [
+        "Checkout repository",
+        "Set up Python (3.15)",
+        "Convert Incoming Snapshot to Intake Branch (python3 tools/skill-library.py convert-incoming)",
+        "Evaluate Staged Intake Candidates (python3 tools/skill-library.py intake --strict --output-report /tmp/intake-report.md)",
+        "Push Intake Branch",
+        "Generate Intake PR Body",
+        "Open Intake Pull Request (gh pr create)"
+      ]
+    }
+  ],
+  "dependency_profile": {
+    "standard_library_only": true,
+    "external_pip_packages_required": false,
+    "cli_dependencies": [
+      "git",
+      "gh (optional for dispatch)"
+    ]
+  }
+}
