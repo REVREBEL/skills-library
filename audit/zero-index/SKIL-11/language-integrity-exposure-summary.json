@@ -35,11 +35,14 @@
     "ast_syntax_errors": 0,
     "dangerous_calls_detected": 4,
     "workstation_path_leaks": 0,
-    "secret_leaks": 0
+    "secret_leaks": 0,
+    "internal_url_exposures": 0,
+    "unreadable_files": 0
   },
   "quarantine_candidate_breakdown": {
     "foreign_language_dominant": 14,
-    "mixed_language_metadata": 27,
+    "mixed_language_body": 4,
+    "mixed_language_metadata": 23,
     "persona_or_prompt_outlier": 6,
     "historical_phase03_excluded_tech": 1
   },

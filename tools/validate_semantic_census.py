@@ -2214,15 +2214,13 @@ def main():
 
     # 8. SKIL-11 (ZI-06) Language, Integrity & Exposure Audit
     print("\n[8/8] Running SKIL-11 Language, Integrity & Exposure Audit...")
-    try:
-        from tools.audit_language_and_integrity import run_skil11_audit
-        run_skil11_audit()
-    except Exception as e:
-        print(f"      [Warning] SKIL-11 audit execution: {e}")
+    from tools.audit_language_and_integrity import run_skil11_audit
+    run_skil11_audit()
 
     # Automated validation gate: assert zero template leaks across all generated reports
     print("\n[Gate] Verifying zero template leaks across generated reports...")
     assert_no_template_leaks(CENSUS_DIR)
+    assert_no_template_leaks(REPO_ROOT / "audit" / "zero-index" / "SKIL-11")
     print("      Verification passed: 0 template leaks detected.")
 
     print("\n" + "=" * 75)
