@@ -12,7 +12,7 @@ python3 tools/validate_semantic_census.py
 * **Exit code**: `0`
 * **Execution time**: ~18s
 * **Population processed**: 2,133 skills
-* **Resources inspected**: 8,078 files
+* **Resources inspected**: 8,172 files
 
 ### 2. Run Test Suite
 ```bash
@@ -32,9 +32,9 @@ python3 -m unittest tests/test_semantic_census.py tests/test_semantic_object_mod
 | Artifact File | Size (Bytes) | SHA-256 Digest |
 |---|---|---|
 | `language-audit.csv` | 543,706 | `6eec55c35e2ee9d03740abc0f3c98c11e9e26c4cab8ecbc772c6e87386cdf25b` |
-| `integrity-and-exposure-findings.csv` | 1,729,157 | `9e918a22504a551cb83efee802c6fe992cfa9e1dff89bec135b8237bdef0f1fb` |
+| `integrity-and-exposure-findings.csv` | 1,746,072 | `1dff50c0eee74edcbb2c225e971bb7bd87c6f2e739d6a3b53a55eccb51d72174` |
 | `quarantine-candidates.csv` | 19,774 | `d6076ca2c672136c786d6079627599fa73170745ead1c2bcc85596cd7adda50e` |
-| `language-integrity-exposure-summary.json` | 1,386 | `de9687a6542ed94fef3a663b85f9796a59d47ce5f30d4d8a317f25e4a12aa06b` |
+| `language-integrity-exposure-summary.json` | 1,386 | `465b723b4e017893315194749c4b6805c31e8ed50cde0e33064767f696a76820` |
 
 ## Verification Gate Assertions
 1. **100% Population Coverage**: Exactly 2,133 skills audited with zero unhandled exceptions.

@@ -256,14 +256,14 @@ class TestRegenerationAndParity(unittest.TestCase):
 
             with open(tmp_out / "integrity-and-exposure-findings.csv", mode="r", encoding="utf-8") as f:
                 res_rows = list(csv.DictReader(f))
-            self.assertEqual(len(res_rows), 8078)
+            self.assertEqual(len(res_rows), 8172)
 
             with open(tmp_out / "quarantine-candidates.csv", mode="r", encoding="utf-8") as f:
                 q_rows = list(csv.DictReader(f))
             self.assertEqual(len(q_rows), 48)
 
             self.assertEqual(summary["audit_metadata"]["population_audited"], 2133)
-            self.assertEqual(summary["audit_metadata"]["total_resources_audited"], 8078)
+            self.assertEqual(summary["audit_metadata"]["total_resources_audited"], 8172)
 
 class TestFailClosedGate(unittest.TestCase):
     """Test fault-injection and fail-closed gate behavior."""
@@ -312,8 +312,8 @@ class TestLanguageIntegrityAuditInvariants(unittest.TestCase):
             self.assertIn(r["proposed_disposition"], {"CANONICAL_ACTIVE", "TRANSLATE_RECOMMENDED", "TRANSLATE_OR_QUARANTINE"})
 
     def test_resource_integrity_and_ast_safety(self):
-        """Resource audit must verify 8,078 resources with 0 AST syntax errors and 0 unclassified leaks."""
-        self.assertEqual(len(self.res_rows), 8078)
+        """Resource audit must verify 8,172 resources with 0 AST syntax errors and 0 unclassified leaks."""
+        self.assertEqual(len(self.res_rows), 8172)
         ast_errors = [r for r in self.res_rows if r["ast_syntax_status"] == "ast_syntax_error"]
         self.assertEqual(len(ast_errors), 0, "All Python scripts must be syntactically valid")
 
