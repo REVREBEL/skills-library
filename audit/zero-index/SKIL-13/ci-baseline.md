@@ -78,7 +78,7 @@ We simulated each step of `ci.yml` directly against the pinned checkout at `/tmp
     - Target Error: Target 'universal-global' tree (17d8651a10) does not match published runtime tree (418c857507).
   ```
 - **Analysis:**
-  - In a freshly cloned repository, the `runtime` branch ref does not match `HEAD:library` unless `publish-runtime` is executed prior to validation. In `ci.yml`, Step 4 (`publish-runtime`) precedes Step 6, which satisfies the publication check in CI. However, the Target Checkout check against `universal-global` fails unless the target checkout at `~/.agents/skills` is physically synchronized.
+  - In the observed pinned workstation checkout, the local `runtime` ref and an **existing but stale** `universal-global` target checkout produced the recorded validation errors. `ci.yml` runs `publish-runtime` before `validate`, addressing the local publication-ref mismatch. The configured `~/.agents/skills` target only produces a mismatch if that path exists and is out of sync; a missing target path is skipped by `validate_library_integrity` on a clean headless runner. These workstation failures must not be attributed to CI without CI-specific logs.
 
 ### Step 7: `python3 tools/catalog_semantic_census.py` && `git diff --exit-code audit/taxonomy-census/`
 - **Command:** `python3 tools/catalog_semantic_census.py && git diff --exit-code audit/taxonomy-census/`
@@ -92,9 +92,9 @@ We simulated each step of `ci.yml` directly against the pinned checkout at `/tmp
 1. **Python Version Drift:**  
    `ci.yml` pins `python-version: '3.15'`, whereas Python 3.14/3.13 is standard across host workstations. Python 3.15 is an unreleased development branch.
 2. **Missing Test Mocking in CI Pipeline:**  
-   The regression suite expects `test` to pass in CI, but due to unmocked external commands (`gh`) and strict directory-name matching on renames, `python3 tools/skill-library.py test` fails.
+   The pinned **workstation** test run failed with two assertions, including an authenticated `gh` dispatch from `test_21`, and three batch setup errors. This does not establish that an unauthenticated GitHub Actions runner triggers the same dispatch or fails the same assertions. The hosted CI outcome must be established from the actual job logs.
 3. **Target Validation in Headless CI:**  
-   `validator.py` attempts to inspect local target checkouts defined in `config/runtime-targets.json` (`~/.agents/skills`). In headless GitHub Actions runners, this path does not exist or lacks matching commits unless `--skip-targets` is supplied.
+   `validator.py` inspects configured target checkouts only when their paths exist. A missing `~/.agents/skills` checkout on a headless GitHub Actions runner is skipped and does **not** require `--skip-targets`. An existing but stale target, as observed on the workstation, can fail validation.
 
 ---
 
@@ -102,9 +102,9 @@ We simulated each step of `ci.yml` directly against the pinned checkout at `/tmp
 
 To avoid ambiguity between audit branch status and baseline repository health:
 - **Baseline Source Health (SHA `195eda775d`):**  
-  Simulated execution of the full `ci.yml` pipeline against the pinned snapshot fails at Step 5 (`test`, exit 1) and Step 6 (`validate`, exit 1). The baseline codebase does **not** possess a green continuous integration pass.
+  Local workstation execution of individual `ci.yml` commands at the pinned source SHA reported failures for `test` (exit 1) and `validate` (exit 1). These are **pinned-workstation baseline results**, not a recorded GitHub Actions run at that SHA; they cannot independently establish the hosted CI outcome.
 - **Evidence-Only PR Status (PR #159):**  
-  GitHub Actions status checks on PR #159 show green/passing. This is strictly because PR #159 introduces read-only documentation artifacts under `audit/zero-index/SKIL-13/` without modifying functional code in `library/`, `tools/`, or `tests/`. Branch protection and CI path filtering do not invoke full library validation or test execution on docs-only commits. A green check on PR #159 must not be construed as validation of the underlying architecture code.
+  GitHub Actions status checks on PR #159 reported green/passing at the observed PR head. The `Test and Validate` workflow (`.github/workflows/ci.yml`) has **no path filter** for pull requests targeting `main`: its configured publication, test, library-validation, and census steps still run for documentation-only PRs. Thus the green check is evidence that the configured hosted workflow passed **on the PR commit and CI environment**, but not proof that the separately pinned older source SHA passed the locally executed baseline tests. Differences between local baseline results and hosted CI require separate investigation; do not attribute them to skipped docs-only checks.
 - **Toolchain Provenance Record:**  
   - Diagnostic Execution: Python 3.14.7 (Clang 15.0.0, arm64 Darwin 24.3.0 macOS 15.3), Git 2.47.0.
   - Specified CI Target: Python 3.15 on `ubuntu-latest` (`actions/setup-python@v7`).
