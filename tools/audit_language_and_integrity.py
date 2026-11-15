@@ -234,6 +234,8 @@ def audit_resources_and_ast(population: List[Dict[str, Any]], repo_root: Optiona
         for root, dirs, files in os.walk(skill_dir):
             dirs[:] = [d for d in dirs if d not in (".git", "__pycache__", ".pytest_cache")]
             for f in sorted(files):
+                if f in (".DS_Store", "Thumbs.db", ".installer-metadata.json", ".incoming-metadata.json") or f.startswith("._") or f.endswith(".pyc"):
+                    continue
                 full_p = Path(root) / f
                 file_rel = str(full_p.relative_to(skill_dir))
                 repo_rel = str(full_p.relative_to(root_dir))

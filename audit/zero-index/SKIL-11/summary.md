@@ -1,7 +1,7 @@
 # ZI-06 Language, Integrity, and Exposure Audit Summary
 
 ## Executive Summary
-As part of Linear issue **SKIL-11 (ZI-06)**, a comprehensive, non-destructive audit was executed across the authoritative **2,133-skill population** and its **8,172 on-disk package resources**.
+As part of Linear issue **SKIL-11 (ZI-06)**, a comprehensive, non-destructive audit was executed across the authoritative **2,133-skill population** and its **8,078 on-disk package resources**.
 
 The audit extends `tools/validate_semantic_census.py` to evaluate three critical governance dimensions:
 1. **Language Metadata & Body Audit**: Rigorous classification of natural language frontmatter and execution prompts.
@@ -36,13 +36,13 @@ The audit extends `tools/validate_semantic_census.py` to evaluate three critical
   * `METADATA_ONLY`: 23 skills (require frontmatter English translation).
   * `BODY_ONLY`: 4 skills (require prompt body English translation).
 
-### 2. Resource Integrity & AST Safety (8,172 Resources)
+### 2. Resource Integrity & AST Safety (8,078 Resources)
 * **Resource Breakdown**:
   * Canonical Skill Manifests (`SKILL.md`): 2,628 files
   * Reference & Documentation Files (`.md`): 3,508 files
   * Executable Scripts: 828 files (521 Python `.py`, 90 Shell `.sh`, 217 other)
   * Configuration & Data Manifests: 589 files
-  * Assets & Binaries: 619 files
+  * Assets & Binaries: 525 files
 * **Python AST Results**:
   * 521 / 521 parsed with 0 syntax errors.
   * Flagged AST Calls:
@@ -65,7 +65,7 @@ The audit extends `tools/validate_semantic_census.py` to evaluate three critical
 
 ## Deliverables Generated in `audit/zero-index/SKIL-11`
 1. `language-audit.csv` (2,134 lines)
-2. `integrity-and-exposure-findings.csv` (8,173 lines)
+2. `integrity-and-exposure-findings.csv` (8,079 lines)
 3. `quarantine-candidates.csv` (49 lines)
 4. `language-integrity-exposure-summary.json`
 5. `commands-and-tests.md`

@@ -3,7 +3,7 @@
     "issue_identifier": "SKIL-11",
     "task_title": "ZI-06 | Complete language, integrity and exposure audit",
     "population_audited": 2133,
-    "total_resources_audited": 8172,
+    "total_resources_audited": 8078,
     "digest_algorithm": "SHA-256",
     "non_destructive_certification": true
   },
@@ -25,7 +25,7 @@
     "TRANSLATE_RECOMMENDED": 27
   },
   "resource_and_ast_stats": {
-    "total_resources": 8172,
+    "total_resources": 8078,
     "total_scripts": 828,
     "total_python_scripts": 521,
     "total_shell_scripts": 90,
