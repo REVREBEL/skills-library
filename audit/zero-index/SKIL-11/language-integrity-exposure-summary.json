@@ -1,0 +1,47 @@
+{
+  "audit_metadata": {
+    "issue_identifier": "SKIL-11",
+    "task_title": "ZI-06 | Complete language, integrity and exposure audit",
+    "population_audited": 2133,
+    "total_resources_audited": 8172,
+    "digest_algorithm": "SHA-256",
+    "non_destructive_certification": true
+  },
+  "language_distribution": {
+    "English": 2092,
+    "Chinese": 32,
+    "Portuguese": 9
+  },
+  "language_classification": {
+    "english_native": 2052,
+    "mixed_english_dominant": 40,
+    "foreign_language_dominant": 14,
+    "mixed_foreign_body": 4,
+    "mixed_foreign_metadata": 23
+  },
+  "proposed_dispositions": {
+    "CANONICAL_ACTIVE": 2092,
+    "TRANSLATE_OR_QUARANTINE": 14,
+    "TRANSLATE_RECOMMENDED": 27
+  },
+  "resource_and_ast_stats": {
+    "total_resources": 8172,
+    "total_scripts": 828,
+    "total_python_scripts": 521,
+    "total_shell_scripts": 90,
+    "total_references": 6136,
+    "total_configs": 589,
+    "ast_syntax_valid": 521,
+    "ast_syntax_errors": 0,
+    "dangerous_calls_detected": 4,
+    "workstation_path_leaks": 0,
+    "secret_leaks": 0
+  },
+  "quarantine_candidate_breakdown": {
+    "foreign_language_dominant": 14,
+    "mixed_language_metadata": 27,
+    "persona_or_prompt_outlier": 6,
+    "historical_phase03_excluded_tech": 1
+  },
+  "total_quarantine_candidates": 48
+}
