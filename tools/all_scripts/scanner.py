@@ -142,6 +142,8 @@ def scan_candidate_directory(pkg_dir: str, name: Optional[str] = None) -> Candid
     # Scan for bundled scripts and resources
     for root, _, files in os.walk(pkg_dir):
         for fname in files:
+            if fname in (".installer-metadata.json", ".incoming-metadata.json", ".DS_Store"):
+                continue
             fpath = os.path.join(root, fname)
             rel = os.path.relpath(fpath, pkg_dir).replace(os.sep, "/")
             if rel.startswith("scripts/"):

@@ -200,7 +200,7 @@ def validate_single_skill(skill_dir: str) -> SkillValidationReport:
     for root, dirs, files in os.walk(skill_dir):
         dirs[:] = [d for d in dirs if d not in (".git", "__pycache__", ".pytest_cache")]
         for file in files:
-            if file.endswith((".pyc", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".pdf", ".zip", ".tar", ".gz")):
+            if file in (".installer-metadata.json", ".incoming-metadata.json", ".DS_Store") or file.endswith((".pyc", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".pdf", ".zip", ".tar", ".gz")):
                 continue
             fpath = os.path.join(root, file)
             try:

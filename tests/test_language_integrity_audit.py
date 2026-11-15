@@ -2,28 +2,47 @@
 Comprehensive Unit, Scanner Correctness, and Invariant Test Suite for SKIL-11 (ZI-06).
 """
 
-import os
+import ast
 import csv
 import json
-import ast
+import os
+import sys
 import tempfile
 import unittest
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+TOOLS_DIR = REPO_ROOT / "tools"
 ZERO_INDEX_DIR = REPO_ROOT / "audit" / "zero-index" / "SKIL-11"
 
-from tools.audit_language_and_integrity import (
-    classify_leak,
-    audit_language_entry,
-    audit_resources_and_ast,
-    generate_quarantine_reconciliation,
-    run_skil11_audit,
-    SECRET_PATTERNS,
-    WORKSTATION_PATH_PATTERNS,
-    BENIGN_PATH_MARKERS
-)
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+
+try:
+    from tools.audit_language_and_integrity import (
+        classify_leak,
+        audit_language_entry,
+        audit_resources_and_ast,
+        generate_quarantine_reconciliation,
+        run_skil11_audit,
+        SECRET_PATTERNS,
+        WORKSTATION_PATH_PATTERNS,
+        BENIGN_PATH_MARKERS,
+    )
+except ImportError:
+    from audit_language_and_integrity import (
+        classify_leak,
+        audit_language_entry,
+        audit_resources_and_ast,
+        generate_quarantine_reconciliation,
+        run_skil11_audit,
+        SECRET_PATTERNS,
+        WORKSTATION_PATH_PATTERNS,
+        BENIGN_PATH_MARKERS,
+    )
 
 class TestScannerCorrectness(unittest.TestCase):
     """Test unit-level scanner behavior, regex classifications, AST checks, and error handling."""
