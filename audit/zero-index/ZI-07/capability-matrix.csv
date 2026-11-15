@@ -8,10 +8,10 @@ Scope+slug uniqueness,identity,no,yes,"2133 canonical ids, 2132 unique; one coll
 Census-derived canonical IDs conform to syntax,identity,no,partial,"census stores bare slugs: 2102 of 2133 rejected by CanonicalIdentity.parse(); only 31 scoped",PARTIAL,census is the source of truth and is non-conforming
 Canonical ID materialized in package metadata,identity,no,no,"0 of 2656 library SKILL.md files carry canonical_id or urn:skill:",ABSENT,derive at compile time by design
 Nested package classification,identity,no,no,"494 packages deeper than canonical depth (357 under seo-skills-main, 44 under design-it) have no role",ABSENT,not canonical; needs reference or child classification
-Lifecycle state vocabulary,lifecycle,partial,partial,"ReviewStatus = active, manual_review, deprecated, draft, sunset; no retired",PARTIAL,ZI-07 requires active/deprecated/retired
-Lifecycle transition API,lifecycle,no,no,"no transition function; status is a plain assignable field",ABSENT,
-Registry status validation,lifecycle,no,no,"RegistryEntry.status is a free string; SkillObject silently accepts unknown statuses",ABSENT,
-Lifecycle evidence in append-only ledger,lifecycle,partial,no,"ChangeLedger.record_change records operation/decision only; no lifecycle or status fields",PARTIAL,
+Lifecycle state vocabulary,lifecycle,yes,yes,"ReviewStatus = draft, provisional, manual_review, active, deprecated, sunset, retired + tests/test_lifecycle.py",IMPLEMENTED,
+Lifecycle transition API,lifecycle,yes,yes,"SkillObject.transition_to enforces ALLOWED_TRANSITIONS; retired is terminal + tests/test_lifecycle.py",IMPLEMENTED,
+Registry status validation,lifecycle,yes,yes,"ReviewStatus.coerce raises on unknown values, applied in SkillObject and RegistryEntry __post_init__ + tests/test_lifecycle.py",IMPLEMENTED,
+Lifecycle evidence in append-only ledger,lifecycle,yes,yes,"ChangeLedger.record_lifecycle_transition + list_lifecycle_transitions, append-only + tests/test_lifecycle.py",IMPLEMENTED,
 Alias single-hop resolution,alias,yes,yes,"AliasResolver.resolve enforces INV-3",IMPLEMENTED,
 Alias chaining rejection,alias,yes,yes,"test_inv_3_chained_alias_rejection, test_negative_chained_alias_triggers_violation",IMPLEMENTED,
 Four governed duplicate outcomes,alias,yes,yes,"AliasResolver.adjudicate_duplicate_pair + gate 2 tests",IMPLEMENTED,

@@ -107,14 +107,84 @@ class CanonicalIdentity:
 
 class ReviewStatus(str, Enum):
     """
-    Analytical and governance lifecycle review status.
+    Analytical and governance lifecycle status.
+
     Distinguishes review states (such as manual_review) from first-class semantic object types.
+
+    Lifecycle vocabulary (ZI-07):
+      draft        authored, not yet released
+      provisional  direction-neutral candidate pending duplicate adjudication (ADR-004)
+      manual_review  under human or analytical review
+      active       released and current
+      deprecated   superseded but still resolvable for backward compatibility
+      sunset       deprecated with a committed removal milestone
+      retired      withdrawn; terminal
     """
-    ACTIVE = "active"
-    MANUAL_REVIEW = "manual_review"
-    DEPRECATED = "deprecated"
     DRAFT = "draft"
+    PROVISIONAL = "provisional"
+    MANUAL_REVIEW = "manual_review"
+    ACTIVE = "active"
+    DEPRECATED = "deprecated"
     SUNSET = "sunset"
+    RETIRED = "retired"
+
+    @classmethod
+    def coerce(cls, value) -> "ReviewStatus":
+        """Return a ReviewStatus, raising on anything outside the vocabulary.
+
+        Replaces the previous behaviour of silently accepting custom status
+        strings, which let invalid lifecycle values reach the registry.
+        """
+        if isinstance(value, cls):
+            return value
+        if isinstance(value, str):
+            try:
+                return cls(value.strip().lower())
+            except ValueError:
+                allowed = ", ".join(member.value for member in cls)
+                raise InvariantViolationError(
+                    f"Unknown lifecycle status '{value}'. Allowed values: {allowed}."
+                ) from None
+        allowed = ", ".join(member.value for member in cls)
+        raise InvariantViolationError(
+            f"Lifecycle status must be a string or ReviewStatus, got {type(value).__name__}. "
+            f"Allowed values: {allowed}."
+        )
+
+
+# Explicit state machine. A transition not listed here is rejected.
+ALLOWED_TRANSITIONS = {
+    ReviewStatus.DRAFT: frozenset(
+        {ReviewStatus.PROVISIONAL, ReviewStatus.ACTIVE, ReviewStatus.DEPRECATED}
+    ),
+    ReviewStatus.PROVISIONAL: frozenset(
+        {
+            ReviewStatus.DRAFT,
+            ReviewStatus.ACTIVE,
+            ReviewStatus.DEPRECATED,
+            ReviewStatus.RETIRED,
+        }
+    ),
+    ReviewStatus.MANUAL_REVIEW: frozenset(
+        {
+            ReviewStatus.DRAFT,
+            ReviewStatus.PROVISIONAL,
+            ReviewStatus.ACTIVE,
+            ReviewStatus.DEPRECATED,
+        }
+    ),
+    ReviewStatus.ACTIVE: frozenset({ReviewStatus.DEPRECATED, ReviewStatus.RETIRED}),
+    ReviewStatus.DEPRECATED: frozenset(
+        {
+            ReviewStatus.PROVISIONAL,
+            ReviewStatus.ACTIVE,
+            ReviewStatus.SUNSET,
+            ReviewStatus.RETIRED,
+        }
+    ),
+    ReviewStatus.SUNSET: frozenset({ReviewStatus.RETIRED}),
+    ReviewStatus.RETIRED: frozenset(),
+}
 
 
 class SkillRole(str, Enum):
@@ -222,11 +292,8 @@ class SkillObject:
     def __post_init__(self):
         # Validate canonical ID
         self._parsed_id = CanonicalIdentity.parse(self.canonical_id)
-        if isinstance(self.status, str):
-            try:
-                self.status = ReviewStatus(self.status.lower().strip())
-            except ValueError:
-                pass  # Allow custom status strings if needed
+        # Reject lifecycle values outside the vocabulary instead of storing them.
+        self.status = ReviewStatus.coerce(self.status)
         self._initialized = True
 
     def __setattr__(self, name: str, value: Any):
@@ -256,6 +323,49 @@ class SkillObject:
         )
         self.relationships.append(rel)
         return rel
+
+    def transition_to(
+        self,
+        new_status,
+        reason: str = "",
+        actor: str = "",
+    ) -> Dict[str, Any]:
+        """Move this object to ``new_status`` if the lifecycle allows it.
+
+        Returns a ledger-ready record describing the transition. Raises
+        ``InvariantViolationError`` for an unknown status or a transition that
+        is not permitted. Moving to the current status is a no-op that returns
+        a record with ``changed=False``.
+        """
+        current = ReviewStatus.coerce(self.status)
+        target = ReviewStatus.coerce(new_status)
+
+        record = {
+            "canonical_id": self.canonical_id,
+            "urn": self.id_object.urn,
+            "from_status": current.value,
+            "to_status": target.value,
+            "reason": reason,
+            "actor": actor,
+            "changed": False,
+        }
+
+        if target == current:
+            return record
+
+        if target not in ALLOWED_TRANSITIONS.get(current, frozenset()):
+            allowed = ", ".join(
+                sorted(status.value for status in ALLOWED_TRANSITIONS.get(current, frozenset()))
+            )
+            raise InvariantViolationError(
+                f"Illegal lifecycle transition for '{self.canonical_id}': "
+                f"{current.value} -> {target.value}. "
+                f"Allowed targets: {allowed or '(none, terminal)'}."
+            )
+
+        self.status = target
+        record["changed"] = True
+        return record
 
     def to_dict(self) -> Dict[str, Any]:
         status_val = self.status.value if isinstance(self.status, ReviewStatus) else str(self.status)

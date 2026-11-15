@@ -98,3 +98,52 @@ class ChangeLedger:
             return changes[:limit]
         return changes
 
+    def record_lifecycle_transition(
+        self,
+        canonical_id: str,
+        from_status: str,
+        to_status: str,
+        reason: str = "",
+        actor: str = "",
+        urn: str = "",
+        **extra,
+    ) -> dict:
+        """Append a lifecycle transition to the ledger.
+
+        The ledger is append-only, so this is the durable evidence that a skill
+        moved between lifecycle states (active -> deprecated -> retired). It
+        records intent and provenance; it does not enforce the transition —
+        ``SkillObject.transition_to`` does that.
+        """
+        if not urn and ":" in canonical_id:
+            urn = f"urn:skill:{canonical_id}"
+
+        record = {
+            "record_id": f"LFC-{uuid.uuid4().hex[:12].upper()}",
+            "record_type": "lifecycle_transition",
+            "timestamp": get_current_iso_timestamp(),
+            "canonical_id": canonical_id,
+            "urn": urn,
+            "from_status": from_status,
+            "to_status": to_status,
+            "reason": reason,
+            "actor": actor,
+        }
+        record.update(extra)
+
+        with open(self.ledger_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record) + "\n")
+
+        return record
+
+    def list_lifecycle_transitions(self, canonical_id: Optional[str] = None) -> List[dict]:
+        """Return lifecycle transitions, optionally filtered to one canonical id."""
+        transitions = [
+            record
+            for record in self.list_changes()
+            if record.get("record_type") == "lifecycle_transition"
+        ]
+        if canonical_id is not None:
+            transitions = [r for r in transitions if r.get("canonical_id") == canonical_id]
+        return transitions
+

@@ -2,23 +2,24 @@
 
 **Work order:** SKIL-10 (ZI-07), plus absorbed ZI-03 scope
 **Baseline:** `origin/main` @ `f1ab2439`
-**Status:** P0 items 1–3 implemented. P1/P2 remain.
+**Status:** P0 items 1–3 and the lifecycle P1 items implemented. Remaining work is classification
+and data quality.
 
 ---
 
 ## 1. Verdict
 
-**10 implemented · 7 partial · 6 absent** (23 capabilities)
+**14 implemented · 5 partial · 4 absent** (23 capabilities)
 
 The contracts are well specified and the parts that exist are genuinely tested. What was missing was
-the layer connecting specification to catalog — that is now implemented for identity and frontmatter.
-Lifecycle remains a field rather than a governed transition.
+the layer connecting specification to catalog — identity, frontmatter and lifecycle are now
+implemented. What remains is classification and data quality, not mechanism.
 
 | Verdict | Capabilities |
 |---|---|
-| **Implemented** | canonical ID syntax · scope derivation · canonical package coverage · path independence · identity immutability · alias single-hop · alias chaining rejection · four governed duplicate outcomes · single frontmatter parser · frontmatter vocabularies |
-| **Partial** | scope+slug uniqueness · census ID conformance · lifecycle vocabulary · ledger evidence · alias sunset metadata · five-field coverage · CI validation |
-| **Absent** | identity in package metadata · nested package classification · lifecycle transition API · registry status validation · field semantics · source→registry→view hierarchy |
+| **Implemented** | canonical ID syntax · scope derivation · canonical package coverage · path independence · identity immutability · alias single-hop · alias chaining rejection · four governed duplicate outcomes · single frontmatter parser · frontmatter vocabularies · lifecycle vocabulary · transition API · status validation · ledger lifecycle evidence |
+| **Partial** | scope+slug uniqueness · census ID conformance · alias sunset metadata · five-field coverage · CI validation |
+| **Absent** | identity in package metadata · nested package classification · field semantics · source→registry→view hierarchy |
 
 ## 2. Findings that matter
 
@@ -86,19 +87,33 @@ Extending coverage to all 2,133 surfaces one pre-existing defect:
 (`README.md`, `docs/api.md`, and two more). That is a library content fix, not a schema fix, and is
 left alone here.
 
-### 2.6 Lifecycle is a label, not a transition
+### 2.6 Lifecycle is now governed
 
-`ReviewStatus` defines `active, manual_review, deprecated, draft, sunset`. There is:
+`ReviewStatus` was extended to `draft, provisional, manual_review, active, deprecated, sunset,
+retired`. `provisional` was already in use by ADR-004's direction-neutral duplicate outcome but was
+not in the enum; `retired` was named by ZI-07 but absent.
 
-- no `retired` state, though ZI-07 names `active/deprecated/retired`;
-- no transition function — `status` is a plain assignable field;
-- no validation — `SkillObject` silently swallows unknown statuses
-  (`except ValueError: pass  # Allow custom status strings`);
-- no lifecycle evidence in the ledger — `ChangeLedger.record_change` records operation and decision,
-  not state transitions.
+An explicit state machine now governs movement:
 
-Alias deprecation telemetry returns a notice with a target but **no sunset milestone**, which
-ADR-004 explicitly requires.
+```python
+ALLOWED_TRANSITIONS = {
+    draft:        {provisional, active, deprecated},
+    provisional:  {draft, active, deprecated, retired},
+    manual_review:{draft, provisional, active, deprecated},
+    active:       {deprecated, retired},
+    deprecated:   {provisional, active, sunset, retired},
+    sunset:       {retired},
+    retired:      set(),          # terminal
+}
+```
+
+`SkillObject.transition_to(new_status, reason, actor)` validates, mutates, and returns a ledger-ready
+record. `ReviewStatus.coerce` replaces the old `except ValueError: pass`, so an unknown status now
+raises `InvariantViolationError` in both `SkillObject` and `RegistryEntry` instead of being stored.
+
+`ChangeLedger.record_lifecycle_transition` appends the evidence, and
+`list_lifecycle_transitions(canonical_id)` reads it back. The ledger stays append-only and the
+transition records carry their own `record_type`, so existing change records are unaffected.
 
 ## 3. What was implemented
 
@@ -152,6 +167,15 @@ adjudication. It does not resolve them.
 Frontmatter Schema Warnings: 0 (license: 0, risk: 0, source: 0)
 ```
 
+### 3.5 Lifecycle transitions and evidence
+
+- `ReviewStatus` gained `retired` and `provisional`.
+- `ALLOWED_TRANSITIONS` defines the state machine; `retired` is terminal.
+- `SkillObject.transition_to()` validates and returns a ledger-ready record.
+- `ReviewStatus.coerce()` rejects unknown values in `SkillObject` and `RegistryEntry`.
+- `ChangeLedger.record_lifecycle_transition()` / `list_lifecycle_transitions()` provide append-only
+  evidence without disturbing existing change records.
+
 ## 4. Decisions
 
 ### 4.1 Canonical five fields: `name, description, risk, source, license`
@@ -182,15 +206,15 @@ truth remains.
 |---|---|---|---|
 | 1 | Adjudicate the single `competitor-analysis` pair | P1 | closes scope+slug uniqueness |
 | 2 | Classify the 494 nested packages as reference or child | P1 | not canonical; do not mint |
-| 3 | Add `retired` to `ReviewStatus` and an explicit transition API | P1 | reject invalid transitions |
-| 4 | Extend `ChangeLedger` with lifecycle transition records | P1 | the evidence ZI-03 asked for |
-| 5 | Enforce `status` against the enum in `RegistryEntry` and `SkillObject` | P1 | remove the silent `except ValueError: pass` |
-| 6 | Backfill `risk` and `license` for the 30 operational packages | P1 | prerequisite for ZI-08 coverage |
-| 7 | Decide how `risk` gets real values at scale | P1 | 2,102 `unknown`; blocks ZI-08 |
-| 8 | Migrate the census to scoped canonical IDs | P2 | gated under Phase 04 |
-| 9 | Extend per-skill validation to operational roots | P2 | would surface the `llms-maintain` link defect |
-| 10 | Add the sunset milestone to deprecation telemetry | P2 | ADR-004 requirement |
-| 11 | Define and document the source→registry→view hierarchy | P2 | prerequisite for ZI-10 |
+| 3 | Backfill `risk` and `license` for the 30 operational packages | P1 | prerequisite for ZI-08 coverage |
+| 4 | Decide how `risk` gets real values at scale | P1 | 2,102 `unknown`; blocks ZI-08 |
+| 5 | Migrate the census to scoped canonical IDs | P2 | gated under Phase 04 |
+| 6 | Extend per-skill validation to operational roots | P2 | would surface the `llms-maintain` link defect |
+| 7 | Add the sunset milestone to deprecation telemetry | P2 | ADR-004 requirement |
+| 8 | Define and document the source→registry→view hierarchy | P2 | prerequisite for ZI-10 |
+
+Completed in this pass: unified frontmatter parser, vocabularies and schema validation, scope
+derivation, lifecycle vocabulary, transition API, status validation, and ledger lifecycle evidence.
 
 ## 6. What this does not do
 
@@ -203,4 +227,5 @@ truth remains.
 - `capability-matrix.csv` — 23 capabilities × implemented / tested / evidence / verdict / gap.
 - `summary.md` — this document.
 - `tools/skill_library/frontmatter.py`, `tools/skill_library/identity.py` — implementation.
-- `tests/test_frontmatter.py`, `tests/test_identity.py` — 37 tests.
+- `tools/skill_library/object_model.py`, `tools/skill_library/ledger.py` — lifecycle changes.
+- `tests/test_frontmatter.py`, `tests/test_identity.py`, `tests/test_lifecycle.py` — 60 tests.
