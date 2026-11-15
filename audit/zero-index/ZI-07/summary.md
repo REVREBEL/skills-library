@@ -2,22 +2,23 @@
 
 **Work order:** SKIL-10 (ZI-07), plus absorbed ZI-03 scope
 **Baseline:** `origin/main` @ `f1ab2439`
-**Status:** P0 items 1–3 and the lifecycle P1 items implemented. Remaining work is classification
-and data quality.
+**Status:** P0 items 1–3, the lifecycle P1 items, and the executable-surface survey implemented.
+Remaining work is adjudication and backfill.
 
 ---
 
 ## 1. Verdict
 
-**14 implemented · 5 partial · 4 absent** (23 capabilities)
+**15 implemented · 5 partial · 4 absent** (24 capabilities)
 
 The contracts are well specified and the parts that exist are genuinely tested. What was missing was
 the layer connecting specification to catalog — identity, frontmatter and lifecycle are now
-implemented. What remains is classification and data quality, not mechanism.
+implemented, and the executable surface is classified. What remains is adjudication and backfill,
+not mechanism.
 
 | Verdict | Capabilities |
 |---|---|
-| **Implemented** | canonical ID syntax · scope derivation · canonical package coverage · path independence · identity immutability · alias single-hop · alias chaining rejection · four governed duplicate outcomes · single frontmatter parser · frontmatter vocabularies · lifecycle vocabulary · transition API · status validation · ledger lifecycle evidence |
+| **Implemented** | canonical ID syntax · scope derivation · canonical package coverage · path independence · identity immutability · alias single-hop · alias chaining rejection · four governed duplicate outcomes · single frontmatter parser · frontmatter vocabularies · executable-surface classification · lifecycle vocabulary · transition API · status validation · ledger lifecycle evidence |
 | **Partial** | scope+slug uniqueness · census ID conformance · alias sunset metadata · five-field coverage · CI validation |
 | **Absent** | identity in package metadata · nested package classification · field semantics · source→registry→view hierarchy |
 
@@ -200,21 +201,57 @@ duplicate pair.
 `canonical_id` is derived at compile time, never written into frontmatter, so exactly one source of
 truth remains.
 
+### 4.3 Risk tiering from executable surface
+
+`risk` is `unknown` on 2,102 of 2,133 canonical packages, so ZI-08 cannot consume it as-is. Rather
+than guessing, `tools/survey_code_presence.py` measures what each package actually contains:
+
+| Tier | Signal | Packages | Share |
+|---|---|---:|---:|
+| 1 | bundled executable files (`.py`, `.sh`, `.js`, `.ts`, …) | 150 | 7.0% |
+| 2 | fenced blocks in shell / python / js / ts / sql | 512 | 24.0% |
+| 3 | fenced blocks only in text, markdown, data, css, html, tsx, … | 575 | 27.0% |
+| 4 | no fenced blocks at all — prose | 896 | 42.0% |
+
+Two things follow.
+
+**Most packages are plain text.** 42% have no code blocks at all, and another 27% carry only
+illustrative blocks. Together that is **1,471 packages (69%)** whose content is prose or example, not
+executable instructions.
+
+**Only 7% ship real code.** 150 packages bundle an executable file. A further 24% contain shell or
+Python blocks an agent could run, so the honest "executable surface" is **662 packages (31%)**.
+
+Proposed risk mapping, to be ratified under ZI-08:
+
+| Tier | Default `risk` | Review needed |
+|---|---|---|
+| 1 — bundled scripts | `elevated` | yes, per package |
+| 2 — executable blocks | `low` | spot-check |
+| 3 — illustrative blocks | `safe` | none |
+| 4 — prose | `safe` | none |
+
+That makes 69% of the catalog default-safe by rule and concentrates review on 662 packages. It is a
+floor, not a ceiling: a prose skill can still be dangerous if it instructs destructive commands, so
+tier 4 keeps `unknown` until a keyword pass runs.
+
 ## 5. Remaining ZI-07 work
 
 | # | Work | Priority | Notes |
 |---|---|---|---|
 | 1 | Adjudicate the single `competitor-analysis` pair | P1 | closes scope+slug uniqueness |
 | 2 | Classify the 494 nested packages as reference or child | P1 | not canonical; do not mint |
-| 3 | Backfill `risk` and `license` for the 30 operational packages | P1 | prerequisite for ZI-08 coverage |
-| 4 | Decide how `risk` gets real values at scale | P1 | 2,102 `unknown`; blocks ZI-08 |
-| 5 | Migrate the census to scoped canonical IDs | P2 | gated under Phase 04 |
-| 6 | Extend per-skill validation to operational roots | P2 | would surface the `llms-maintain` link defect |
-| 7 | Add the sunset milestone to deprecation telemetry | P2 | ADR-004 requirement |
-| 8 | Define and document the source→registry→view hierarchy | P2 | prerequisite for ZI-10 |
+| 3 | Backfill `risk` from the executable-surface tiers | P1 | 69% default-safe by rule; 662 need review |
+| 4 | Backfill `license` for the 30 operational packages | P1 | prerequisite for ZI-08 coverage |
+| 5 | Ratify the tier→risk mapping under ZI-08 | P1 | tier 4 keeps `unknown` until a keyword pass |
+| 6 | Migrate the census to scoped canonical IDs | P2 | gated under Phase 04 |
+| 7 | Extend per-skill validation to operational roots | P2 | would surface the `llms-maintain` link defect |
+| 8 | Add the sunset milestone to deprecation telemetry | P2 | ADR-004 requirement |
+| 9 | Define and document the source→registry→view hierarchy | P2 | prerequisite for ZI-10 |
 
 Completed in this pass: unified frontmatter parser, vocabularies and schema validation, scope
-derivation, lifecycle vocabulary, transition API, status validation, and ledger lifecycle evidence.
+derivation, lifecycle vocabulary, transition API, status validation, ledger lifecycle evidence, and
+executable-surface classification.
 
 ## 6. What this does not do
 
@@ -227,5 +264,7 @@ derivation, lifecycle vocabulary, transition API, status validation, and ledger 
 - `capability-matrix.csv` — 23 capabilities × implemented / tested / evidence / verdict / gap.
 - `summary.md` — this document.
 - `tools/skill_library/frontmatter.py`, `tools/skill_library/identity.py` — implementation.
+- `tools/skill_library/code_presence.py`, `tools/survey_code_presence.py` — executable-surface survey.
 - `tools/skill_library/object_model.py`, `tools/skill_library/ledger.py` — lifecycle changes.
-- `tests/test_frontmatter.py`, `tests/test_identity.py`, `tests/test_lifecycle.py` — 60 tests.
+- `tests/test_frontmatter.py`, `tests/test_identity.py`, `tests/test_lifecycle.py`, `tests/test_code_presence.py` — 76 tests.
+- `code-presence.csv` — per-package survey output (2,133 rows).
