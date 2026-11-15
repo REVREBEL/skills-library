@@ -247,6 +247,7 @@ def cmd_validate(args):
         manifest=manifest,
         verify_publication=not args.skip_publication,
         verify_targets=not args.skip_targets,
+        strict_frontmatter=getattr(args, "strict_frontmatter", False),
     )
     print(res.summary())
 
@@ -359,6 +360,11 @@ def main():
     p_val.add_argument("--output-report", action="store_true", help="Write audit/validation-report.md")
     p_val.add_argument("--skip-publication", action="store_true", help="Skip runtime branch publication check")
     p_val.add_argument("--skip-targets", action="store_true", help="Skip target checkout validation")
+    p_val.add_argument(
+        "--strict-frontmatter",
+        action="store_true",
+        help="Treat missing risk/source/license fields as errors instead of warnings",
+    )
 
     # status
     subparsers.add_parser("status", help="Print concise status overview")

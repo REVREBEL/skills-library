@@ -1,13 +1,13 @@
 capability,pillar,implemented,tested,evidence,verdict,gap
 Canonical ID syntax (<scope>:<slug> / urn:skill:<scope>:<slug>),identity,yes,yes,"tools/skill_library/object_model.py CanonicalIdentity + tests/test_semantic_object_model.py",IMPLEMENTED,
-Canonical ID materialized in package metadata,identity,no,no,"0 of 2656 library SKILL.md files carry canonical_id or urn:skill:",ABSENT,derive at compile time instead (see summary section 4.1)
-Scope derivation rule,identity,no,no,"no derive_scope or equivalent in tools/skill_library/; migration_gates.py infers scope ad hoc from current_category with a general fallback",ABSENT,rule decided in summary section 4.2
-Census-derived canonical IDs conform to syntax,identity,partial,partial,"audit/taxonomy-census/semantic-role-census.json: 31 of 2133 scoped; 2102 bare slugs rejected by CanonicalIdentity.parse()",PARTIAL,98.5 percent of census IDs are unscoped
-Canonical package coverage,identity,partial,no,"census covers 2102 of 2103 depth-3 packages; sole miss is library/skills-create-manage-update/skill-writer/skill-writer",PARTIAL,one package
-Nested package classification,identity,no,no,"494 packages deeper than depth-3 (357 under seo-skills-main, 44 under design-it) have no census record or role",ABSENT,not canonical; needs reference or child classification
-Scope+slug uniqueness,identity,no,no,"2103 depth-3 packages yield 2102 unique ids; one collision: marketing-and-seo:competitor-analysis (on-page-seo vs cro)",PARTIAL,one genuine duplicate pair
+Scope derivation rule,identity,yes,yes,"tools/skill_library/identity.py SCOPE_MAP + derive_scope/mint_canonical_id + tests/test_identity.py",IMPLEMENTED,
+Canonical package coverage,identity,yes,yes,"derived set of 2133 matches audit/taxonomy-census/semantic-role-census.json exactly (0 difference both ways)",IMPLEMENTED,
 Path independence,identity,yes,yes,"INV-6 tests incl. relocation preserving canonical identity",IMPLEMENTED,
 Identity immutability,identity,yes,yes,"SkillObject.__setattr__ guard + test_semantic_reownership_preserves_canonical_identity",IMPLEMENTED,
+Scope+slug uniqueness,identity,no,yes,"2133 canonical ids, 2132 unique; one collision marketing-and-seo:competitor-analysis (on-page-seo vs cro)",PARTIAL,one genuine duplicate pair for ADR-004 5.2
+Census-derived canonical IDs conform to syntax,identity,no,partial,"census stores bare slugs: 2102 of 2133 rejected by CanonicalIdentity.parse(); only 31 scoped",PARTIAL,census is the source of truth and is non-conforming
+Canonical ID materialized in package metadata,identity,no,no,"0 of 2656 library SKILL.md files carry canonical_id or urn:skill:",ABSENT,derive at compile time by design
+Nested package classification,identity,no,no,"494 packages deeper than canonical depth (357 under seo-skills-main, 44 under design-it) have no role",ABSENT,not canonical; needs reference or child classification
 Lifecycle state vocabulary,lifecycle,partial,partial,"ReviewStatus = active, manual_review, deprecated, draft, sunset; no retired",PARTIAL,ZI-07 requires active/deprecated/retired
 Lifecycle transition API,lifecycle,no,no,"no transition function; status is a plain assignable field",ABSENT,
 Registry status validation,lifecycle,no,no,"RegistryEntry.status is a free string; SkillObject silently accepts unknown statuses",ABSENT,
@@ -16,8 +16,9 @@ Alias single-hop resolution,alias,yes,yes,"AliasResolver.resolve enforces INV-3"
 Alias chaining rejection,alias,yes,yes,"test_inv_3_chained_alias_rejection, test_negative_chained_alias_triggers_violation",IMPLEMENTED,
 Four governed duplicate outcomes,alias,yes,yes,"AliasResolver.adjudicate_duplicate_pair + gate 2 tests",IMPLEMENTED,
 Alias deprecation and sunset metadata,alias,partial,partial,"get_deprecation_telemetry returns a notice with target but no sunset milestone",PARTIAL,ADR-004 requires a sunset milestone
-Frontmatter five-field coverage,metadata,partial,partial,"name/description 2656/2656; license 2208; source 2196; risk 2196; 543 packages missing at least one",PARTIAL,field set not enforced anywhere
-Frontmatter field vocabularies,metadata,no,no,"risk: 2113 unknown, 75 safe, 7 critical; license: 2101 not_declared_upstream, 87 MIT, 19 Apache-2.0",ABSENT,fields exist but carry sentinel values
-Single frontmatter parser,metadata,no,no,"three divergent implementations: scanner.py, validator.py, intake.py",ABSENT,scanner.py splits on the first --- and keeps comment lines
-Frontmatter validation in CI,metadata,partial,partial,"validator.py enforces name and description only",PARTIAL,
+Single frontmatter parser,metadata,yes,yes,"tools/skill_library/frontmatter.py replaces the three divergent copies in scanner/validator/intake + tests/test_frontmatter.py",IMPLEMENTED,
+Frontmatter vocabularies,metadata,yes,yes,"risk and license closed vocabularies with case-insensitive lookup + tests/test_frontmatter.py",IMPLEMENTED,
+Frontmatter five-field coverage,metadata,partial,partial,"2103 of 2133 canonical packages complete; 30 missing (all in skills-create-manage-update); 513 of 523 non-canonical nested packs incomplete",PARTIAL,
+Frontmatter field semantics,metadata,no,no,"risk unknown on 2102/2133; license not_declared_upstream on 2102/2133; 1 safe, 1 critical, 1 MIT",ABSENT,fields present but carry no information
+Frontmatter validation in CI,metadata,partial,partial,"validate enforces name/description always and schema fields under --strict-frontmatter; covers the 2102 router-indexed skills only",PARTIAL,operational roots are never schema-checked
 Source -> registry -> view hierarchy,metadata,no,no,"no compiled registry artifact in repo; CatalogCompiler.compile requires a SkillObject list as input",ABSENT,no disk-to-registry ingestion adapter

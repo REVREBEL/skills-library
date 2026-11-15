@@ -27,6 +27,7 @@ from .config import (
     TRIGGER_CONTRACT_PATTERN,
     WORKSTATION_PATH_PATTERNS,
 )
+from .frontmatter import parse_frontmatter
 from .ledger import ChangeLedger
 from .manifest import RuntimeManifest
 from .pilot import run_targeted_pilot
@@ -58,22 +59,6 @@ def compute_dice_similarity(tokens1: Set[str], tokens2: Set[str]) -> float:
         return 0.0
     intersection = len(tokens1 & tokens2)
     return (2.0 * intersection) / (len(tokens1) + len(tokens2))
-
-
-def parse_frontmatter(content: str) -> Optional[dict]:
-    """Extract frontmatter as dictionary."""
-    if not content.startswith("---"):
-        return None
-    end = content.find("\n---", 3)
-    if end == -1:
-        return None
-    fm_text = content[3:end].strip()
-    result = {}
-    for line in fm_text.splitlines():
-        if ":" in line and not line.strip().startswith("#"):
-            k, v = line.split(":", 1)
-            result[k.strip()] = v.strip().strip("\"'")
-    return result
 
 
 @dataclass
