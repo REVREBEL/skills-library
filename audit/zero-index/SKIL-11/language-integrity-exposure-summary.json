@@ -2,36 +2,34 @@
   "audit_metadata": {
     "issue_identifier": "SKIL-11",
     "task_title": "ZI-06 | Complete language, integrity and exposure audit",
-    "population_audited": 2133,
-    "total_resources_audited": 8172,
+    "population_audited": 2087,
+    "total_resources_audited": 7881,
     "digest_algorithm": "SHA-256",
     "non_destructive_certification": true
   },
   "language_distribution": {
-    "English": 2092,
-    "Chinese": 32,
+    "English": 2078,
     "Portuguese": 9
   },
   "language_classification": {
-    "english_native": 2052,
-    "mixed_english_dominant": 40,
-    "foreign_language_dominant": 14,
-    "mixed_foreign_body": 4,
-    "mixed_foreign_metadata": 23
+    "english_native": 2049,
+    "mixed_english_dominant": 29,
+    "mixed_foreign_metadata": 4,
+    "foreign_language_dominant": 5
   },
   "proposed_dispositions": {
-    "CANONICAL_ACTIVE": 2092,
-    "TRANSLATE_OR_QUARANTINE": 14,
-    "TRANSLATE_RECOMMENDED": 27
+    "CANONICAL_ACTIVE": 2078,
+    "TRANSLATE_RECOMMENDED": 4,
+    "TRANSLATE_OR_QUARANTINE": 5
   },
   "resource_and_ast_stats": {
-    "total_resources": 8172,
-    "total_scripts": 828,
-    "total_python_scripts": 521,
-    "total_shell_scripts": 90,
-    "total_references": 6136,
-    "total_configs": 589,
-    "ast_syntax_valid": 521,
+    "total_resources": 7881,
+    "total_scripts": 808,
+    "total_python_scripts": 508,
+    "total_shell_scripts": 84,
+    "total_references": 5969,
+    "total_configs": 586,
+    "ast_syntax_valid": 508,
     "ast_syntax_errors": 0,
     "dangerous_calls_detected": 4,
     "workstation_path_leaks": 0,
@@ -40,11 +38,10 @@
     "unreadable_files": 0
   },
   "quarantine_candidate_breakdown": {
-    "foreign_language_dominant": 14,
-    "mixed_language_body": 4,
-    "mixed_language_metadata": 23,
+    "mixed_language_metadata": 4,
+    "foreign_language_dominant": 5,
     "persona_or_prompt_outlier": 6,
     "historical_phase03_excluded_tech": 1
   },
-  "total_quarantine_candidates": 48
+  "total_quarantine_candidates": 16
 }

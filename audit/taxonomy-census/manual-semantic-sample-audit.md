@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This audit satisfies the **REV-150 review requirement** for an **independent, reproducible semantic audit** across the 2,133-skill catalog.
+This audit satisfies the **REV-150 review requirement** for an **independent, reproducible semantic audit** across the 2,087-skill catalog.
 
 To ensure complete transparency and scientific rigor, this audit strictly distinguishes between **automated dual-classifier consensus** and **independent manual deep-read adjudications**:
 1. **Stratified Sample (N=100) Dual-Classifier Check**: A fixed stratified sample of 100 packages was evaluated using two independent automated classifiers (heuristic rule pipeline vs. second-pass full-content parser). This surfaced **26 boundary discrepancies** where automated patterns diverged (**74.0% raw agreement**, 74/100).
@@ -27,8 +27,8 @@ To ensure complete transparency and scientific rigor, this audit strictly distin
 
 | Heuristic Census Role | Sampled Count | Second-Pass Agreed | Raw Agreement % | Primary Boundary Dynamics |
 | :--- | :---: | :---: | :---: | :--- |
-| `independent_capability` | 53 | 49 | 92.5% | High agreement. Discrepancies represent complex capabilities with internal phase headings. |
-| `workflow` | 25 | 19 | 76.0% | Substantial agreement. Boundary with capabilities that define sequential steps without full multi-phase lifecycle. |
+| `independent_capability` | 52 | 48 | 92.3% | High agreement. Discrepancies represent complex capabilities with internal phase headings. |
+| `workflow` | 26 | 20 | 76.9% | Substantial agreement. Boundary with capabilities that define sequential steps without full multi-phase lifecycle. |
 | `alias_candidate` | 3 | 3 | 100.0% | Complete agreement. Deterministic duplicate pairs and explicit alias declarations. |
 | `overlay` | 5 | 0 | 0.0% | Systemic boundary divergence. Heuristic assigned platform overlays based on family membership; second pass distinguishes independent domain tools. |
 | `adapter` | 4 | 0 | 0.0% | Systemic boundary divergence. Heuristic assigned adapter based on provider keywords (MCP/CLI); manual inspection reveals full capabilities calling MCP tools. |
@@ -255,7 +255,7 @@ This ledger documents all 100 packages evaluated in the multi-role divergence au
 | 43 | `content-and-documentation-brand-guidelines` | `library/content-and-documentation/technical-writing/brand-guidelines` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 44 | `delegating-to-agents` | `library/development/fullstack/delegating-to-agents` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 45 | `ui-ux-designer` | `library/design-and-experience/design-systems/ui-ux-designer` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
-| 46 | `geo-content-optimizer` | `library/marketing-and-seo/geo-and-local-seo/geo-content-optimizer` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
+| 46 | `ai-native-cli` | `library/business-and-operations/legal-and-governance/ai-native-cli` | `workflow` | `workflow` | `workflow` | **CLASSIFIER_CONSENSUS** | Multi-phase sequential outcome orchestration pipeline |
 | 47 | `call-analysis-framework` | `library/marketing-and-seo/on-page-seo/call-analysis-framework` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 48 | `image-studio` | `library/development/fullstack/image-studio` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 49 | `canvas-design` | `library/design-and-experience/taste-and-critique/canvas-design` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |

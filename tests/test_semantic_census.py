@@ -56,27 +56,27 @@ class TestSemanticCensusInvariants(unittest.TestCase):
 
     def test_population_exact_count_and_parity(self):
         """CSV and JSON must contain exactly 2,133 skills matching authoritative population."""
-        self.assertEqual(len(self.csv_rows), 2133)
-        self.assertEqual(len(self.json_rows), 2133)
+        self.assertEqual(len(self.csv_rows), 2087)
+        self.assertEqual(len(self.json_rows), 2087)
 
         csv_ids = [r["canonical_id"] for r in self.csv_rows]
         json_ids = [r["canonical_id"] for r in self.json_rows]
         self.assertEqual(csv_ids, json_ids)
-        self.assertEqual(len(set(csv_ids)), 2133, "All canonical IDs must be unique")
+        self.assertEqual(len(set(csv_ids)), 2087, "All canonical IDs must be unique")
 
     def test_role_distribution_invariants(self):
         """Authoritative breakdown across the 8 accepted semantic roles."""
         counts = Counter(r["semantic_role"] for r in self.csv_rows)
 
-        self.assertEqual(counts[ROLE_INDEPENDENT_CAPABILITY], 1701)
-        self.assertEqual(counts[ROLE_WORKFLOW], 391)
+        self.assertEqual(counts[ROLE_INDEPENDENT_CAPABILITY], 1668)
+        self.assertEqual(counts[ROLE_WORKFLOW], 378)
         self.assertEqual(counts[ROLE_MANUAL_REVIEW], 22)
         self.assertEqual(counts[ROLE_OVERLAY], 6)
         self.assertEqual(counts[ROLE_REFERENCE], 5)
         self.assertEqual(counts[ROLE_ADAPTER], 4)
         self.assertEqual(counts[ROLE_ALIAS], 3)
         self.assertEqual(counts[ROLE_FAMILY_PRIMITIVE], 1)
-        self.assertEqual(sum(counts.values()), 2133)
+        self.assertEqual(sum(counts.values()), 2087)
 
     def test_asset_audit_classification_integrity(self):
         """Verify asset-audit is classified as workflow across datasets and reports."""
@@ -103,9 +103,9 @@ class TestSemanticCensusInvariants(unittest.TestCase):
         self.assertNotIn("Aliases / Duplicates", catch_all)
 
         # Exact row counts
-        self.assertIn("| `development/fullstack` | 420 | 326 | 83 | 1 | 0 | 1 | 1 | 8 |", catch_all)
-        self.assertIn("| `marketing-and-seo/on-page-seo` | 279 | 246 | 30 | 0 | 2 | 0 | 0 | 1 |", catch_all)
-        self.assertIn("| `marketing-and-seo/cro` | 209 | 167 | 38 | 0 | 2 | 1 | 0 | 1 |", catch_all)
+        self.assertIn("| `development/fullstack` | 406 | 318 | 77 | 1 | 0 | 1 | 1 | 8 |", catch_all)
+        self.assertIn("| `marketing-and-seo/on-page-seo` | 271 | 238 | 30 | 0 | 2 | 0 | 0 | 1 |", catch_all)
+        self.assertIn("| `marketing-and-seo/cro` | 206 | 165 | 37 | 0 | 2 | 1 | 0 | 1 |", catch_all)
 
     def test_independent_validation_narrative_percentages_against_counts(self):
         """Independently verifies that narrative percentages match underlying counts."""
@@ -113,9 +113,9 @@ class TestSemanticCensusInvariants(unittest.TestCase):
         counts = Counter(r["semantic_role"] for r in self.csv_rows)
 
         expected_pcts = {role: round((count / total) * 100, 1) for role, count in counts.items()}
-        self.assertEqual(expected_pcts[ROLE_INDEPENDENT_CAPABILITY], 79.7)
-        self.assertEqual(expected_pcts[ROLE_WORKFLOW], 18.3)
-        self.assertEqual(expected_pcts[ROLE_MANUAL_REVIEW], 1.0)
+        self.assertEqual(expected_pcts[ROLE_INDEPENDENT_CAPABILITY], 79.9)
+        self.assertEqual(expected_pcts[ROLE_WORKFLOW], 18.1)
+        self.assertEqual(expected_pcts[ROLE_MANUAL_REVIEW], 1.1)
         self.assertEqual(expected_pcts[ROLE_OVERLAY], 0.3)
         self.assertEqual(expected_pcts[ROLE_REFERENCE], 0.2)
         self.assertEqual(expected_pcts[ROLE_ADAPTER], 0.2)
@@ -123,9 +123,9 @@ class TestSemanticCensusInvariants(unittest.TestCase):
         self.assertEqual(expected_pcts[ROLE_FAMILY_PRIMITIVE], 0.0)
 
         report_text = (CENSUS_DIR / "census-validation-report.md").read_text(encoding="utf-8")
-        self.assertIn("79.7%", report_text)
-        self.assertIn("18.3%", report_text)
-        self.assertIn("1.0%", report_text)
+        self.assertIn("79.9%", report_text)
+        self.assertIn("18.1%", report_text)
+        self.assertIn("1.1%", report_text)
         self.assertIn("0.3%", report_text)
 
 

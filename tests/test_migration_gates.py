@@ -61,6 +61,7 @@ from skill_library.registry_contract import (
     RegistryEntry,
 )
 from skill_library.migration_gates import (
+    DELIBERATELY_PRUNED_PATHS,
     GateID,
     GateResult,
     GateStatus,
@@ -111,7 +112,13 @@ class TestHistoricalProvenanceMapping(unittest.TestCase):
         self.assertTrue(report.is_fully_reconciled, "Historical provenance must be 100% reconciled.")
         self.assertEqual(len(report.unmatched_historical), 0, "No historical Phase 08 records can be left unmapped.")
         self.assertGreaterEqual(report.total_historical_records, 2100)
-        self.assertGreaterEqual(report.matched_records, 2100)
+        # Every historical record is either matched to the live census or deliberately pruned.
+        self.assertEqual(
+            report.matched_records + len(DELIBERATELY_PRUNED_PATHS),
+            report.total_historical_records,
+            "Historical records must be matched or explicitly pruned, never silently dropped.",
+        )
+        self.assertGreaterEqual(report.matched_records, 2050)
 
         # Check sample record integrity
         commit_rec = report.provenance_records.get("development:commit")
