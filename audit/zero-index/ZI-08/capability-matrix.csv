@@ -1,0 +1,13 @@
+capability,implemented,tested,evidence,verdict,gap
+Risk declaration,yes,yes,"execution.ExecutionProfile.risk derived per package; 2133 profiles, no unknown remaining + tests/test_execution.py",IMPLEMENTED,
+Side-effect declaration,yes,yes,"SideEffect enum (none, reads_files, writes_files, executes_commands, network, external_state, destructive) + tests",IMPLEMENTED,
+Permission declaration,yes,yes,"Permission enum (none, filesystem_read, filesystem_write, shell, network, credentials) + tests",IMPLEMENTED,
+Environment requirement declaration,yes,yes,"EnvironmentRequirement (runtimes, tools, needs_network, env_vars) + tests",IMPLEMENTED,
+Runtime load plan,yes,yes,"LoadPlan (entrypoint, resources, scripts, runtimes, needs_network), distinct from the availability closure + tests",IMPLEMENTED,
+Destructive-command detection,yes,yes,"code-span-scoped regex over fenced blocks and inline code; 33 true positives, 0 prose false positives after tightening + tests",IMPLEMENTED,
+Credential-reference detection,yes,yes,"credential keyword scan; 454 packages declare a credential dependency",IMPLEMENTED,
+Phase 09 evidence reuse,yes,yes,"596 of 596 Phase 09 owner slugs match current canonical slugs; 616 packages gain execution evidence from it",IMPLEMENTED,
+Execution provider bindings,partial,partial,"ExecutionProviderContract validates bindings, but only 12 of 2656 packages declare tools and 2 declare mcp",PARTIAL,contract without data
+Provider and transport view,partial,partial,"MultiViewProjector.project_provider_view exists but has almost no providers to project",PARTIAL,same data gap
+Health probes,no,no,"no probe implementation",ABSENT,deferred by design: ZI-08 requires a concrete execution consumer first
+Runtime enforcement,no,no,"no sandbox or permission enforcement",ABSENT,out of scope for a skills library; runtime concern
