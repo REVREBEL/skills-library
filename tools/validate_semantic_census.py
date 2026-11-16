@@ -2085,7 +2085,7 @@ def assert_no_template_leaks(directory: Path):
         if leaks:
             raise AssertionError(f"Unresolved template leak detected in {p.name}: {leaks}")
 
-def main():
+def main(regenerate_skil11: bool = False):
     print("=" * 75)
     print("REV-150: INDEPENDENT SEMANTIC CENSUS METHODOLOGY & CLASSIFICATION VALIDATION")
     print("=" * 75)
@@ -2205,18 +2205,28 @@ def main():
     print(f"      Wrote: {outlier_path}")
 
     # 8. SKIL-11 (ZI-06) Language, Integrity & Exposure Audit
-    print("\n[8/8] Running SKIL-11 Language, Integrity & Exposure Audit...")
-    from tools.audit_language_and_integrity import run_skil11_audit
-    run_skil11_audit()
+    #
+    # SKIL-11 is a completed work order and its artifacts under
+    # audit/zero-index/SKIL-11/ are immutable evidence. Regenerating them from
+    # a census run would silently rewrite a finished audit against a different
+    # population, so this is opt-in.
+    skil11_dir = REPO_ROOT / "audit" / "zero-index" / "SKIL-11"
+    if regenerate_skil11:
+        print("\n[8/8] Running SKIL-11 Language, Integrity & Exposure Audit...")
+        from tools.audit_language_and_integrity import run_skil11_audit
+        run_skil11_audit()
+    else:
+        print("\n[8/8] SKIL-11 evidence preserved; pass --regenerate-skil11 to rebuild it.")
 
     # Automated validation gate: assert zero template leaks across all generated reports
     print("\n[Gate] Verifying zero template leaks across generated reports...")
     assert_no_template_leaks(CENSUS_DIR)
-    assert_no_template_leaks(REPO_ROOT / "audit" / "zero-index" / "SKIL-11")
+    if skil11_dir.exists():
+        assert_no_template_leaks(skil11_dir)
     print("      Verification passed: 0 template leaks detected.")
 
     print("\n" + "=" * 75)
-    print("VALIDATION & AUDIT COMPLETE: ALL CENSUS & SKIL-11 AUDIT DELIVERABLES GENERATED.")
+    print("VALIDATION & AUDIT COMPLETE: ALL CENSUS DELIVERABLES GENERATED.")
     print("=" * 75)
 
 if __name__ == "__main__":

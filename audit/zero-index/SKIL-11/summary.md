@@ -1,7 +1,7 @@
 # ZI-06 Language, Integrity, and Exposure Audit Summary
 
 ## Executive Summary
-As part of Linear issue **SKIL-11 (ZI-06)**, a comprehensive, non-destructive audit was executed across the authoritative **2,133-skill population** and its **7,881 on-disk package resources**.
+As part of Linear issue **SKIL-11 (ZI-06)**, a comprehensive, non-destructive audit was executed across the authoritative **2,133-skill population** and its **8,172 on-disk package resources**.
 
 The audit extends `tools/validate_semantic_census.py` to evaluate three critical governance dimensions:
 1. **Language Metadata & Body Audit**: Rigorous classification of natural language frontmatter and execution prompts.
@@ -15,12 +15,12 @@ The audit extends `tools/validate_semantic_census.py` to evaluate three critical
 | Requirement | Target / Constraint | Observed Status | Disposition |
 |---|---|---|---|
 | **Authoritative Population** | Exactly 2,133 skills | 2,133 skills parsed | **PASS** |
-| **Language Classification** | 100% of skills classified | 2078 English, 0 Chinese, 9 Portuguese | **PASS** |
+| **Language Classification** | 100% of skills classified | 2092 English, 32 Chinese, 9 Portuguese | **PASS** |
 | **Translation Candidates** | Explicit scope (Metadata/Body) | 41 skills identified (14 dominant, 23 metadata, 4 body) | **PASS** |
-| **Python AST Inspection** | 508 Python scripts | 508 syntactically valid (0 SyntaxErrors) | **PASS** |
+| **Python AST Inspection** | 521 Python scripts | 521 syntactically valid (0 SyntaxErrors) | **PASS** |
 | **Dangerous Call Isolation** | Flag `eval`/`exec`/`os.system` | 4 instances flagged | **PASS** |
 | **Leak & Credential Scan** | 0 unclassified secrets/keys | 0 unclassified private keys or tokens | **PASS** |
-| **Quarantine Cross-Ref** | Reconcile Phase 03/09 criteria | 16 candidates reconciled | **PASS** |
+| **Quarantine Cross-Ref** | Reconcile Phase 03/09 criteria | 48 candidates reconciled | **PASS** |
 | **Non-Destructive Operation** | 0 live packages mutated | 0 live modifications to `library/` | **PASS** |
 
 ---
@@ -28,23 +28,23 @@ The audit extends `tools/validate_semantic_census.py` to evaluate three critical
 ## Detailed Findings
 
 ### 1. Language Distribution (2,133 Skills)
-* **Native / Dominant English**: 2078 skills (**97.42%**)
-* **Chinese (CJK)**: 0 skills (**0.00%**) — 10 dominant persona/domain skills (`ai-analyzer`, `emergency-card`, `fitness-analyzer`, `goal-analyzer`, `mental-health-analyzer`, `oral-health-analyzer`, `product-decision-agent`, `rehabilitation-analyzer`, `tcm-constitution-analyzer`), 22 mixed metadata/aliases.
+* **Native / Dominant English**: 2092 skills (**98.08%**)
+* **Chinese (CJK)**: 32 skills (**1.50%**) — 10 dominant persona/domain skills (`ai-analyzer`, `emergency-card`, `fitness-analyzer`, `goal-analyzer`, `mental-health-analyzer`, `oral-health-analyzer`, `product-decision-agent`, `rehabilitation-analyzer`, `tcm-constitution-analyzer`), 22 mixed metadata/aliases.
 * **Portuguese**: 9 skills (**0.42%**) — e.g., `context-agent`, `elon-musk`, `matematico-tao`, `multi-advisor`, `steve-jobs`, `task-intelligence`, `ai-studio-image`, `cred-omega`, `image-studio`.
 * **Translation Scope Breakdown**:
   * `METADATA_AND_BODY`: 14 skills (require full localization or isolation).
   * `METADATA_ONLY`: 23 skills (require frontmatter English translation).
   * `BODY_ONLY`: 4 skills (require prompt body English translation).
 
-### 2. Resource Integrity & AST Safety (7,881 Resources)
+### 2. Resource Integrity & AST Safety (8,172 Resources)
 * **Resource Breakdown**:
-  * Canonical Skill Manifests (`SKILL.md`): 2,580 files
-  * Reference & Documentation Files (`.md`): 3,389 files
-  * Executable Scripts: 808 files (508 Python `.py`, 84 Shell `.sh`, 216 other)
-  * Configuration & Data Manifests: 586 files
-  * Assets & Binaries: 518 files
+  * Canonical Skill Manifests (`SKILL.md`): 2,628 files
+  * Reference & Documentation Files (`.md`): 3,508 files
+  * Executable Scripts: 828 files (521 Python `.py`, 90 Shell `.sh`, 217 other)
+  * Configuration & Data Manifests: 589 files
+  * Assets & Binaries: 619 files
 * **Python AST Results**:
-  * 508 / 508 parsed with 0 syntax errors.
+  * 521 / 521 parsed with 0 syntax errors.
   * Flagged AST Calls:
     * `eval()`: 2 calls in video processing routines for fractional framerate calculation (`eval("24/1")`).
     * `os.system()`: 2 calls in `xlsx/recalc.py` for LibreOffice headless invocation.
@@ -64,9 +64,9 @@ The audit extends `tools/validate_semantic_census.py` to evaluate three critical
 ---
 
 ## Deliverables Generated in `audit/zero-index/SKIL-11`
-1. `language-audit.csv` (2,088 lines)
-2. `integrity-and-exposure-findings.csv` (7,882 lines)
-3. `quarantine-candidates.csv` (17 lines)
+1. `language-audit.csv` (2,134 lines)
+2. `integrity-and-exposure-findings.csv` (8,173 lines)
+3. `quarantine-candidates.csv` (49 lines)
 4. `language-integrity-exposure-summary.json`
 5. `commands-and-tests.md`
 6. `summary.md`

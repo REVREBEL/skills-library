@@ -12,7 +12,7 @@ python3 tools/validate_semantic_census.py
 * **Exit code**: `0`
 * **Execution time**: ~18s
 * **Population processed**: 2,133 skills
-* **Resources inspected**: 7,881 files
+* **Resources inspected**: 8,172 files
 
 ### 2. Run Test Suite
 ```bash
@@ -31,14 +31,14 @@ python3 -m unittest tests/test_semantic_census.py tests/test_semantic_object_mod
 
 | Artifact File | Size (Bytes) | SHA-256 Digest |
 |---|---|---|
-| `language-audit.csv` | 530,233 | `0d7039a2efd46919e7065fbc38b15eeac90729534dfca9d8fe4d7132b95ca563` |
-| `integrity-and-exposure-findings.csv` | 1,686,336 | `de9db0ccfff86a2a9f8edbc9951cd72535ad0e5418a835fc444f3d7da4ad1fa8` |
-| `quarantine-candidates.csv` | 6,408 | `17d93135c539f18c2f136953f7182d3651823833acd2331ddbf269564ae9373d` |
-| `language-integrity-exposure-summary.json` | 1,302 | `51e04566ea98dda5a12eb28d75655b3adc1c2a467fd62ced1d85af1f66d1dfc1` |
+| `language-audit.csv` | 543,706 | `6eec55c35e2ee9d03740abc0f3c98c11e9e26c4cab8ecbc772c6e87386cdf25b` |
+| `integrity-and-exposure-findings.csv` | 1,746,072 | `1dff50c0eee74edcbb2c225e971bb7bd87c6f2e739d6a3b53a55eccb51d72174` |
+| `quarantine-candidates.csv` | 19,774 | `d6076ca2c672136c786d6079627599fa73170745ead1c2bcc85596cd7adda50e` |
+| `language-integrity-exposure-summary.json` | 1,386 | `465b723b4e017893315194749c4b6805c31e8ed50cde0e33064767f696a76820` |
 
 ## Verification Gate Assertions
 1. **100% Population Coverage**: Exactly 2,133 skills audited with zero unhandled exceptions.
-2. **Deterministic Script Verification**: All 508 Python scripts parsed with Python AST parser (0 SyntaxErrors).
+2. **Deterministic Script Verification**: All 521 Python scripts parsed with Python AST parser (0 SyntaxErrors).
 3. **Safe Static Execution**: Dangerous calls flagged for review without mutating on-disk packages.
 4. **Zero Template Leaks**: Automated gate certified 0 template leaks or unresolved brackets across outputs.
 5. **Non-Destructive Compliance**: Zero skills moved or deleted; all quarantine recommendations documented neutrally.
