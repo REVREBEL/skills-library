@@ -1,0 +1,135 @@
+skill,verdict,target,reason
+brandkit,keep,,"distinct, substantive; absorbs brandkit2"
+brand-guidelines,drop,,138-word templated stub; no unique guidance beyond brand-analyzer
+color-expert,drop,,129-word templated stub; color-system covers it
+imagegen,drop,,122-word templated stub
+imagen,drop,,115-word templated stub
+a-b-test-design,keep,,"distinct, substantive"
+accessibility-audit,keep,,"distinct, substantive"
+accessibility-test-plan,keep,,"distinct, substantive"
+brand-analyzer,keep,,"distinct, substantive"
+brand-consistency-checker,keep,,"distinct, substantive"
+card-sort-analysis,keep,,"distinct, substantive"
+case-study,keep,,"distinct, substantive"
+ce-optimize,keep,,"distinct, substantive"
+ce-polish,keep,,"distinct, substantive"
+ce-product-pulse,keep,,"distinct, substantive"
+ce-strategy,keep,,"distinct, substantive"
+color-system,keep,,"distinct, substantive"
+component-spec,keep,,"distinct, substantive"
+creative-director,keep,,"distinct, substantive"
+dark-mode-design,keep,,"distinct, substantive"
+data-visualization,keep,,"distinct, substantive"
+design-an-interface,keep,,"distinct, substantive"
+design-audit,keep,,"distinct, substantive"
+design-brief,keep,,"distinct, substantive"
+design-impact-reporting,keep,,"distinct, substantive"
+design-orchestration,keep,,"distinct, substantive"
+design-principles,keep,,"distinct, substantive"
+design-qa-checklist,keep,,"distinct, substantive"
+design-rationale,keep,,"distinct, substantive"
+design-spatial,keep,,"distinct, substantive"
+design-sprint-plan,keep,,"distinct, substantive"
+design-ux,keep,,"distinct, substantive"
+designer-tools,keep,,"distinct, substantive"
+diary-study-plan,keep,,"distinct, substantive"
+error-handling-ux,keep,,"distinct, substantive"
+flowkit-naming,keep,,"distinct, substantive"
+form-design,keep,,"distinct, substantive"
+gesture-patterns,keep,,"distinct, substantive"
+handoff-spec,keep,,"distinct, substantive"
+heuristic-evaluation,keep,,"distinct, substantive"
+icon-system,keep,,"distinct, substantive"
+illustration-style,keep,,"distinct, substantive"
+information-architecture,keep,,"distinct, substantive"
+interview-script,keep,,"distinct, substantive"
+layers-conceptual-model,keep,,"distinct, substantive"
+layers-domain,keep,,"distinct, substantive"
+layers-interaction-flow,keep,,"distinct, substantive"
+layers-intro,keep,,"distinct, substantive"
+layers-observed-behaviour,keep,,"distinct, substantive"
+layers-product-strategy,keep,,"distinct, substantive"
+layers-surface,keep,,"distinct, substantive"
+layers-user-needs,keep,,"distinct, substantive"
+layout-grid,keep,,"distinct, substantive"
+loading-states,keep,,"distinct, substantive"
+localization-design,keep,,"distinct, substantive"
+lookdev,keep,,"distinct, substantive"
+magic-ui-generator,keep,,"distinct, substantive"
+metrics-definition,keep,,"distinct, substantive"
+minimalist-skill,keep,,"distinct, substantive"
+navigation-patterns,keep,,"distinct, substantive"
+north-star-vision,keep,,"distinct, substantive"
+onboarding-design,keep,,"distinct, substantive"
+opportunity-framework,keep,,"distinct, substantive"
+pattern-library,keep,,"distinct, substantive"
+presentation-design,keep,,"distinct, substantive"
+prototype-strategy,keep,,"distinct, substantive"
+redesign-skill,keep,,"distinct, substantive"
+responsive-design,keep,,"distinct, substantive"
+search-ux,keep,,"distinct, substantive"
+service-blueprint,keep,,"distinct, substantive"
+spacing-system,keep,,"distinct, substantive"
+stakeholder-alignment,keep,,"distinct, substantive"
+state-machine,keep,,"distinct, substantive"
+survey-design,keep,,"distinct, substantive"
+team-workflow,keep,,"distinct, substantive"
+theming-system,keep,,"distinct, substantive"
+typography-scale,keep,,"distinct, substantive"
+ui-skills,keep,,"distinct, substantive"
+ui-skills-root,keep,,"distinct, substantive"
+ui-ux-pro-max,keep,,"distinct, substantive"
+usability-test-plan,keep,,"distinct, substantive"
+user-flow-diagram,keep,,"distinct, substantive"
+user-interface-designer,keep,,"distinct, substantive"
+user-persona,keep,,"distinct, substantive"
+ux-audit,keep,,"distinct, substantive"
+ux-feedback,keep,,"distinct, substantive"
+ux-flow,keep,,"distinct, substantive"
+ux-persuasion-engineer,keep,,"distinct, substantive"
+visual-hierarchy,keep,,"distinct, substantive"
+webflow-code-component-component-scaffold,keep,,"distinct, substantive"
+webflow-code-component-pre-deploy-check,keep,,"distinct, substantive"
+webflow-code-components,keep,,"distinct, substantive"
+wireframe-spec,keep,,"distinct, substantive"
+brandkit2,merge,brandkit,redundant within cluster
+click-test-plan,merge,usability-test-plan,redundant within cluster
+design-brief-ux-strategy,merge,design-brief,redundant within cluster
+doherty-threshold,merge,ux-laws (new),redundant within cluster
+fitts-law,merge,ux-laws (new),redundant within cluster
+hicks-law,merge,ux-laws (new),redundant within cluster
+law-of-common-region,merge,ux-laws (new),redundant within cluster
+law-of-proximity,merge,ux-laws (new),redundant within cluster
+millers-law,merge,ux-laws (new),redundant within cluster
+presentation-deck,merge,presentation-design,redundant within cluster
+test-scenario,merge,usability-test-plan,redundant within cluster
+uxui-principles,merge,heuristic-evaluation,redundant within cluster
+von-restorff-effect,merge,ux-laws (new),redundant within cluster
+agent-to-agent,move,meta-and-agent-skills,wrong domain
+blind-spot-detective,move,content-and-documentation,wrong domain
+business-analytics-reporter,move,data-and-ai,wrong domain
+content-strategy,move,content-and-documentation,wrong domain
+copywriting,move,content-and-documentation,wrong domain
+doc-coauthoring,move,content-and-documentation,wrong domain
+docx,move,content-and-documentation,wrong domain
+domain-driven-design,move,development,wrong domain
+evaluate,move,meta-and-agent-skills,wrong domain
+fortify,move,meta-and-agent-skills,wrong domain
+front-end-developer,move,development,wrong domain
+frontend-design,move,development,wrong domain
+frontend-skill,move,development,wrong domain
+investigate,move,meta-and-agent-skills,wrong domain
+mermaid-expert,move,content-and-documentation,wrong domain
+non-fiction-revision,move,content-and-documentation,wrong domain
+organize,move,meta-and-agent-skills,wrong domain
+output-skill,move,meta-and-agent-skills,wrong domain
+pdf,move,content-and-documentation,wrong domain
+pitch-deck,move,content-and-documentation,wrong domain
+pptx,move,content-and-documentation,wrong domain
+speech-adaptation,move,content-and-documentation,wrong domain
+strategize,move,business-and-operations,wrong domain
+summarization,move,content-and-documentation,wrong domain
+travel-planner,move,business-and-operations,wrong domain
+version-control-strategy,move,development,wrong domain
+voice-analysis,move,content-and-documentation,wrong domain
+xlsx,move,data-and-ai,wrong domain
