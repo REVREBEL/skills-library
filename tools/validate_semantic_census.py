@@ -4,7 +4,7 @@ REV-150: Independent Semantic Census Methodology & Classification Validator
 Linear Issue: REV-150 (Blocks REV-127 through REV-130)
 
 This script validates and reconciles the REV-126 semantic census methodology and datasets:
-  1. Authoritative population (2,087 skills) & schema field reconciliation
+  1. Authoritative population (2,073 skills) & schema field reconciliation
   2. Role vocabulary reconciliation (canonical work-order roles) & explicit alias identification
   3. Stratified precision audit & heuristic consistency verification (N=100)
   4. Family-membership audit: member-level pruning of false positives
@@ -545,7 +545,7 @@ SAMPLE_100_PATHS = [
     "library/development/backend/php-pro",
     "library/content-and-documentation/technical-writing/build-workspace-docs",
     "library/development/backend/python-pro",
-    "library/design-and-experience/ui-ux/law-of-common-region",
+    "library/business-and-operations/legal-and-governance/api-and-interface-design",
     "library/development/fullstack/anti-sleep",
     "library/design-and-experience/motion-and-graphics/animation-principles",
     "library/marketing-and-seo/on-page-seo/call-highlights",
@@ -570,7 +570,7 @@ SAMPLE_100_PATHS = [
     "library/quality-and-security/testing/what-if",
     "library/marketing-and-seo/cro/content-repurpose",
     "library/development/backend/social-proof-architect",
-    "library/design-and-experience/ui-ux/law-of-proximity",
+    "library/business-and-operations/legal-and-governance/aria",
     "library/development/fullstack/gmail-automation",
     "library/content-and-documentation/technical-writing/brand-guidelines",
     "library/development/fullstack/delegating-to-agents",
@@ -634,7 +634,7 @@ SAMPLE_100_PATHS = [
 
 def load_authoritative_population() -> List[Dict[str, Any]]:
     """
-    Load the authoritative 2,087-skill catalog across all three source sets:
+    Load the authoritative 2,073-skill catalog across all three source sets:
       1. audit/runtime-manifest.json (2,102 managed runtime skills)
       2. library/github-operations/* (18 consolidated skills)
       3. library/skills-create-manage-update/* (13 lifecycle management skills)
@@ -710,9 +710,9 @@ def load_authoritative_population() -> List[Dict[str, Any]]:
                         "is_consolidated": True
                     })
 
-    # Assert exact 2,087 population
-    if len(population) != 2087:
-        raise ValueError(f"Expected exactly 2087 skills in authoritative population, found {len(population)}")
+    # Assert exact 2,073 population
+    if len(population) != 2073:
+        raise ValueError(f"Expected exactly 2073 skills in authoritative population, found {len(population)}")
 
     # Assert 100% unique canonical_ids
     cids = [item["canonical_id"] for item in population]
@@ -1575,7 +1575,7 @@ def write_catch_all_analysis(path: Path, rows: List[Dict[str, Any]]):
 
 def write_stress_test_report(path: Path, rows: List[Dict[str, Any]], role_counter: Counter, token_stats: Dict[str, Any]):
     """
-    Write architecture stress-test report evaluating the 2,087-skill catalog
+    Write architecture stress-test report evaluating the 2,073-skill catalog
     against the project's authoritative four planes:
       1. Semantic Plane
       2. Composition Plane
@@ -1588,7 +1588,7 @@ def write_stress_test_report(path: Path, rows: List[Dict[str, Any]], role_counte
         "",
         "## Executive Summary",
         "",
-        "This report stress-tests the **Hybrid C/D architectural model** against the full validated catalog of **2,087 skills**.",
+        "This report stress-tests the **Hybrid C/D architectural model** against the full validated catalog of **2,073 skills**.",
         "Under Hybrid C/D:",
         "- **Domain capabilities** are physically organized by functional domain.",
         "- **Tier 1 platform/tool families** are physically organized under universal family roots (`tools-and-platforms/<family>`) or meta-engineering roots (`meta-and-agent-skills/skill-lifecycle`).",
@@ -1604,10 +1604,10 @@ def write_stress_test_report(path: Path, rows: List[Dict[str, Any]], role_counte
         "",
         "### 1. Semantic Plane",
         "The Semantic Plane governs stable identity, canonical naming, taxonomy classification, and contract clarity.",
-        "- **Population Scale**: 2,087 packages classified across 8 canonical roles without ontological gaps.",
+        "- **Population Scale**: 2,073 packages classified across 8 canonical roles without ontological gaps.",
         "- **Stable Identity & Disambiguation**: Scoped canonical IDs (`github-operations:<name>`, `skills-lifecycle:<name>`) disambiguate duplicate package names without collisions.",
         "- **Domain Separation**: Clear boundaries established between functional capabilities (e.g. `javascript-mastery`) and platform integrations (e.g. `github-operations:commit`), pruning 27 false-positive brand mentions.",
-        "- **Census Evidence Finding**: Demonstrates baseline feasibility of the 8-role model across 2,087 packages. Scoped identifiers provide collision-free identity. Formal semantic object model specifications and canonical naming rules remain to be closed under **REV-127**.",
+        "- **Census Evidence Finding**: Demonstrates baseline feasibility of the 8-role model across 2,073 packages. Scoped identifiers provide collision-free identity. Formal semantic object model specifications and canonical naming rules remain to be closed under **REV-127**.",
         "",
         "### 2. Composition Plane",
         "The Composition Plane governs how packages assemble: primitives providing low-level operations, overlays specializing base platforms, and workflows orchestrating multi-step pipelines.",
@@ -1677,7 +1677,7 @@ def write_manual_semantic_sample_audit_report(path: Path, audit_res: Dict[str, A
         "",
         "## Executive Summary",
         "",
-        "This audit satisfies the **REV-150 review requirement** for an **independent, reproducible semantic audit** across the 2,087-skill catalog.",
+        "This audit satisfies the **REV-150 review requirement** for an **independent, reproducible semantic audit** across the 2,073-skill catalog.",
         "",
         "To ensure complete transparency and scientific rigor, this audit strictly distinguishes between **automated dual-classifier consensus** and **independent manual deep-read adjudications**:",
         "1. **Stratified Sample (N=100) Dual-Classifier Check**: A fixed stratified sample of 100 packages was evaluated using two independent automated classifiers (heuristic rule pipeline vs. second-pass full-content parser). This surfaced **26 boundary discrepancies** where automated patterns diverged (**74.0% raw agreement**, 74/100).",
@@ -1930,7 +1930,7 @@ def write_validation_report(
         "This report documents the independent methodology and classification validation of the **[REV-126](https://linear.app/revrebel/issue/REV-126/complete-catalog-wide-semantic-role-census)** census, conducted under **[REV-150](https://linear.app/revrebel/issue/REV-150/validate-rev-126-semantic-census-methodology-and-classifications)** to gate architectural closure for **[REV-127](https://linear.app/revrebel/issue/REV-127/decide-canonical-semantic-object-model-and-stable-identity)** through **[REV-130](https://linear.app/revrebel/issue/REV-130/define-registry-router-alias-dependency-and-group-contracts)**.",
         "",
         "### Key Audit Results",
-        f"- **Authoritative Population & Schema**: Exactly **2,087 unique skills** reconciled 1:1 against the filesystem and manifest with **zero duplicate IDs** (15 colliding IDs disambiguated with scoped canonical identifiers).",
+        f"- **Authoritative Population & Schema**: Exactly **2,073 unique skills** reconciled 1:1 against the filesystem and manifest with **zero duplicate IDs** (15 colliding IDs disambiguated with scoped canonical identifiers).",
         f"- **Role Vocabulary Alignment**: Full alignment with canonical work-order roles (`independent_capability`, `family_primitive`, `workflow`, `overlay`, `adapter`, `reference_or_support_candidate`, `alias_candidate`, `manual_review`).",
         f"- **Explicit Alias Identification & Neutral Duplicate Pairs**: **{role_counter[ROLE_ALIAS]} alias candidates** documented: 3 self-declared compatibility aliases, and 15 candidate duplicate pairs (30 packages) preserved direction-neutrally (classified by content as capabilities or workflows with paired metadata) deferring canonical ownership direction to REV-128/REV-129.",
         f"- **Automated Heuristic Rule Consistency (N=100)**: Stratified sample audit demonstrated **{sample_res['heuristic_consistency_pct']:.1f}% heuristic rule consistency** across the catalog and catch-all bins.",
@@ -1949,7 +1949,7 @@ def write_validation_report(
         "1. `audit/runtime-manifest.json`: **2,102 managed runtime skills**.",
         "2. `library/github-operations/*`: **18 consolidated operational skills**.",
         "3. `library/skills-create-manage-update/*`: **13 lifecycle management skills**.",
-        "**Total Population: Exactly 2,087 skills.** Zero omissions; zero missing files.",
+        "**Total Population: Exactly 2,073 skills.** Zero omissions; zero missing files.",
         "",
         "### Disambiguation of Colliding Canonical IDs",
         "The 15 skills in `library/github-operations/*` that share names with skills in the main category tree (`actions-debugger`, `advanced-workflows`, `commit`, `create-branch`, `create-issue-gate`, `feature-tracking`, `github`, `hooks-automation`, `issue-creator`, `pr-merge-champion`, `pr-review`, `pr-writer`, `presence`, `review-requests`, `security-review`) previously caused ID collisions. In this validated census, they are assigned fully qualified scoped identifiers (`github-operations:<name>`) and classified direction-neutrally based on content with cross-referencing candidate duplicate pair metadata, deferring canonical ownership to REV-128/REV-129.",
@@ -2006,7 +2006,7 @@ def write_validation_report(
         "- **Sampling Stratification**: Explicitly spans **all 12 top-level categories** (2 packages each = 24) plus the **three massive catch-all bins** (16 packages: 6 in `development/fullstack`, 5 in `marketing-and-seo/on-page-seo`, 5 in `marketing-and-seo/cro`).",
         "- **Contract Verification**: Every package evaluated directly from its full `SKILL.md` body on disk to verify atomic single-task capability contracts without multi-phase workflow orchestration.",
         "",
-        "### Reported Confidence Distribution across 2,087 Skills",
+        "### Reported Confidence Distribution across 2,073 Skills",
         f"- **High Confidence**: {confidence_counter['high']} skills ({confidence_counter['high']/total*100:.1f}%) — Unambiguous contract matching deterministic criteria.",
         f"- **Medium Confidence**: {confidence_counter['medium']} skills ({confidence_counter['medium']/total*100:.1f}%) — Short prompts (<30 lines) or single-phase workflows.",
         f"- **Low Confidence / Manual Review**: {confidence_counter['low']} skills ({confidence_counter['low']/total*100:.1f}%) — Persona prompts or multi-domain umbrella skills.",
@@ -2093,13 +2093,13 @@ def main(regenerate_skil11: bool = False):
     CENSUS_DIR.mkdir(parents=True, exist_ok=True)
 
     # 1. Reconcile population and schema
-    print("\n[1/7] Reconciling authoritative 2,087 population & schema fields...")
+    print("\n[1/7] Reconciling authoritative 2,073 population & schema fields...")
     population = load_authoritative_population()
     print(f"      Verified exact population: {len(population)} skills.")
     print("      Disambiguated duplicate names with scoped canonical IDs.")
 
     # 2. Deep-read and classify all skills
-    print("\n[2/7] Executing targeted semantic deep-reads across 2,087 skills...")
+    print("\n[2/7] Executing targeted semantic deep-reads across 2,073 skills...")
     initial_heuristic_rows = []
     audited_rows = []
     role_counter = Counter()

@@ -379,10 +379,11 @@ class HistoricalProvenanceRecord:
         }
 
 
-# Canonical packages deliberately removed from the catalog by the non-English prune.
-# Historical Phase 08 provenance stays traceable without pretending these still exist;
-# they are excluded from unmatched-historical counts, not from the audit trail.
-DELIBERATELY_PRUNED_PATHS = frozenset(
+# Canonical packages deliberately removed from the catalog: pruned as non-English,
+# consolidated into a successor, or dropped as templated stubs. Historical Phase 08
+# provenance stays traceable without pretending these still exist; they are excluded
+# from unmatched-historical counts, not from the audit trail.
+REMOVED_CANONICAL_PATHS = frozenset(
     {
         "library/business-and-operations/product-management/product-decision-agent",
         "library/business-and-operations/startup-finance/startup-business-analyst-financial-projections",
@@ -430,6 +431,21 @@ DELIBERATELY_PRUNED_PATHS = frozenset(
         "library/marketing-and-seo/technical-seo/on-page-seo-auditor",
         "library/marketing-and-seo/technical-seo/schema-markup-generator",
         "library/marketing-and-seo/technical-seo/technical-seo-checker",
+        "library/design-and-experience/ui-ux/fitts-law",
+        "library/design-and-experience/ui-ux/hicks-law",
+        "library/design-and-experience/ui-ux/millers-law",
+        "library/design-and-experience/ui-ux/doherty-threshold",
+        "library/design-and-experience/ui-ux/law-of-proximity",
+        "library/design-and-experience/ui-ux/law-of-common-region",
+        "library/design-and-experience/ui-ux/von-restorff-effect",
+        "library/design-and-experience/ui-ux/brand-guidelines",
+        "library/design-and-experience/ui-ux/color-expert",
+        "library/design-and-experience/ui-ux/imagegen",
+        "library/design-and-experience/ui-ux/imagen",
+        "library/design-and-experience/taste-and-critique/design-review_2",
+        "library/design-and-experience/design-systems/design-consultation",
+        "library/design-and-experience/design-systems/documentation-template",
+        "library/design-and-experience/motion-and-graphics/shader-dev",
     }
 )
 
@@ -664,11 +680,11 @@ class HistoricalProvenanceMapper:
                     notes="Census platform candidate (added during REV-126/REV-150)",
                 )
 
-        pruned_p8 = [p for p in p8_by_dest.keys() if p in DELIBERATELY_PRUNED_PATHS]
+        pruned_p8 = [p for p in p8_by_dest.keys() if p in REMOVED_CANONICAL_PATHS]
         unmatched_p8 = [
             p
             for p in p8_by_dest.keys()
-            if p not in matched_destinations and p not in DELIBERATELY_PRUNED_PATHS
+            if p not in matched_destinations and p not in REMOVED_CANONICAL_PATHS
         ]
         is_reconciled = len(unmatched_p8) == 0 and (
             matched_records_count + len(pruned_p8) == len(p8_rows)

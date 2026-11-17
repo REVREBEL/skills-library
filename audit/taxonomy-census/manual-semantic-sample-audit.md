@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This audit satisfies the **REV-150 review requirement** for an **independent, reproducible semantic audit** across the 2,087-skill catalog.
+This audit satisfies the **REV-150 review requirement** for an **independent, reproducible semantic audit** across the 2,073-skill catalog.
 
 To ensure complete transparency and scientific rigor, this audit strictly distinguishes between **automated dual-classifier consensus** and **independent manual deep-read adjudications**:
 1. **Stratified Sample (N=100) Dual-Classifier Check**: A fixed stratified sample of 100 packages was evaluated using two independent automated classifiers (heuristic rule pipeline vs. second-pass full-content parser). This surfaced **26 boundary discrepancies** where automated patterns diverged (**74.0% raw agreement**, 74/100).
@@ -225,7 +225,7 @@ This ledger documents all 100 packages evaluated in the multi-role divergence au
 | 13 | `php-pro` | `library/development/backend/php-pro` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 14 | `build-workspace-docs` | `library/content-and-documentation/technical-writing/build-workspace-docs` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 15 | `python-pro` | `library/development/backend/python-pro` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
-| 16 | `law-of-common-region` | `library/design-and-experience/ui-ux/law-of-common-region` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
+| 16 | `api-and-interface-design` | `library/business-and-operations/legal-and-governance/api-and-interface-design` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 17 | `anti-sleep` | `library/development/fullstack/anti-sleep` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 18 | `animation-principles` | `library/design-and-experience/motion-and-graphics/animation-principles` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 19 | `call-highlights` | `library/marketing-and-seo/on-page-seo/call-highlights` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
@@ -250,7 +250,7 @@ This ledger documents all 100 packages evaluated in the multi-role divergence au
 | 38 | `what-if` | `library/quality-and-security/testing/what-if` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 39 | `content-repurpose` | `library/marketing-and-seo/cro/content-repurpose` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 40 | `social-proof-architect` | `library/development/backend/social-proof-architect` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
-| 41 | `law-of-proximity` | `library/design-and-experience/ui-ux/law-of-proximity` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
+| 41 | `aria` | `library/business-and-operations/legal-and-governance/aria` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 42 | `gmail-automation` | `library/development/fullstack/gmail-automation` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 43 | `content-and-documentation-brand-guidelines` | `library/content-and-documentation/technical-writing/brand-guidelines` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 44 | `delegating-to-agents` | `library/development/fullstack/delegating-to-agents` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
