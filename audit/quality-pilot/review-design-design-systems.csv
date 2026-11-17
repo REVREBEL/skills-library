@@ -1,0 +1,57 @@
+skill,verdict,target,reason
+design-consultation,drop,,125-word templated stub
+documentation-template,drop,,114-word templated stub
+artifacts-builder,keep,,distinct
+ckw-design,keep,,distinct
+code-showcase-core-components,keep,,distinct
+color-palette,keep,,distinct
+design-loop,keep,,distinct
+design-md,keep,,distinct
+design-system-architect,keep,,distinct
+design-system-governance,keep,,distinct
+design-token,keep,,distinct
+enhance-prompt,keep,,distinct
+feedback-patterns,keep,,distinct
+figma-code-connect,keep,,distinct
+figma-create-new-file,keep,,distinct
+figma-design-to-code,keep,,distinct
+figma-generate-design,keep,,distinct
+figma-generate-diagram,keep,,distinct
+figma-generate-library,keep,,distinct
+figma-swiftui,keep,,distinct
+figma-use,keep,,distinct
+figma-use-figjam,keep,,distinct
+figma-use-slides,keep,,distinct
+generate-project-plan,keep,,distinct
+interface-design-system,keep,,distinct
+naming-convention,keep,,distinct
+radix-ui-design-system,keep,,distinct
+shadcn,keep,,distinct
+tailwind-patterns,keep,,distinct
+tailwind-theme-builder,keep,,distinct
+theme-factory,keep,,distinct
+ui-lint,keep,,distinct
+ui-pattern,keep,,distinct
+ui-setup,keep,,distinct
+ui-visual-validator,keep,,distinct
+visual-design-foundations,keep,,distinct
+web-component-design,keep,,distinct
+artifacts-builder-reports,merge,artifacts-builder,redundant within cluster
+core-components,merge,code-showcase-core-components,redundant within cluster
+design-system-generator,merge,design-system-architect,redundant within cluster
+design-system-patterns,merge,design-system-architect,redundant within cluster
+frontend-design2,merge,development/frontend-design,redundant within cluster
+shadcn-ui,merge,shadcn,redundant within cluster
+tailwind-design-system,merge,tailwind-theme-builder,redundant within cluster
+affinity-diagram,move,ui-ux,wrong domain
+intent,move,meta-and-agent-skills,wrong domain
+lovable-cleanup,move,development,wrong domain
+product-inventor,move,business-and-operations,wrong domain
+react-nextjs-development,move,development,wrong domain
+senior-frontend,move,development,wrong domain
+summarize-interview,move,ui-ux,wrong domain
+system-design,move,development,wrong domain
+threat-modeling-expert,move,quality-and-security,wrong domain
+transilience-report-style,move,quality-and-security,wrong domain
+ui-ux-designer,move,ui-ux,wrong domain
+writing-skills,move,meta-and-agent-skills,wrong domain

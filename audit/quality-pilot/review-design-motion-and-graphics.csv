@@ -1,0 +1,30 @@
+skill,verdict,target,reason
+shader-dev,drop,,125-word templated stub
+animation-principles,keep,,distinct
+figma-implement-motion,keep,,distinct
+figma-use-motion,keep,,distinct
+lookdev-auto,keep,,distinct
+premium-3d-website,keep,,distinct
+remotion,keep,,distinct
+shader-programming-glsl,keep,,distinct
+threejs-animation,keep,,distinct
+threejs-fundamentals,keep,,distinct
+threejs-geometry,keep,,distinct
+vercel-react-view-transitions,keep,,distinct
+remotion-best-practices,merge,remotion,redundant within cluster
+antigravity-design-expert,move,development,wrong domain
+ce-frontend-design,move,development,wrong domain
+frontend-dev,move,development,wrong domain
+frontend-slides,move,content-and-documentation,wrong domain
+gemini-omni-flash-api,move,data-and-ai,wrong domain
+include,move,meta-and-agent-skills,wrong domain
+interface-kit,move,design-systems,wrong domain
+jobs-to-be-done,move,business-and-operations,wrong domain
+journey-map,move,ui-ux,wrong domain
+json-canvas,move,content-and-documentation,wrong domain
+minimalist-ui,move,taste-and-critique,wrong domain
+presentation-builder,move,content-and-documentation,wrong domain
+product-design,move,business-and-operations,wrong domain
+soft-skill,move,taste-and-critique,wrong domain
+storytelling,move,content-and-documentation,wrong domain
+value-proposition-canvas,move,business-and-operations,wrong domain

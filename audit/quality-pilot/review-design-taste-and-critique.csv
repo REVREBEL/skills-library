@@ -1,0 +1,76 @@
+skill,verdict,target,reason
+design-review_2,drop,,123-word templated stub; design-review covers it
+3d-ui,keep,,distinct
+aesthetic-usability,keep,,distinct
+ai-native-ui,keep,,distinct
+aurora-ui,keep,,distinct
+bento-ui,keep,,distinct
+brutalism,keep,,distinct
+brutalist-skill,keep,,distinct
+brutalist-typography,keep,,distinct
+card-based-design,keep,,distinct
+color-blocking,keep,,distinct
+command-center-ui,keep,,distinct
+critique-brand-consistency,keep,,distinct
+critique-composition,keep,,distinct
+critique-typography,keep,,distinct
+critique-visual-hierarchy,keep,,distinct
+cyber-y2k,keep,,distinct
+cyberpunk-ui,keep,,distinct
+dark-mode,keep,,distinct
+dashboard-design,keep,,distinct
+data-dense-design,keep,,distinct
+design-critique,keep,,distinct
+design-it,keep,,distinct
+design-review,keep,,distinct
+design-review-process,keep,,distinct
+design-system,keep,,distinct
+deterministic-design,keep,,distinct
+duotone-design,keep,,distinct
+editorial-design,keep,,distinct
+flat-design,keep,,distinct
+floating-ui,keep,,distinct
+frutiger-aero,keep,,distinct
+glassmorphism,keep,,distinct
+high-contrast,keep,,distinct
+holographic-ui,keep,,distinct
+isometric-design,keep,,distinct
+layered-design,keep,,distinct
+material-design,keep,,distinct
+maximalism,keep,,distinct
+minimalism,keep,,distinct
+monochromatic-ui,keep,,distinct
+neo-brutalism,keep,,distinct
+neumorphism,keep,,distinct
+retro-design,keep,,distinct
+retro-futurism,keep,,distinct
+sci-fi-interface,keep,,distinct
+soft-pastel,keep,,distinct
+spatial-computing-ui,keep,,distinct
+stitch-design-taste,keep,,distinct
+swiss-design,keep,,distinct
+synthwave,keep,,distinct
+taste-skill,keep,,distinct
+typography-first,keep,,distinct
+vaporwave,keep,,distinct
+vibrant-maximalism,keep,,distinct
+y2k-design,keep,,distinct
+design-taste-frontend,merge,taste-skill,redundant within cluster
+flat-design-2,merge,flat-design,redundant within cluster
+front-end-design,merge,development/frontend-design,redundant within cluster
+spatial-design,merge,spatial-computing-ui,redundant within cluster
+taste-skill-v1,merge,taste-skill,redundant within cluster
+algorithmic-art,move,development,wrong domain
+canvas-design,move,meta-and-agent-skills,wrong domain
+design-philosophy,move,meta-and-agent-skills,wrong domain
+email-design-eng,move,motion-and-graphics,wrong domain
+frontend-enhancer,move,development,wrong domain
+frontend-slides-frontend-slides,move,content-and-documentation,wrong domain
+frontend-ui-dark-ts,move,development,wrong domain
+review-animations,move,motion-and-graphics,wrong domain
+ui-component,move,design-systems,wrong domain
+ui-motion,move,motion-and-graphics,wrong domain
+ui-page,move,design-systems,wrong domain
+ui-tokens,move,design-systems,wrong domain
+ui-update,move,design-systems,wrong domain
+webflow-ui-skills,move,design-systems,wrong domain
