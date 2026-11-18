@@ -51,7 +51,6 @@ Manage 17 skills for presentations.
 
 | Skill | Description | Primary Outcome |
 |---|---|---|
-| [`2slides-ppt-generator`](presentations/2slides-ppt-generator/SKILL.md) | AI-powered presentation generation via the 2slides API — create slides from text, match a reference image style, summarize documents into decks, add AI voice... | 2Slides Ppt Generator: AI-powered presentation generation via the 2slides API — create slides from text, ... |
 | [`client-proposal`](presentations/client-proposal/SKILL.md) | Draft agency proposals. Use when: pitch deck, scope of work, SLA, capabilities presentation for prospects or clients. | Client Proposal: Draft agency proposals. Use when: pitch deck, scope of work, SLA, capabilities pre... |
 | [`google-slides-automation`](presentations/google-slides-automation/SKILL.md) | Lightweight Google Slides integration with standalone OAuth authentication. No MCP server required. Full read/write access. Use when working with google slid... | Google Slides Automation: Lightweight Google Slides integration with standalone OAuth authentication. No MCP... |
 | [`mdpr-skill`](presentations/mdpr-skill/SKILL.md) | Review MDPR Markdown presentation workflows with semantic hints, visual checks, and deterministic renderer boundaries. Use when working with mdpr skill. | Mdpr Skill: Review MDPR Markdown presentation workflows with semantic hints, visual checks, an... |
