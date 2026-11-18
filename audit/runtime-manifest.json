@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_at": "2026-10-07T15:51:34Z",
-  "total_managed_skills": 2103,
+  "total_managed_skills": 2056,
   "skills": {
     "007": {
       "runtime_name": "007",
@@ -58,16 +58,6 @@
       "canonical_name": "1password-service-accounts",
       "canonical_path": "library/infrastructure-and-ops/containers-and-orchestration/1password-service-accounts",
       "functional_parent": "library/infrastructure-and-ops/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "2slides-ppt-generator": {
-      "runtime_name": "2slides-ppt-generator",
-      "canonical_name": "2slides-ppt-generator",
-      "canonical_path": "library/content-and-documentation/presentations/2slides-ppt-generator",
-      "functional_parent": "library/content-and-documentation/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -583,16 +573,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "ai-analyzer": {
-      "runtime_name": "ai-analyzer",
-      "canonical_name": "ai-analyzer",
-      "canonical_path": "library/marketing-and-seo/cro/ai-analyzer",
-      "functional_parent": "library/marketing-and-seo/cro/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "ai-bot-log-audit": {
       "runtime_name": "ai-bot-log-audit",
       "canonical_name": "ai-bot-log-audit",
@@ -638,16 +618,6 @@
       "canonical_name": "ai-loop",
       "canonical_path": "library/development/fullstack/ai-loop",
       "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "ai-md": {
-      "runtime_name": "ai-md",
-      "canonical_name": "ai-md",
-      "canonical_path": "library/marketing-and-seo/cro/ai-md",
-      "functional_parent": "library/marketing-and-seo/cro/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -718,16 +688,6 @@
       "canonical_name": "ai-wrapper-product",
       "canonical_path": "library/data-and-ai/machine-learning/ai-wrapper-product",
       "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "alert-manager": {
-      "runtime_name": "alert-manager",
-      "canonical_name": "alert-manager",
-      "canonical_path": "library/marketing-and-seo/on-page-seo/alert-manager",
-      "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -1463,16 +1423,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "auto-research": {
-      "runtime_name": "auto-research",
-      "canonical_name": "auto-research",
-      "canonical_path": "library/development/fullstack/auto-research",
-      "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "automated-triage": {
       "runtime_name": "automated-triage",
       "canonical_name": "automated-triage",
@@ -1558,16 +1508,6 @@
       "canonical_name": "backend-development-feature-development",
       "canonical_path": "library/marketing-and-seo/cro/backend-development-feature-development",
       "functional_parent": "library/marketing-and-seo/cro/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "backlink-analyzer": {
-      "runtime_name": "backlink-analyzer",
-      "canonical_name": "backlink-analyzer",
-      "canonical_path": "library/marketing-and-seo/on-page-seo/backlink-analyzer",
-      "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -4153,26 +4093,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "content-quality-auditor": {
-      "runtime_name": "content-quality-auditor",
-      "canonical_name": "content-quality-auditor",
-      "canonical_path": "library/marketing-and-seo/geo-and-local-seo/content-quality-auditor",
-      "functional_parent": "library/marketing-and-seo/geo-and-local-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "content-refresher": {
-      "runtime_name": "content-refresher",
-      "canonical_name": "content-refresher",
-      "canonical_path": "library/marketing-and-seo/geo-and-local-seo/content-refresher",
-      "functional_parent": "library/marketing-and-seo/geo-and-local-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "content-repurpose": {
       "runtime_name": "content-repurpose",
       "canonical_name": "content-repurpose",
@@ -6703,16 +6623,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "domain-authority-auditor": {
-      "runtime_name": "domain-authority-auditor",
-      "canonical_name": "domain-authority-auditor",
-      "canonical_path": "library/marketing-and-seo/geo-and-local-seo/domain-authority-auditor",
-      "functional_parent": "library/marketing-and-seo/geo-and-local-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "domain-driven-design": {
       "runtime_name": "domain-driven-design",
       "canonical_name": "domain-driven-design",
@@ -7153,16 +7063,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "emergency-card": {
-      "runtime_name": "emergency-card",
-      "canonical_name": "emergency-card",
-      "canonical_path": "library/development/fullstack/emergency-card",
-      "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "emerging-channels": {
       "runtime_name": "emerging-channels",
       "canonical_name": "emerging-channels",
@@ -7268,16 +7168,6 @@
       "canonical_name": "entity-audit",
       "canonical_path": "library/development/fullstack/entity-audit",
       "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "entity-optimizer": {
-      "runtime_name": "entity-optimizer",
-      "canonical_name": "entity-optimizer",
-      "canonical_path": "library/marketing-and-seo/geo-and-local-seo/entity-optimizer",
-      "functional_parent": "library/marketing-and-seo/geo-and-local-seo/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -7518,16 +7408,6 @@
       "canonical_name": "event-store-design",
       "canonical_path": "library/development/systems/event-store-design",
       "functional_parent": "library/development/systems/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "evolution": {
-      "runtime_name": "evolution",
-      "canonical_name": "evolution",
-      "canonical_path": "library/development/fullstack/evolution",
-      "functional_parent": "library/development/fullstack/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -8038,16 +7918,6 @@
       "canonical_name": "first-principles",
       "canonical_path": "library/business-and-operations/startup-finance/first-principles",
       "functional_parent": "library/business-and-operations/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "fitness-analyzer": {
-      "runtime_name": "fitness-analyzer",
-      "canonical_name": "fitness-analyzer",
-      "canonical_path": "library/development/fullstack/fitness-analyzer",
-      "functional_parent": "library/development/fullstack/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -8693,16 +8563,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "geo-content-optimizer": {
-      "runtime_name": "geo-content-optimizer",
-      "canonical_name": "geo-content-optimizer",
-      "canonical_path": "library/marketing-and-seo/geo-and-local-seo/geo-content-optimizer",
-      "functional_parent": "library/marketing-and-seo/geo-and-local-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "geo-fundamentals": {
       "runtime_name": "geo-fundamentals",
       "canonical_name": "geo-fundamentals",
@@ -8788,16 +8648,6 @@
       "canonical_name": "go-rod-master",
       "canonical_path": "library/workflow-and-automation/task-orchestration/go-rod-master",
       "functional_parent": "library/workflow-and-automation/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "goal-analyzer": {
-      "runtime_name": "goal-analyzer",
-      "canonical_name": "goal-analyzer",
-      "canonical_path": "library/development/backend/goal-analyzer",
-      "functional_parent": "library/development/backend/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -10193,16 +10043,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "internal-linking-optimizer": {
-      "runtime_name": "internal-linking-optimizer",
-      "canonical_name": "internal-linking-optimizer",
-      "canonical_path": "library/marketing-and-seo/technical-seo/internal-linking-optimizer",
-      "functional_parent": "library/marketing-and-seo/technical-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "interview-coach": {
       "runtime_name": "interview-coach",
       "canonical_name": "interview-coach",
@@ -11353,60 +11193,10 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "logic-diff": {
-      "runtime_name": "logic-diff",
-      "canonical_name": "logic-diff",
-      "canonical_path": "library/development/software-architecture/logic-diff",
-      "functional_parent": "library/development/software-architecture/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "logic-explain": {
-      "runtime_name": "logic-explain",
-      "canonical_name": "logic-explain",
-      "canonical_path": "library/development/fullstack/logic-explain",
-      "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "logic-fix-all": {
-      "runtime_name": "logic-fix-all",
-      "canonical_name": "logic-fix-all",
-      "canonical_path": "library/development/fullstack/logic-fix-all",
-      "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "logic-lens": {
       "runtime_name": "logic-lens",
       "canonical_name": "logic-lens",
       "canonical_path": "library/development/fullstack/logic-lens",
-      "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "logic-locate": {
-      "runtime_name": "logic-locate",
-      "canonical_name": "logic-locate",
-      "canonical_path": "library/development/fullstack/logic-locate",
-      "functional_parent": "library/quality-and-security/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "logic-review": {
-      "runtime_name": "logic-review",
-      "canonical_name": "logic-review",
-      "canonical_path": "library/development/fullstack/logic-review",
       "functional_parent": "library/development/fullstack/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -11753,16 +11543,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "marketing-and-seo-content-gap-analysis": {
-      "runtime_name": "marketing-and-seo-content-gap-analysis",
-      "canonical_name": "content-gap-analysis",
-      "canonical_path": "library/marketing-and-seo/on-page-seo/content-gap-analysis",
-      "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "marketing-and-seo-content-strategy": {
       "runtime_name": "marketing-and-seo-content-strategy",
       "canonical_name": "content-strategy",
@@ -11793,16 +11573,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "marketing-and-seo-keyword-research": {
-      "runtime_name": "marketing-and-seo-keyword-research",
-      "canonical_name": "keyword-research",
-      "canonical_path": "library/marketing-and-seo/on-page-seo/keyword-research",
-      "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "marketing-and-seo-marketing-psychology": {
       "runtime_name": "marketing-and-seo-marketing-psychology",
       "canonical_name": "marketing-psychology",
@@ -11817,16 +11587,6 @@
       "runtime_name": "marketing-and-seo-notebooklm",
       "canonical_name": "notebooklm",
       "canonical_path": "library/marketing-and-seo/on-page-seo/notebooklm",
-      "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "marketing-and-seo-on-page-seo-competitor-analysis": {
-      "runtime_name": "marketing-and-seo-on-page-seo-competitor-analysis",
-      "canonical_name": "competitor-analysis",
-      "canonical_path": "library/marketing-and-seo/on-page-seo/competitor-analysis",
       "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -11848,16 +11608,6 @@
       "canonical_name": "responsive-design",
       "canonical_path": "library/marketing-and-seo/cro/responsive-design",
       "functional_parent": "library/marketing-and-seo/cro/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "marketing-and-seo-schema-markup-generator": {
-      "runtime_name": "marketing-and-seo-schema-markup-generator",
-      "canonical_name": "schema-markup-generator",
-      "canonical_path": "library/marketing-and-seo/technical-seo/schema-markup-generator",
-      "functional_parent": "library/marketing-and-seo/technical-seo/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -12173,16 +11923,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "memory-management": {
-      "runtime_name": "memory-management",
-      "canonical_name": "memory-management",
-      "canonical_path": "library/marketing-and-seo/geo-and-local-seo/memory-management",
-      "functional_parent": "library/marketing-and-seo/geo-and-local-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "memory-safety-patterns": {
       "runtime_name": "memory-safety-patterns",
       "canonical_name": "memory-safety-patterns",
@@ -12198,16 +11938,6 @@
       "canonical_name": "memory-systems",
       "canonical_path": "library/marketing-and-seo/cro/memory-systems",
       "functional_parent": "library/marketing-and-seo/cro/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "mental-health-analyzer": {
-      "runtime_name": "mental-health-analyzer",
-      "canonical_name": "mental-health-analyzer",
-      "canonical_path": "library/development/fullstack/mental-health-analyzer",
-      "functional_parent": "library/development/fullstack/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -12288,16 +12018,6 @@
       "canonical_name": "meta-ads-integration",
       "canonical_path": "library/development/backend/meta-ads-integration",
       "functional_parent": "library/marketing-and-seo/content-and-campaigns/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "meta-tags-optimizer": {
-      "runtime_name": "meta-tags-optimizer",
-      "canonical_name": "meta-tags-optimizer",
-      "canonical_path": "library/marketing-and-seo/technical-seo/meta-tags-optimizer",
-      "functional_parent": "library/marketing-and-seo/technical-seo/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -13233,16 +12953,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "on-page-seo-auditor": {
-      "runtime_name": "on-page-seo-auditor",
-      "canonical_name": "on-page-seo-auditor",
-      "canonical_path": "library/marketing-and-seo/technical-seo/on-page-seo-auditor",
-      "functional_parent": "library/marketing-and-seo/technical-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "onboarding": {
       "runtime_name": "onboarding",
       "canonical_name": "onboarding",
@@ -13348,16 +13058,6 @@
       "canonical_name": "options-flow-analyzer",
       "canonical_path": "library/business-and-operations/legal-and-governance/options-flow-analyzer",
       "functional_parent": "library/business-and-operations/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "oral-health-analyzer": {
-      "runtime_name": "oral-health-analyzer",
-      "canonical_name": "oral-health-analyzer",
-      "canonical_path": "library/development/fullstack/oral-health-analyzer",
-      "functional_parent": "library/development/fullstack/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -13478,16 +13178,6 @@
       "canonical_name": "paid-advertising",
       "canonical_path": "library/marketing-and-seo/content-and-campaigns/paid-advertising",
       "functional_parent": "library/marketing-and-seo/content-and-campaigns/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "papers-skill": {
-      "runtime_name": "papers-skill",
-      "canonical_name": "papers-skill",
-      "canonical_path": "library/development/backend/papers-skill",
-      "functional_parent": "library/development/backend/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -13738,16 +13428,6 @@
       "canonical_name": "performance-report",
       "canonical_path": "library/development/fullstack/performance-report",
       "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "performance-reporter": {
-      "runtime_name": "performance-reporter",
-      "canonical_name": "performance-reporter",
-      "canonical_path": "library/marketing-and-seo/on-page-seo/performance-reporter",
-      "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -14533,16 +14213,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "product-decision-agent": {
-      "runtime_name": "product-decision-agent",
-      "canonical_name": "product-decision-agent",
-      "canonical_path": "library/business-and-operations/product-management/product-decision-agent",
-      "functional_parent": "library/business-and-operations/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "product-design": {
       "runtime_name": "product-design",
       "canonical_name": "product-design",
@@ -15303,16 +14973,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "rank-tracker": {
-      "runtime_name": "rank-tracker",
-      "canonical_name": "rank-tracker",
-      "canonical_path": "library/marketing-and-seo/on-page-seo/rank-tracker",
-      "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "rclone-cli": {
       "runtime_name": "rclone-cli",
       "canonical_name": "rclone-cli",
@@ -15623,16 +15283,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "rehabilitation-analyzer": {
-      "runtime_name": "rehabilitation-analyzer",
-      "canonical_name": "rehabilitation-analyzer",
-      "canonical_path": "library/development/fullstack/rehabilitation-analyzer",
-      "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "reinforcement-drills": {
       "runtime_name": "reinforcement-drills",
       "canonical_name": "reinforcement-drills",
@@ -15648,16 +15298,6 @@
       "canonical_name": "reinforcement-loop",
       "canonical_path": "library/marketing-and-seo/on-page-seo/reinforcement-loop",
       "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "remote-gpu-trainer": {
-      "runtime_name": "remote-gpu-trainer",
-      "canonical_name": "remote-gpu-trainer",
-      "canonical_path": "library/infrastructure-and-ops/cloud-platforms/remote-gpu-trainer",
-      "functional_parent": "library/infrastructure-and-ops/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -17323,16 +16963,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "serp-analysis": {
-      "runtime_name": "serp-analysis",
-      "canonical_name": "serp-analysis",
-      "canonical_path": "library/marketing-and-seo/on-page-seo/serp-analysis",
-      "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "serp-analyzer": {
       "runtime_name": "serp-analyzer",
       "canonical_name": "serp-analyzer",
@@ -17468,16 +17098,6 @@
       "canonical_name": "share-of-voice",
       "canonical_path": "library/marketing-and-seo/on-page-seo/share-of-voice",
       "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "sharp-coder": {
-      "runtime_name": "sharp-coder",
-      "canonical_name": "sharp-coder",
-      "canonical_path": "library/development/fullstack/sharp-coder",
-      "functional_parent": "library/development/fullstack/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -18143,16 +17763,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "startup-business-analyst-financial-projections": {
-      "runtime_name": "startup-business-analyst-financial-projections",
-      "canonical_name": "startup-business-analyst-financial-projections",
-      "canonical_path": "library/business-and-operations/startup-finance/startup-business-analyst-financial-projections",
-      "functional_parent": "library/business-and-operations/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "startup-business-analyst-market-opportunity": {
       "runtime_name": "startup-business-analyst-market-opportunity",
       "canonical_name": "startup-business-analyst-market-opportunity",
@@ -18308,16 +17918,6 @@
       "canonical_name": "student-success-scorecard",
       "canonical_path": "library/marketing-and-seo/on-page-seo/student-success-scorecard",
       "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "styleseed-design-review": {
-      "runtime_name": "styleseed-design-review",
-      "canonical_name": "styleseed-design-review",
-      "canonical_path": "library/design-and-experience/taste-and-critique/styleseed-design-review",
-      "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -18643,16 +18243,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "tcm-constitution-analyzer": {
-      "runtime_name": "tcm-constitution-analyzer",
-      "canonical_name": "tcm-constitution-analyzer",
-      "canonical_path": "library/development/fullstack/tcm-constitution-analyzer",
-      "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "teach": {
       "runtime_name": "teach",
       "canonical_name": "teach",
@@ -18757,16 +18347,6 @@
       "runtime_name": "technical-seo",
       "canonical_name": "technical-seo",
       "canonical_path": "library/marketing-and-seo/technical-seo/technical-seo",
-      "functional_parent": "library/marketing-and-seo/technical-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "technical-seo-checker": {
-      "runtime_name": "technical-seo-checker",
-      "canonical_name": "technical-seo-checker",
-      "canonical_path": "library/marketing-and-seo/technical-seo/technical-seo-checker",
       "functional_parent": "library/marketing-and-seo/technical-seo/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -19423,26 +19003,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "ui-review": {
-      "runtime_name": "ui-review",
-      "canonical_name": "ui-review",
-      "canonical_path": "library/design-and-experience/design-systems/ui-review",
-      "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "ui-score": {
-      "runtime_name": "ui-score",
-      "canonical_name": "ui-score",
-      "canonical_path": "library/design-and-experience/taste-and-critique/ui-score",
-      "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "ui-setup": {
       "runtime_name": "ui-setup",
       "canonical_name": "ui-setup",
@@ -19708,16 +19268,6 @@
       "canonical_name": "ux-audit",
       "canonical_path": "library/design-and-experience/ui-ux/ux-audit",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "ux-copy": {
-      "runtime_name": "ux-copy",
-      "canonical_name": "ux-copy",
-      "canonical_path": "library/marketing-and-seo/cro/ux-copy",
-      "functional_parent": "library/marketing-and-seo/cro/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -20848,16 +20398,6 @@
       "canonical_name": "workflow-versioning",
       "canonical_path": "library/marketing-and-seo/cro/workflow-versioning",
       "functional_parent": "library/marketing-and-seo/cro/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "workorai": {
-      "runtime_name": "workorai",
-      "canonical_name": "workorai",
-      "canonical_path": "library/development/fullstack/workorai",
-      "functional_parent": "library/development/fullstack/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",

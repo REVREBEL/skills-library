@@ -379,6 +379,60 @@ class HistoricalProvenanceRecord:
         }
 
 
+# Canonical packages deliberately removed from the catalog by the non-English prune.
+# Historical Phase 08 provenance stays traceable without pretending these still exist;
+# they are excluded from unmatched-historical counts, not from the audit trail.
+DELIBERATELY_PRUNED_PATHS = frozenset(
+    {
+        "library/business-and-operations/product-management/product-decision-agent",
+        "library/business-and-operations/startup-finance/startup-business-analyst-financial-projections",
+        "library/content-and-documentation/presentations/2slides-ppt-generator",
+        "library/design-and-experience/design-systems/ui-review",
+        "library/design-and-experience/taste-and-critique/styleseed-design-review",
+        "library/design-and-experience/taste-and-critique/ui-score",
+        "library/development/backend/goal-analyzer",
+        "library/development/backend/papers-skill",
+        "library/development/fullstack/auto-research",
+        "library/development/fullstack/emergency-card",
+        "library/development/fullstack/evolution",
+        "library/development/fullstack/fitness-analyzer",
+        "library/development/fullstack/logic-explain",
+        "library/development/fullstack/logic-fix-all",
+        "library/development/fullstack/logic-locate",
+        "library/development/fullstack/logic-review",
+        "library/development/fullstack/mental-health-analyzer",
+        "library/development/fullstack/oral-health-analyzer",
+        "library/development/fullstack/rehabilitation-analyzer",
+        "library/development/fullstack/sharp-coder",
+        "library/development/fullstack/tcm-constitution-analyzer",
+        "library/development/fullstack/workorai",
+        "library/development/software-architecture/logic-diff",
+        "library/infrastructure-and-ops/cloud-platforms/remote-gpu-trainer",
+        "library/marketing-and-seo/cro/ai-analyzer",
+        "library/marketing-and-seo/cro/ai-md",
+        "library/marketing-and-seo/cro/ux-copy",
+        "library/marketing-and-seo/geo-and-local-seo/content-quality-auditor",
+        "library/marketing-and-seo/geo-and-local-seo/content-refresher",
+        "library/marketing-and-seo/geo-and-local-seo/domain-authority-auditor",
+        "library/marketing-and-seo/geo-and-local-seo/entity-optimizer",
+        "library/marketing-and-seo/geo-and-local-seo/geo-content-optimizer",
+        "library/marketing-and-seo/geo-and-local-seo/memory-management",
+        "library/marketing-and-seo/on-page-seo/alert-manager",
+        "library/marketing-and-seo/on-page-seo/backlink-analyzer",
+        "library/marketing-and-seo/on-page-seo/competitor-analysis",
+        "library/marketing-and-seo/on-page-seo/content-gap-analysis",
+        "library/marketing-and-seo/on-page-seo/keyword-research",
+        "library/marketing-and-seo/on-page-seo/performance-reporter",
+        "library/marketing-and-seo/on-page-seo/rank-tracker",
+        "library/marketing-and-seo/on-page-seo/serp-analysis",
+        "library/marketing-and-seo/technical-seo/internal-linking-optimizer",
+        "library/marketing-and-seo/technical-seo/meta-tags-optimizer",
+        "library/marketing-and-seo/technical-seo/on-page-seo-auditor",
+        "library/marketing-and-seo/technical-seo/schema-markup-generator",
+        "library/marketing-and-seo/technical-seo/technical-seo-checker",
+    }
+)
+
 @dataclass
 class ProvenanceReconciliationReport:
     """Report detailing historical provenance reconciliation against canonical models."""
@@ -610,8 +664,15 @@ class HistoricalProvenanceMapper:
                     notes="Census platform candidate (added during REV-126/REV-150)",
                 )
 
-        unmatched_p8 = [p for p in p8_by_dest.keys() if p not in matched_destinations]
-        is_reconciled = len(unmatched_p8) == 0 and matched_records_count == len(p8_rows)
+        pruned_p8 = [p for p in p8_by_dest.keys() if p in DELIBERATELY_PRUNED_PATHS]
+        unmatched_p8 = [
+            p
+            for p in p8_by_dest.keys()
+            if p not in matched_destinations and p not in DELIBERATELY_PRUNED_PATHS
+        ]
+        is_reconciled = len(unmatched_p8) == 0 and (
+            matched_records_count + len(pruned_p8) == len(p8_rows)
+        )
 
         return ProvenanceReconciliationReport(
             total_historical_records=len(p8_rows),
