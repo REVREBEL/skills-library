@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This report stress-tests the **Hybrid C/D architectural model** against the full validated catalog of **2,087 skills**.
+This report stress-tests the **Hybrid C/D architectural model** against the full validated catalog of **2,073 skills**.
 Under Hybrid C/D:
 - **Domain capabilities** are physically organized by functional domain.
 - **Tier 1 platform/tool families** are physically organized under universal family roots (`tools-and-platforms/<family>`) or meta-engineering roots (`meta-and-agent-skills/skill-lifecycle`).
@@ -18,16 +18,16 @@ This evaluation provides **empirical evidence and baseline feasibility findings*
 
 ### 1. Semantic Plane
 The Semantic Plane governs stable identity, canonical naming, taxonomy classification, and contract clarity.
-- **Population Scale**: 2,087 packages classified across 8 canonical roles without ontological gaps.
+- **Population Scale**: 2,073 packages classified across 8 canonical roles without ontological gaps.
 - **Stable Identity & Disambiguation**: Scoped canonical IDs (`github-operations:<name>`, `skills-lifecycle:<name>`) disambiguate duplicate package names without collisions.
 - **Domain Separation**: Clear boundaries established between functional capabilities (e.g. `javascript-mastery`) and platform integrations (e.g. `github-operations:commit`), pruning 27 false-positive brand mentions.
-- **Census Evidence Finding**: Demonstrates baseline feasibility of the 8-role model across 2,087 packages. Scoped identifiers provide collision-free identity. Formal semantic object model specifications and canonical naming rules remain to be closed under **REV-127**.
+- **Census Evidence Finding**: Demonstrates baseline feasibility of the 8-role model across 2,073 packages. Scoped identifiers provide collision-free identity. Formal semantic object model specifications and canonical naming rules remain to be closed under **REV-127**.
 
 ### 2. Composition Plane
 The Composition Plane governs how packages assemble: primitives providing low-level operations, overlays specializing base platforms, and workflows orchestrating multi-step pipelines.
 - **Role Distribution**:
   - **`family_primitive`**: 1 low-level primitives (auth, tokens, parsers).
-  - **`independent_capability`**: 1668 singular reusable building blocks.
+  - **`independent_capability`**: 1654 singular reusable building blocks.
   - **`overlay`**: 6 domain specializations extending base platform families via `extends` metadata without polluting core vendor tools.
   - **`workflow`**: 378 composite outcome pipelines orchestrating sequential stages.
 - **Dependency Modeling**: The `dependencies_or_extends` schema field captures upstream/downstream relationships cleanly.
@@ -38,10 +38,10 @@ The Execution Plane governs runtime projections, tool adapters, invocation bound
 - **Tool Adapters**: Provider coupling (CLI, MCP, browser runner) is encapsulated within adapter packages rather than polluting general capabilities.
 - **Population Token Density Differential**:
   - Workflows average: **2120 tokens**.
-  - Independent capabilities average: **1350 tokens**.
-  - Population Density Differential: **36.3%**.
+  - Independent capabilities average: **1359 tokens**.
+  - Population Density Differential: **35.9%**.
 - **Runtime Context Overhead Clarification**: This token density differential demonstrates a structural size difference across package populations. It is not an active execution benchmark. Real runtime context savings constitute an architectural hypothesis to be tested during runtime execution benchmarking under REV-130.
-- **Census Evidence Finding**: Structural token density differential (36.3%) is observed between workflows and capabilities. Tool adapters isolate runtime couplings. Formal execution contracts, runtime projection targets, and active execution context savings remain to be benchmarked and closed under **REV-130**.
+- **Census Evidence Finding**: Structural token density differential (35.9%) is observed between workflows and capabilities. Tool adapters isolate runtime couplings. Formal execution contracts, runtime projection targets, and active execution context savings remain to be benchmarked and closed under **REV-130**.
 
 ### 4. Lifecycle Plane
 The Lifecycle Plane governs intake validation, continuous drift detection, runtime publication, deprecation, and alias management.

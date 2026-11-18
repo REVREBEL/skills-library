@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_at": "2026-10-07T15:51:34Z",
-  "total_managed_skills": 2056,
+  "total_managed_skills": 2042,
   "skills": {
     "007": {
       "runtime_name": "007",
@@ -3533,16 +3533,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "color-expert": {
-      "runtime_name": "color-expert",
-      "canonical_name": "color-expert",
-      "canonical_path": "library/design-and-experience/ui-ux/color-expert",
-      "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "color-palette": {
       "runtime_name": "color-palette",
       "canonical_name": "color-palette",
@@ -3993,30 +3983,10 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "content-and-documentation-brand-guidelines": {
-      "runtime_name": "content-and-documentation-brand-guidelines",
-      "canonical_name": "brand-guidelines",
-      "canonical_path": "library/content-and-documentation/technical-writing/brand-guidelines",
-      "functional_parent": "library/content-and-documentation/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "content-and-documentation-copywriting": {
       "runtime_name": "content-and-documentation-copywriting",
       "canonical_name": "copywriting",
       "canonical_path": "library/content-and-documentation/copywriting/copywriting",
-      "functional_parent": "library/content-and-documentation/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "content-and-documentation-imagen": {
-      "runtime_name": "content-and-documentation-imagen",
-      "canonical_name": "imagen",
-      "canonical_path": "library/content-and-documentation/technical-writing/imagen",
       "functional_parent": "library/content-and-documentation/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -5603,16 +5573,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "design-and-experience-brand-guidelines": {
-      "runtime_name": "design-and-experience-brand-guidelines",
-      "canonical_name": "brand-guidelines",
-      "canonical_path": "library/design-and-experience/ui-ux/brand-guidelines",
-      "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "design-and-experience-content-strategy": {
       "runtime_name": "design-and-experience-content-strategy",
       "canonical_name": "content-strategy",
@@ -5648,16 +5608,6 @@
       "canonical_name": "frontend-design",
       "canonical_path": "library/design-and-experience/ui-ux/frontend-design",
       "functional_parent": "library/development/frontend/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "design-and-experience-imagen": {
-      "runtime_name": "design-and-experience-imagen",
-      "canonical_name": "imagen",
-      "canonical_path": "library/design-and-experience/ui-ux/imagen",
-      "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -5738,16 +5688,6 @@
       "canonical_name": "design-brief-ux-strategy",
       "canonical_path": "library/design-and-experience/ui-ux/design-brief-ux-strategy",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "design-consultation": {
-      "runtime_name": "design-consultation",
-      "canonical_name": "design-consultation",
-      "canonical_path": "library/design-and-experience/design-systems/design-consultation",
-      "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -5887,16 +5827,6 @@
       "runtime_name": "design-review-process",
       "canonical_name": "design-review-process",
       "canonical_path": "library/design-and-experience/taste-and-critique/design-review-process",
-      "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "design-review_2": {
-      "runtime_name": "design-review_2",
-      "canonical_name": "design-review_2",
-      "canonical_path": "library/design-and-experience/taste-and-critique/design-review_2",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -6573,16 +6503,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "documentation-template": {
-      "runtime_name": "documentation-template",
-      "canonical_name": "documentation-template",
-      "canonical_path": "library/design-and-experience/design-systems/documentation-template",
-      "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "documentation-templates": {
       "runtime_name": "documentation-templates",
       "canonical_name": "documentation-templates",
@@ -6608,16 +6528,6 @@
       "canonical_name": "docx-official",
       "canonical_path": "library/development/fullstack/docx-official",
       "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "doherty-threshold": {
-      "runtime_name": "doherty-threshold",
-      "canonical_name": "doherty-threshold",
-      "canonical_path": "library/design-and-experience/ui-ux/doherty-threshold",
-      "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -7923,16 +7833,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "fitts-law": {
-      "runtime_name": "fitts-law",
-      "canonical_name": "fitts-law",
-      "canonical_path": "library/design-and-experience/ui-ux/fitts-law",
-      "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "fix-review": {
       "runtime_name": "fix-review",
       "canonical_name": "fix-review",
@@ -9043,16 +8943,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "hicks-law": {
-      "runtime_name": "hicks-law",
-      "canonical_name": "hicks-law",
-      "canonical_path": "library/design-and-experience/ui-ux/hicks-law",
-      "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "hierarchical-agent-memory": {
       "runtime_name": "hierarchical-agent-memory",
       "canonical_name": "hierarchical-agent-memory",
@@ -9588,16 +9478,6 @@
       "canonical_name": "image-to-code-skill",
       "canonical_path": "library/marketing-and-seo/cro/image-to-code-skill",
       "functional_parent": "library/marketing-and-seo/cro/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "imagegen": {
-      "runtime_name": "imagegen",
-      "canonical_name": "imagegen",
-      "canonical_path": "library/design-and-experience/ui-ux/imagegen",
-      "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -10568,26 +10448,6 @@
       "canonical_name": "launch-tiering",
       "canonical_path": "library/marketing-and-seo/on-page-seo/launch-tiering",
       "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "law-of-common-region": {
-      "runtime_name": "law-of-common-region",
-      "canonical_name": "law-of-common-region",
-      "canonical_path": "library/design-and-experience/ui-ux/law-of-common-region",
-      "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "law-of-proximity": {
-      "runtime_name": "law-of-proximity",
-      "canonical_name": "law-of-proximity",
-      "canonical_path": "library/design-and-experience/ui-ux/law-of-proximity",
-      "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -12068,16 +11928,6 @@
       "canonical_name": "microservices-patterns",
       "canonical_path": "library/marketing-and-seo/cro/microservices-patterns",
       "functional_parent": "library/development/software-architecture/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "millers-law": {
-      "runtime_name": "millers-law",
-      "canonical_name": "millers-law",
-      "canonical_path": "library/design-and-experience/ui-ux/millers-law",
-      "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -17063,16 +16913,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "shader-dev": {
-      "runtime_name": "shader-dev",
-      "canonical_name": "shader-dev",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/shader-dev",
-      "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "shader-programming-glsl": {
       "runtime_name": "shader-programming-glsl",
       "canonical_name": "shader-programming-glsl",
@@ -19753,16 +19593,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "von-restorff-effect": {
-      "runtime_name": "von-restorff-effect",
-      "canonical_name": "von-restorff-effect",
-      "canonical_path": "library/design-and-experience/ui-ux/von-restorff-effect",
-      "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "vscode-extension-guide-en": {
       "runtime_name": "vscode-extension-guide-en",
       "canonical_name": "vscode-extension-guide-en",
@@ -20558,6 +20388,34 @@
       "canonical_name": "zustand-store-ts",
       "canonical_path": "library/development/frontend/zustand-store-ts",
       "functional_parent": "library/development/frontend/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-10-07T09:16:13Z",
+      "last_validated": "2026-10-07T09:16:13Z"
+    },
+    "ux-laws": {
+      "runtime_name": "ux-laws",
+      "canonical_name": "ux-laws",
+      "canonical_path": "library/design-and-experience/ui-ux/ux-laws",
+      "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true
+    },
+    "content-and-documentation-brand-guidelines": {
+      "runtime_name": "content-and-documentation-brand-guidelines",
+      "canonical_name": "brand-guidelines",
+      "canonical_path": "library/content-and-documentation/technical-writing/brand-guidelines",
+      "functional_parent": "library/content-and-documentation/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-10-07T09:16:13Z",
+      "last_validated": "2026-10-07T09:16:13Z"
+    },
+    "content-and-documentation-imagen": {
+      "runtime_name": "content-and-documentation-imagen",
+      "canonical_name": "imagen",
+      "canonical_path": "library/content-and-documentation/technical-writing/imagen",
+      "functional_parent": "library/content-and-documentation/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
