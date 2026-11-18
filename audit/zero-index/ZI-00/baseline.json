@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.revrebel.io/v1/zero-index-baseline.schema.json",
+  "work_order": "ZI-00",
+  "purpose": "Program-state reconciliation: re-pin the baseline SHA and test Linear claims against the tree.",
+  "generated_at_utc": "2026-11-15T18:15:02Z",
+  "repository": {
+    "origin": "REVREBEL/skills-library",
+    "worktree_path_class": "isolated-worktree",
+    "worktree_status": "clean",
+    "worktree_head_sha": "da83ca841b7e7673a4699ab8157232d6fbbbc279",
+    "worktree_head_subject": "Revert \"gary/skil-14-zi-03-construct-independent-architecture-and\"",
+    "worktree_head_is_ancestor_of_origin_main": true,
+    "worktree_commits_behind_origin_main": 7,
+    "origin_main_sha": "f1ab243937afe64410c0bd2358b68ad98e59265e",
+    "previously_pinned_sha": "195eda775d7a8dcad1837a1990bcba8259da3ea0",
+    "commits_between_previously_pinned_and_origin_main": 61
+  },
+  "populations": {
+    "measured_at": "origin/main",
+    "total_skill_md_files": 5070,
+    "library_skill_md": 2656,
+    "task_folder_agents_skills": 2100,
+    "task_folder_agents_not_needed": 238,
+    "task_folder_agents_archived": 20,
+    "task_example_skill_md": 49,
+    "by_path": {
+      "library": 2656,
+      "task-folder/agents/skills": 2100,
+      "task-folder/agents/not-needed": 238,
+      "task-folder/agents/archived": 20,
+      "task-example": 49
+    }
+  },
+  "manifest": {
+    "path": "audit/runtime-manifest.json",
+    "generated_at": "2026-10-07T15:51:34Z",
+    "declared_total_managed_skills": 2103,
+    "actual_skill_entries": 2102,
+    "self_consistent": false
+  },
+  "validation": {
+    "command": "PYTHONPATH=tools python3 tools/skill-library.py validate",
+    "exit_code": 1,
+    "result": "FAILED",
+    "set_reconciliation": "PASSED",
+    "runtime_publication": "PASSED",
+    "target_checkout": "FAILED",
+    "routers_verified": 26,
+    "router_links_verified": 2176,
+    "broken_links": 0,
+    "canonical_active_skills": 2102,
+    "orphans": 0,
+    "manifest_skills": 2102,
+    "workstation_path_leaks": 0,
+    "potential_secret_leaks": 0,
+    "errors": [
+      "Target 'universal-global' HEAD commit (b5f4af2f0d) does not match published runtime commit (3ede2dfb07).",
+      "Target 'universal-global' tree (17d8651a10) does not match published runtime tree (f010636bbd)."
+    ]
+  },
+  "tests": {
+    "command": "PYTHONPATH=tools python3 tools/skill-library.py test",
+    "exit_code": 1,
+    "tests_ran": 253,
+    "failures": 1,
+    "errors": 0,
+    "duration_seconds": 168.083,
+    "failing_tests": [
+      "test_runtime_publication.TestRuntimeGitClonePublication.test_24_skill_directory_rename_preserves_old_and_new_paths"
+    ],
+    "safeguards": {
+      "gh_stubbed_on_path": true,
+      "gh_tokens_unset": true,
+      "working_tree_dirty_after_run": false
+    }
+  },
+  "not_executed": [
+    {
+      "command": "PYTHONPATH=tools python3 tools/catalog_semantic_census.py",
+      "reason": "Writes to audit/taxonomy-census/; would mutate tracked evidence during a read-only assessment."
+    },
+    {
+      "command": "PYTHONPATH=tools python3 tools/skill-library.py publish-runtime",
+      "reason": "Creates/updates the local 'runtime' git ref; not performed without authorization."
+    }
+  ]
+}

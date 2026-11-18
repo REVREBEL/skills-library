@@ -169,6 +169,9 @@ class RegistryEntry:
         if not self.urn:
             self.urn = self._parsed_id.urn
 
+        # Enforce the lifecycle vocabulary instead of storing a free-form string.
+        self.status = ReviewStatus.coerce(self.status).value
+
         # Validate Invariant 6: Path-Independent Identity
         for part, name in [(self._parsed_id.scope, "scope"), (self._parsed_id.slug, "slug")]:
             if "/" in part or "\\" in part or any(part.endswith(ext) for ext in [".md", ".json", ".yaml", ".yml"]):
