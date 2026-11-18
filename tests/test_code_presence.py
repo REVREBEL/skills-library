@@ -5,6 +5,7 @@ The survey exists to size the risk model before ZI-08 design: if most packages
 are prose, risk can default cheaply and review effort concentrates on the rest.
 """
 
+import json
 import os
 import sys
 import tempfile
@@ -26,6 +27,20 @@ from skill_library.code_presence import (
 )
 
 LIBRARY = str(REPO_ROOT / "library")
+
+
+def census_population() -> int:
+    """Authoritative canonical package count.
+
+    Derived rather than hardcoded: the library changes whenever skills are
+    added, merged or pruned, and a fixed denominator broke these tests every
+    time it did.
+    """
+    path = REPO_ROOT / "audit" / "taxonomy-census" / "semantic-role-census.json"
+    with open(path, encoding="utf-8") as handle:
+        return len(json.load(handle))
+
+
 
 
 def write_package(root: str, relative: str, body: str = "---\nname: demo\ndescription: d\n---\n") -> str:
@@ -176,7 +191,7 @@ class TestRealLibrary(unittest.TestCase):
         cls.summary = summarise(cls.surveys)
 
     def test_population(self):
-        self.assertEqual(self.summary["total"], 2133)
+        self.assertEqual(self.summary["total"], census_population())
 
     def test_both_classes_present(self):
         self.assertGreater(self.summary["code"]["total"], 0)
