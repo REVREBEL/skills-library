@@ -3,7 +3,7 @@
 Catalog-Wide Semantic Role Census & Architecture Stress-Test Tool
 Linear Issues: REV-126, REV-150
 
-Performs authoritative census across all 2,133 skills in the library,
+Performs authoritative census across all 2,087 skills in the library,
 evaluating them against the canonical work-order semantic object model:
   - independent_capability
   - family_primitive
@@ -38,5 +38,14 @@ except ImportError:
     import validate_semantic_census
 
 if __name__ == "__main__":
-    validate_semantic_census.main()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Regenerate the semantic role census")
+    parser.add_argument(
+        "--regenerate-skil11",
+        action="store_true",
+        help="Also rebuild audit/zero-index/SKIL-11/. Off by default: that audit is immutable evidence.",
+    )
+    args = parser.parse_args()
+    validate_semantic_census.main(regenerate_skil11=args.regenerate_skil11)
 

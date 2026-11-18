@@ -1,0 +1,71 @@
+path,canonical_id,kind,language,han_chars,kana_chars,hangul_chars,latin_chars,recommended_action,reason
+library/development/fullstack/mental-health-analyzer,development:mental-health-analyzer,skill,chinese,5894,0,0,1688,dump,Chinese-dominant body and metadata; no English version
+library/development/fullstack/rehabilitation-analyzer,development:rehabilitation-analyzer,skill,chinese,3383,0,0,1220,dump,Chinese-dominant body and metadata; no English version
+library/development/fullstack/oral-health-analyzer,development:oral-health-analyzer,skill,chinese,3227,0,0,522,dump,Chinese-dominant body and metadata; no English version
+library/development/fullstack/tcm-constitution-analyzer,development:tcm-constitution-analyzer,skill,chinese,2987,0,0,1590,dump,Chinese-dominant body and metadata; no English version
+library/development/backend/goal-analyzer,development:goal-analyzer,skill,chinese,2986,0,0,1694,dump,Chinese-dominant body and metadata; no English version
+library/development/fullstack/fitness-analyzer,development:fitness-analyzer,skill,chinese,2101,0,0,905,dump,Chinese-dominant body and metadata; no English version
+library/development/fullstack/emergency-card,development:emergency-card,skill,chinese,1757,0,0,4433,dump,Chinese-dominant body and metadata; no English version
+library/marketing-and-seo/cro/ai-analyzer,marketing-and-seo:ai-analyzer,skill,chinese,1499,0,0,1718,dump,Chinese-dominant body and metadata; no English version
+library/business-and-operations/product-management/product-decision-agent,business-and-operations:product-decision-agent,skill,chinese,1414,0,0,373,dump,Chinese-dominant body and metadata; no English version
+library/development/fullstack/evolution,development:evolution,skill,chinese,33,0,0,8204,ignore,English skill with 33 stray Han characters
+library/development/backend/papers-skill,development:papers-skill,skill,chinese,31,0,0,5821,ignore,English skill with 31 stray Han characters
+library/marketing-and-seo/on-page-seo/content-gap-analysis,marketing-and-seo:content-gap-analysis,skill,chinese,20,0,0,4886,ignore,English skill with 20 stray Han characters
+library/marketing-and-seo/on-page-seo/keyword-research,marketing-and-seo:keyword-research,skill,chinese,15,0,0,5066,ignore,English skill with 15 stray Han characters
+library/content-and-documentation/presentations/2slides-ppt-generator,content-and-documentation:2slides-ppt-generator,skill,chinese,11,0,3,16266,ignore,English skill with 11 stray Han characters
+library/marketing-and-seo/on-page-seo/alert-manager,marketing-and-seo:alert-manager,skill,chinese,13,0,0,4292,ignore,English skill with 13 stray Han characters
+library/marketing-and-seo/on-page-seo/backlink-analyzer,marketing-and-seo:backlink-analyzer,skill,chinese,12,0,0,5260,ignore,English skill with 12 stray Han characters
+library/marketing-and-seo/on-page-seo/competitor-analysis,marketing-and-seo:competitor-analysis,skill,chinese,12,0,0,5484,ignore,English skill with 12 stray Han characters
+library/marketing-and-seo/on-page-seo/performance-reporter,marketing-and-seo:performance-reporter,skill,chinese,10,0,0,5275,ignore,English skill with 10 stray Han characters
+library/marketing-and-seo/on-page-seo/rank-tracker,marketing-and-seo:rank-tracker,skill,chinese,9,0,0,4725,ignore,English skill with 9 stray Han characters
+library/marketing-and-seo/geo-and-local-seo/domain-authority-auditor,marketing-and-seo:domain-authority-auditor,skill,chinese,9,0,0,25021,ignore,English skill with 9 stray Han characters
+library/marketing-and-seo/on-page-seo/serp-analysis,marketing-and-seo:serp-analysis,skill,chinese,8,0,0,4650,ignore,English skill with 8 stray Han characters
+library/marketing-and-seo/technical-seo/on-page-seo-auditor,marketing-and-seo:on-page-seo-auditor,skill,chinese,8,0,0,8467,ignore,English skill with 8 stray Han characters
+library/marketing-and-seo/technical-seo/internal-linking-optimizer,marketing-and-seo:internal-linking-optimizer,skill,chinese,8,0,0,6657,ignore,English skill with 8 stray Han characters
+library/marketing-and-seo/geo-and-local-seo/entity-optimizer,marketing-and-seo:entity-optimizer,skill,chinese,8,0,0,9871,ignore,English skill with 8 stray Han characters
+library/marketing-and-seo/geo-and-local-seo/geo-content-optimizer,marketing-and-seo:geo-content-optimizer,skill,chinese,8,0,0,5518,ignore,English skill with 8 stray Han characters
+library/marketing-and-seo/geo-and-local-seo/content-refresher,marketing-and-seo:content-refresher,skill,chinese,8,0,0,5555,ignore,English skill with 8 stray Han characters
+library/marketing-and-seo/technical-seo/meta-tags-optimizer,marketing-and-seo:meta-tags-optimizer,skill,chinese,7,0,0,3969,ignore,English skill with 7 stray Han characters
+library/marketing-and-seo/technical-seo/schema-markup-generator,marketing-and-seo:schema-markup-generator,skill,chinese,7,0,0,6223,ignore,English skill with 7 stray Han characters
+library/marketing-and-seo/geo-and-local-seo/memory-management,marketing-and-seo:memory-management,skill,chinese,7,0,0,11030,ignore,English skill with 7 stray Han characters
+library/development/fullstack/sharp-coder,development:sharp-coder,skill,chinese,7,0,0,3838,ignore,English skill with 7 stray Han characters
+library/marketing-and-seo/technical-seo/technical-seo-checker,marketing-and-seo:technical-seo-checker,skill,chinese,6,0,0,8344,ignore,English skill with 6 stray Han characters
+library/marketing-and-seo/geo-and-local-seo/content-quality-auditor,marketing-and-seo:content-quality-auditor,skill,chinese,6,0,0,24999,ignore,English skill with 6 stray Han characters
+library/development/fullstack/logic-explain,development:logic-explain,skill,chinese,4,0,0,2534,ignore,English skill with 4 stray Han characters
+library/development/fullstack/logic-fix-all,development:logic-fix-all,skill,chinese,4,0,0,3710,ignore,English skill with 4 stray Han characters
+library/development/fullstack/logic-locate,development:logic-locate,skill,chinese,4,0,0,2987,ignore,English skill with 4 stray Han characters
+library/development/software-architecture/logic-diff,development:logic-diff,skill,chinese,4,0,0,2713,ignore,English skill with 4 stray Han characters
+library/design-and-experience/design-systems/ui-review,design-and-experience:ui-review,skill,korean,0,0,2,3444,ignore,Only 2 Hangul characters
+library/design-and-experience/taste-and-critique/ui-score,design-and-experience:ui-score,skill,korean,0,0,2,4524,ignore,Only 2 Hangul characters
+library/design-and-experience/taste-and-critique/styleseed-design-review,design-and-experience:styleseed-design-review,skill,korean,0,0,2,4241,ignore,Only 2 Hangul characters
+library/development/fullstack/workorai,development:workorai,skill,cyrillic,0,0,0,3784,ignore,Only 9 characters
+library/business-and-operations/startup-finance/startup-business-analyst-financial-projections,business-and-operations:startup-business-analyst-financial-projections,skill,arabic,0,0,0,6054,ignore,Only 1 characters
+library/development/fullstack/auto-research,development:auto-research,skill,chinese,99,0,0,4120,keep_multilingual,English skill with intentional Chinese examples or trigger phrases
+library/development/fullstack/logic-review,development:logic-review,skill,chinese,99,0,0,10192,keep_multilingual,English skill with intentional Chinese examples or trigger phrases
+library/infrastructure-and-ops/cloud-platforms/remote-gpu-trainer,infrastructure-and-ops:remote-gpu-trainer,skill,chinese,92,0,0,16671,keep_multilingual,English skill with intentional Chinese examples or trigger phrases
+library/marketing-and-seo/technical-seo/seo-skills-main/optimize/technical-seo-checker,,nested,japanese,46,5,2,8922,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/technical-seo/seo-skills-main/monitor/performance-reporter,,nested,japanese,37,4,3,5779,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/geo-and-local-seo/geo-audit-report/SEO Audit/seo-geo-claude-skills-main 2/build/geo-content-optimizer,,nested,chinese,41,0,3,6109,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/technical-seo/seo-skills-main/monitor/alert-manager,,nested,japanese,31,4,2,4780,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/technical-seo/seo-skills-main/optimize/on-page-seo-auditor,,nested,japanese,29,3,5,9039,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/technical-seo/seo-skills-main/geo-audit-report/SEO Audit/seo-geo-claude-skills-main 2/cross-cutting/memory-management,,nested,japanese,24,6,7,11499,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/geo-and-local-seo/geo-audit-report/SEO Audit/seo-geo-claude-skills-main 2/cross-cutting/memory-management,,nested,japanese,24,6,7,11499,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/geo-and-local-seo/geo-audit-report/SEO Audit/seo-geo-claude-skills-main 2/build/schema-markup-generator,,nested,japanese,28,3,6,6678,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/technical-seo/seo-skills-main/geo-audit-report/SEO Audit/seo-geo-claude-skills-main 2/cross-cutting/domain-authority-auditor,,nested,japanese,26,4,5,25496,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/geo-and-local-seo/geo-audit-report/SEO Audit/seo-geo-claude-skills-main 2/cross-cutting/domain-authority-auditor,,nested,japanese,26,4,5,25496,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/technical-seo/seo-skills-main/monitor/rank-tracker,,nested,japanese,24,5,4,5208,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/technical-seo/seo-skills-main/monitor/backlink-analyzer,,nested,japanese,27,3,3,5765,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/technical-seo/seo-skills-main/optimize/content-refresher,,nested,japanese,23,5,5,6102,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/technical-seo/seo-skills-main/geo-audit-report/SEO Audit/seo-geo-claude-skills-main 2/cross-cutting/content-quality-auditor,,nested,japanese,23,5,5,25519,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/geo-and-local-seo/geo-audit-report/SEO Audit/seo-geo-claude-skills-main 2/cross-cutting/content-quality-auditor,,nested,japanese,23,5,5,25519,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/technical-seo/seo-skills-main/geo-audit-report/SEO Audit/seo-geo-claude-skills-main 2/cross-cutting/entity-optimizer,,nested,japanese,21,6,3,10369,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/geo-and-local-seo/geo-audit-report/SEO Audit/seo-geo-claude-skills-main 2/cross-cutting/entity-optimizer,,nested,japanese,21,6,3,10369,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/technical-seo/seo-skills-main/optimize/internal-linking-optimizer,,nested,japanese,22,3,4,7148,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/geo-and-local-seo/geo-audit-report/SEO Audit/seo-geo-claude-skills-main 2/build/meta-tags-optimizer,,nested,japanese,21,4,4,4394,nested,Non-canonical nested pack; not part of the managed catalog
+library/marketing-and-seo/cro/ai-md,marketing-and-seo:ai-md,skill,chinese,498,0,0,12115,review,Substantially bilingual; split or translate
+library/marketing-and-seo/cro/ux-copy,marketing-and-seo:ux-copy,skill,korean,0,0,20,2790,review,Korean content inside an English skill
+library/development/fullstack,,router,chinese,607,0,0,91418,router,Category or subcategory router; inherits text from indexed skills
+library/business-and-operations,,router,chinese,126,0,0,14239,router,Category or subcategory router; inherits text from indexed skills
+library/marketing-and-seo/cro,,router,chinese,104,0,0,40373,router,Category or subcategory router; inherits text from indexed skills
+library/development/backend,,router,chinese,102,0,0,36664,router,Category or subcategory router; inherits text from indexed skills
+library/marketing-and-seo/on-page-seo,,router,chinese,82,0,0,59749,router,Category or subcategory router; inherits text from indexed skills

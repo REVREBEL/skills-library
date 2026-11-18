@@ -1,0 +1,38 @@
+skill,words,files,verdict,reason
+analytics,1050,5,merge,Overlaps analytics-tracking; both cover measurement setup and auditing. Keep the deeper one.
+analytics-insights,2828,11,keep,GA4-specific with dated platform changes and real attribution detail. Distinct and current.
+analytics-tracking,868,1,merge,Thinner duplicate of analytics. Fold its readiness index into analytics.
+bigquery-analytics,233,1,rewrite,A 233-word reference card, not a skill. Expand into a real BigQuery workflow or fold into ecommerce-data-warehouse.
+business-analyst,945,1,rewrite,"Generic 'AI-powered analytics' framing with no opinionated procedure. Rewrite around a specific decision."
+cash-flow-forecasting,1575,8,keep,Concrete 13-week forecast procedure with scenario modelling. Multi-file and specific.
+cc-skill-clickhouse-io,1320,1,keep,Real ClickHouse engine and query patterns. Rename to drop the cc-skill- prefix.
+churn-risk,1169,1,keep,Purpose/Input/Process/Output structure but genuinely specific scoring and playbooks.
+cohort-analysis,1376,1,keep,Distinct retention and LTV-by-cohort method.
+computer-vision-expert,536,1,move,Misfiled: computer vision and model training, not analytics. Belongs in machine-learning.
+custom-code-management,665,1,move,Misfiled: Webflow custom-code management, not analytics. Belongs in development/frontend.
+customer-analytics,1410,8,merge,Overlaps unit-economics-tracking on RFM and segmentation. Merge into one customer-economics skill.
+data-scientist,1227,1,rewrite,"Aspirational generalist with no procedure. Either specialise or drop."
+data-storytelling,1359,3,keep,Distinct narrative and visualisation guidance. Not duplicated elsewhere.
+ecommerce-budgeting-forecasting,1576,8,keep,Rolling operating budget with variance analysis. Specific and multi-file.
+ecommerce-data-warehouse,1553,8,keep,Star-schema and dbt build for a real warehouse. Specific.
+email-list-segmentation,1135,8,merge,Overlaps lifecycle-marketing-automation. Merge into one lifecycle segmentation skill.
+financial-analytics-dashboard,1603,8,merge,Highest pairwise similarity in the set (0.32) with financial-reporting-dashboard. Merge.
+financial-reporting-dashboard,1602,8,merge,Merge target for financial-analytics-dashboard. One P&L and cash dashboard skill is enough.
+four-core-documents,2217,1,move,Misfiled: business and SBU strategy deliverables. Belongs in business-and-operations/strategy.
+hugging-face-vision-trainer,4054,12,move,Misfiled: vision model training. Belongs in machine-learning.
+influencer-tracking,1163,8,keep,UTM and discount-code attribution with a real creator workflow.
+instagram,1752,29,move,"Misfiled and non-English (Portuguese description). Social media operations; quarantine pending translation."
+lifecycle-marketing-automation,1260,8,merge,Merge target for email-list-segmentation.
+marketplace-fee-reconciliation,1552,8,keep,Amazon/eBay/Walmart/Etsy fee reconciliation with FBA overcharge checks. Specific.
+positioning,2280,1,move,Misfiled: marketing strategy, not analytics. Belongs in marketing.
+posthog-automation,1115,1,review,"Tool-coupled to Rube/Composio MCP. Usable only where that provider exists; decide whether it belongs in a provider adapter."
+pricing-strategy,2120,1,move,Misfiled: pricing methodology, not analytics. Belongs in marketing.
+product-analytics,1668,8,keep,Sell-through and dead-stock analysis with a weekly catalog report.
+profit-margin-analysis,1527,8,keep,Margin hierarchy and cost attribution. Specific.
+revenue-recognition-accounting,1783,8,keep,ASC 606 / IFRS 15 with the physical-product timing case. Specific and non-obvious.
+segment-audience,1698,1,keep,Concrete segmentation build for CRM and email platforms.
+segment-automation,1227,1,review,"Tool-coupled to Rube/Composio MCP. Same decision as posthog-automation."
+segment-cdp,2182,1,keep,Real Analytics.js and server-side tracking patterns.
+sendgrid-automation,1826,1,review,"Tool-coupled to Rube/Composio MCP. Same decision as posthog-automation."
+stp-framework,1393,1,move,Misfiled: segmentation-targeting-positioning marketing framework. Belongs in marketing.
+unit-economics-tracking,1641,8,merge,Merge with customer-analytics into one customer-economics skill.
