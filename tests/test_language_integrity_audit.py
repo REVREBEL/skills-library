@@ -44,6 +44,19 @@ except ImportError:
         BENIGN_PATH_MARKERS,
     )
 
+def read_rows(path) -> list:
+    """Read a CSV into a list of dicts."""
+    with open(path, mode="r", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+def census_population() -> int:
+    """Authoritative canonical package count from the committed census."""
+    path = REPO_ROOT / "audit" / "taxonomy-census" / "semantic-role-census.json"
+    with open(path, mode="r", encoding="utf-8") as handle:
+        return len(json.load(handle))
+
+
 class TestScannerCorrectness(unittest.TestCase):
     """Test unit-level scanner behavior, regex classifications, AST checks, and error handling."""
 
@@ -236,34 +249,56 @@ class TestRegenerationAndParity(unittest.TestCase):
     """Test full audit engine regeneration into a temporary directory and verify parity."""
 
     def test_reproducible_regeneration(self):
-        """Regenerating audit deliverables in a scratch directory must produce valid artifacts with identical counts."""
-        with tempfile.TemporaryDirectory() as td:
-            tmp_out = Path(td)
-            summary = run_skil11_audit(output_dir=tmp_out)
+        """Two independent runs must be byte-identical, and every count must agree.
 
-            # Assert all 6 files are created
-            self.assertTrue((tmp_out / "language-audit.csv").exists())
-            self.assertTrue((tmp_out / "integrity-and-exposure-findings.csv").exists())
-            self.assertTrue((tmp_out / "quarantine-candidates.csv").exists())
-            self.assertTrue((tmp_out / "language-integrity-exposure-summary.json").exists())
-            self.assertTrue((tmp_out / "commands-and-tests.md").exists())
-            self.assertTrue((tmp_out / "summary.md").exists())
+        Counts are derived rather than hardcoded. The library changes whenever
+        skills are added, merged or pruned, and a fixed denominator broke this
+        test every time it did — most recently when the non-English prune moved
+        46 packages. The invariants that matter are reproducibility and internal
+        consistency, not a specific population size.
+        """
+        population = census_population()
 
-            # Verify row counts match authoritative data
-            with open(tmp_out / "language-audit.csv", mode="r", encoding="utf-8") as f:
-                lang_rows = list(csv.DictReader(f))
-            self.assertEqual(len(lang_rows), 2133)
+        with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
+            first_dir = Path(first)
+            second_dir = Path(second)
 
-            with open(tmp_out / "integrity-and-exposure-findings.csv", mode="r", encoding="utf-8") as f:
-                res_rows = list(csv.DictReader(f))
-            self.assertEqual(len(res_rows), 8172)
+            run_skil11_audit(output_dir=first_dir)
+            run_skil11_audit(output_dir=second_dir)
 
-            with open(tmp_out / "quarantine-candidates.csv", mode="r", encoding="utf-8") as f:
-                q_rows = list(csv.DictReader(f))
-            self.assertEqual(len(q_rows), 48)
+            for name in (
+                "language-audit.csv",
+                "integrity-and-exposure-findings.csv",
+                "quarantine-candidates.csv",
+            ):
+                self.assertTrue((first_dir / name).exists(), f"{name} was not generated")
+                self.assertEqual(
+                    (first_dir / name).read_bytes(),
+                    (second_dir / name).read_bytes(),
+                    f"{name} is not reproducible across two runs",
+                )
 
-            self.assertEqual(summary["audit_metadata"]["population_audited"], 2133)
-            self.assertEqual(summary["audit_metadata"]["total_resources_audited"], 8172)
+            for name in (
+                "language-integrity-exposure-summary.json",
+                "commands-and-tests.md",
+                "summary.md",
+            ):
+                self.assertTrue((first_dir / name).exists(), f"{name} was not generated")
+
+            lang_rows = read_rows(first_dir / "language-audit.csv")
+            res_rows = read_rows(first_dir / "integrity-and-exposure-findings.csv")
+            quarantine_rows = read_rows(first_dir / "quarantine-candidates.csv")
+            summary = json.loads(
+                (first_dir / "language-integrity-exposure-summary.json").read_text(encoding="utf-8")
+            )
+
+            metadata = summary["audit_metadata"]
+            self.assertEqual(len(lang_rows), population)
+            self.assertEqual(metadata["population_audited"], population)
+            self.assertEqual(len(res_rows), metadata["total_resources_audited"])
+            self.assertEqual(len(quarantine_rows), summary["total_quarantine_candidates"])
+            self.assertGreater(len(res_rows), 0, "the library should have scannable resources")
+            self.assertGreater(len(quarantine_rows), 0, "some candidates are always expected")
 
 class TestFailClosedGate(unittest.TestCase):
     """Test fault-injection and fail-closed gate behavior."""
