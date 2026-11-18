@@ -6,6 +6,7 @@ ZI-08 requires these to be tested as behaviour, not inferred from module
 presence.
 """
 
+import json
 import os
 import sys
 import tempfile
@@ -29,6 +30,20 @@ from skill_library.execution import (
 from skill_library.identity import mint_canonical_id
 
 LIBRARY = str(REPO_ROOT / "library")
+
+
+def census_population() -> int:
+    """Authoritative canonical package count.
+
+    Derived rather than hardcoded: the library changes whenever skills are
+    added, merged or pruned, and a fixed denominator broke these tests every
+    time it did.
+    """
+    path = REPO_ROOT / "audit" / "taxonomy-census" / "semantic-role-census.json"
+    with open(path, encoding="utf-8") as handle:
+        return len(json.load(handle))
+
+
 
 
 def write_package(root: str, relative: str, body: str = "---\nname: demo\n---\n") -> str:
@@ -220,10 +235,10 @@ class TestRealLibrary(unittest.TestCase):
         cls.summary = summarise_profiles(cls.profiles)
 
     def test_population(self):
-        self.assertEqual(self.summary["total"], 2133)
+        self.assertEqual(self.summary["total"], census_population())
 
     def test_every_package_has_a_risk(self):
-        self.assertEqual(sum(self.summary["by_risk"].values()), 2133)
+        self.assertEqual(sum(self.summary["by_risk"].values()), census_population())
 
     def test_no_profile_is_unknown(self):
         self.assertNotIn("unknown", self.summary["by_risk"])
