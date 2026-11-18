@@ -1,0 +1,17 @@
+class,issue_id,item,linear_status,claimed,observed_at_head,observed_at_origin_main,severity,finding
+baseline,A,-,Pinned baseline SHA,195eda775d7a8dcad1837a1990bcba8259da3ea0,da83ca841b7e7673a4699ab8157232d6fbbbc279,f1ab243937afe64410c0bd2358b68ad98e59265e,high,Worktree is detached at da83ca84 and 7 commits behind origin/main; the pinned SHA is 61 commits behind origin/main
+baseline,A,-,SKIL-16 population total,5072,5070,5070,medium,Claimed total exceeds the measured count by 2 against the same SHA it pins
+baseline,A,-,SKIL-16 library population,2657,2656,2656,low,Off by 1 against pinned SHA
+baseline,A,-,SKIL-16 task-folder/agents/skills population,2101,2100,2100,low,Off by 1 against pinned SHA
+baseline,A,-,Manifest declared total,2103,2102,2102,medium,audit/runtime-manifest.json declares total_managed_skills=2103 but contains 2102 skill entries
+issue,SKIL-16,ZI-01 Pin canonical source and zero-index inventory,Done,audit/zero-index/SKIL-16,PRESENT,PRESENT,ok,Artifacts present; counts disagree (see baseline rows)
+issue,SKIL-15,ZI-02 Reconcile 52 archived scripts against current code,Done,audit/zero-index/SKIL-15,PRESENT,PRESENT,ok,Artifacts present
+issue,SKIL-13,ZI-04 Validate existing code and CI from pinned SHA,Done,audit/zero-index/SKIL-13,PRESENT,PRESENT,ok,Artifacts present
+issue,SKIL-14,ZI-03 Construct independent architecture and contract ledger,In Review,audit/zero-index/SKIL-14,MISSING,MISSING,high,Entire diff reverted at da83ca84; no ledger artifacts and no branch content survive. Status is false.
+issue,SKIL-12,ZI-05 Controlled skill discovery and context benchmark,In Review,audit/zero-index/ZI-05 (implied),MISSING,MISSING,high,"No artifact directory, no branch, and no repository trace. Status is unsupported."
+issue,SKIL-11,ZI-06 Complete language integrity and exposure audit,Done,audit/zero-index/SKIL-11,MISSING,PRESENT,medium,Work exists but only on origin/main; absent at the detached HEAD
+issue,SKIL-57,Add Linear issue workflow and GitHub PR submission scripts,Done,.agents/linear-issues-workflow,PRESENT,PRESENT,ok,Artifacts present
+validation,-,Living library validator,-,PASSED,FAILED,PASSED,high,validate exits 1 at HEAD: Target 'universal-global' HEAD commit and tree do not match published runtime
+validation,-,Checked-in audit/validation-report.md,-,PASSED (Checked: 0),FAILED (Checked: 1),FAILED,medium,Checked-in report is stale and asserts success that the current tree does not produce
+tests,-,Test suite,-,253 tests / 2 failures / 3 setup errors (SKIL-13),253 tests / 1 failure,253 tests / 1 failure,medium,test_24 external-rename failure persists; test_21 live-dispatch hazard was neutralized by stubbing gh
+structure,-,Canonical library churn,-,gh and gh-skill present,REVERTED,REVERTED,medium,SKIL-14 added library/github-operations/gh and gh-skill then the revert removed them; content work rode along with a contract-ledger work order
