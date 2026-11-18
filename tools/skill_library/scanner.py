@@ -22,26 +22,8 @@ from .config import (
     TRIGGER_CONTRACT_PATTERN,
     WORKSTATION_PATH_PATTERNS,
 )
+from .frontmatter import parse_frontmatter
 from .manifest import RuntimeManifest
-
-
-def parse_frontmatter(content: str) -> Optional[dict]:
-    """Parse YAML frontmatter enclosed in ---."""
-    if not content.startswith("---"):
-        return None
-    parts = content.split("---", 2)
-    if len(parts) < 3:
-        return None
-    fm_text = parts[1].strip()
-    result = {}
-    for line in fm_text.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if ":" in line:
-            k, v = line.split(":", 1)
-            result[k.strip()] = v.strip().strip("\"'")
-    return result
 
 
 @dataclass

@@ -30,6 +30,7 @@ from .config import (
     get_all_routers,
     load_runtime_targets,
 )
+from .frontmatter import parse_frontmatter, validate_frontmatter
 from .manifest import RuntimeManifest
 from .publisher import get_commit_tree_sha, get_ref_commit_sha
 
@@ -44,6 +45,7 @@ class SkillValidationReport:
     markdown_links_checked: int = 0
     scripts_checked: int = 0
     resources_checked: int = 0
+    frontmatter_warnings: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -66,6 +68,7 @@ class ValidationResult:
     secret_leaks: List[str] = field(default_factory=list)
     reconciliation_discrepancies: List[str] = field(default_factory=list)
     evidence: List[str] = field(default_factory=list)
+    frontmatter_warnings: Dict[str, int] = field(default_factory=dict)
 
     @property
     def set_reconciliation_passed(self) -> bool:
@@ -85,6 +88,15 @@ class ValidationResult:
             f"Workstation Path Leaks: {len(self.workstation_path_leaks)}",
             f"Potential Secret Leaks: {len(self.secret_leaks)}",
         ]
+        if self.frontmatter_warnings:
+            detail = ", ".join(
+                f"{name}: {count}" for name, count in sorted(self.frontmatter_warnings.items())
+            )
+            lines.append(
+                f"Frontmatter Schema Warnings: {sum(self.frontmatter_warnings.values())} ({detail})"
+            )
+        else:
+            lines.append("Frontmatter Schema Warnings: 0")
         if not self.is_valid:
             lines.append("\nErrors / Regressions Found:")
             for r in self.reconciliation_discrepancies[:10]:
@@ -104,22 +116,7 @@ class ValidationResult:
         return "\n".join(lines)
 
 
-def parse_frontmatter(content: str) -> Optional[dict]:
-    if not content.startswith("---"):
-        return None
-    end = content.find("\n---", 3)
-    if end == -1:
-        return None
-    fm_text = content[3:end].strip()
-    result = {}
-    for line in fm_text.splitlines():
-        if ":" in line and not line.strip().startswith("#"):
-            k, v = line.split(":", 1)
-            result[k.strip()] = v.strip().strip("\"'")
-    return result
-
-
-def validate_single_skill(skill_dir: str) -> SkillValidationReport:
+def validate_single_skill(skill_dir: str, strict_frontmatter: bool = False) -> SkillValidationReport:
     """Validates an individual skill directory."""
     name = os.path.basename(skill_dir.rstrip(os.sep))
     report = SkillValidationReport(skill_path=skill_dir, name=name)
@@ -138,21 +135,16 @@ def validate_single_skill(skill_dir: str) -> SkillValidationReport:
         report.errors.append(f"Unreadable SKILL.md: {e}")
         return report
 
-    # 1. Frontmatter check
+    # 1. Frontmatter schema check
     fm = parse_frontmatter(content)
-    if not fm:
+    fm_errors, fm_warnings = validate_frontmatter(fm, strict=strict_frontmatter)
+    if fm_errors:
         report.is_valid = False
-        report.errors.append("Invalid or missing YAML frontmatter in SKILL.md")
-    else:
-        if not fm.get("name"):
-            report.is_valid = False
-            report.errors.append("Frontmatter missing required 'name'")
-        desc = fm.get("description", "")
-        if not desc:
-            report.is_valid = False
-            report.errors.append("Frontmatter missing required 'description'")
-        elif not TRIGGER_CONTRACT_PATTERN.search(desc):
-            report.warnings.append("Description lacks strong trigger contract clause")
+        report.errors.extend(fm_errors)
+    report.warnings.extend(fm_warnings)
+    report.frontmatter_warnings.extend(fm_warnings)
+    if fm and fm.get("description") and not TRIGGER_CONTRACT_PATTERN.search(fm["description"]):
+        report.warnings.append("Description lacks strong trigger contract clause")
 
     # 2. Markdown link verification
     link_pattern = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
@@ -242,6 +234,7 @@ def validate_library_integrity(
     config_path: Optional[str] = None,
     verify_publication: bool = True,
     verify_targets: bool = True,
+    strict_frontmatter: bool = False,
 ) -> ValidationResult:
     """
     Validates canonical library, routers, manifest, runtime publication branch,
@@ -500,7 +493,7 @@ def validate_library_integrity(
     # Step 8: Validate individual skill structural health
     for s_rel in sorted(list(router_indexed_set)):
         s_abs = os.path.join(repo_root, s_rel)
-        rep = validate_single_skill(s_abs)
+        rep = validate_single_skill(s_abs, strict_frontmatter=strict_frontmatter)
         if not rep.is_valid:
             result.is_valid = False
             result.skill_errors[s_rel] = rep.errors
@@ -509,6 +502,11 @@ def validate_library_integrity(
                 result.workstation_path_leaks.append(f"{s_rel}: {err}")
             elif "secret leak" in err:
                 result.secret_leaks.append(f"{s_rel}: {err}")
+        for warning in rep.frontmatter_warnings:
+            field_name = warning.split("'")[1] if "'" in warning else "unknown"
+            result.frontmatter_warnings[field_name] = (
+                result.frontmatter_warnings.get(field_name, 0) + 1
+            )
 
     return result
 
