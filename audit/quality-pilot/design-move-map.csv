@@ -3,7 +3,6 @@ jobs-to-be-done,library/design-and-experience/motion-and-graphics/jobs-to-be-don
 product-design,library/design-and-experience/motion-and-graphics/product-design,library/business-and-operations/product-design,business-and-operations,,product strategy
 product-inventor,library/design-and-experience/design-systems/product-inventor,library/business-and-operations/product-inventor,business-and-operations,,product strategy
 strategize,library/design-and-experience/ui-ux/strategize,library/business-and-operations/strategize,business-and-operations,,strategy facilitation
-travel-planner,library/design-and-experience/ui-ux/travel-planner,library/business-and-operations/travel-planner,business-and-operations,,itinerary planning
 value-proposition-canvas,library/design-and-experience/motion-and-graphics/value-proposition-canvas,library/business-and-operations/value-proposition-canvas,business-and-operations,,Osterwalder VPC
 copywriting,library/design-and-experience/ui-ux/copywriting,library/content-and-documentation/copywriting/copywriting,content-and-documentation,copywriting,copywriting
 speech-adaptation,library/design-and-experience/ui-ux/speech-adaptation,library/content-and-documentation/copywriting/speech-adaptation,content-and-documentation,copywriting,spoken-word adaptation of prose
@@ -46,6 +45,7 @@ antigravity-design-expert,library/design-and-experience/motion-and-graphics/anti
 ce-frontend-design,library/design-and-experience/motion-and-graphics/ce-frontend-design,library/development/frontend/ce-frontend-design,development,frontend,frontend UI engineering
 front-end-developer,library/design-and-experience/ui-ux/front-end-developer,library/development/frontend/front-end-developer,development,frontend,frontend engineering
 frontend-design,library/design-and-experience/ui-ux/frontend-design,library/development/frontend/frontend-design,development,frontend,frontend UI; joins the three-way duplicate
+frontend-design2,library/design-and-experience/design-systems/frontend-design2,library/development/frontend/frontend-design2,development,frontend,joins the three-way frontend-design duplicate
 frontend-dev,library/design-and-experience/motion-and-graphics/frontend-dev,library/development/frontend/frontend-dev,development,frontend,frontend engineering
 frontend-enhancer,library/design-and-experience/taste-and-critique/frontend-enhancer,library/development/frontend/frontend-enhancer,development,frontend,frontend enhancement
 frontend-skill,library/design-and-experience/ui-ux/frontend-skill,library/development/frontend/frontend-skill,development,frontend,frontend engineering
@@ -56,8 +56,6 @@ senior-frontend,library/design-and-experience/design-systems/senior-frontend,lib
 domain-driven-design,library/design-and-experience/ui-ux/domain-driven-design,library/development/software-architecture/domain-driven-design,development,software-architecture,domain-modelling architecture
 system-design,library/design-and-experience/design-systems/system-design,library/development/software-architecture/system-design,development,software-architecture,system architecture
 agent-to-agent,library/design-and-experience/ui-ux/agent-to-agent,library/meta-and-agent-skills/agent-to-agent,meta-and-agent-skills,,agent-to-agent protocol
-canvas-design,library/design-and-experience/taste-and-critique/canvas-design,library/meta-and-agent-skills/canvas-design,meta-and-agent-skills,,design-philosophy meta guidance
-design-philosophy,library/design-and-experience/taste-and-critique/design-philosophy,library/meta-and-agent-skills/design-philosophy,meta-and-agent-skills,,design-philosophy meta guidance
 evaluate,library/design-and-experience/ui-ux/evaluate,library/meta-and-agent-skills/evaluate,meta-and-agent-skills,,agent orchestration
 fortify,library/design-and-experience/ui-ux/fortify,library/meta-and-agent-skills/fortify,meta-and-agent-skills,,agent orchestration
 include,library/design-and-experience/motion-and-graphics/include,library/meta-and-agent-skills/include,meta-and-agent-skills,,agent orchestration

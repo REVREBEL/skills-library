@@ -1,7 +1,7 @@
-# Design Move Plan — 70 misfiled skills
+# Design Move Plan — 68 misfiled skills
 
 **Status:** proposal. Nothing has moved.
-**Companion file:** `design-move-map.csv` — 70 rows, one per skill.
+**Companion file:** `design-move-map.csv` — 68 rows, one per skill.
 
 ---
 
@@ -11,15 +11,15 @@
 |---|---:|
 | content-and-documentation | 18 |
 | design-and-experience *(internal)* | 15 |
-| development | 14 |
-| meta-and-agent-skills | 11 |
-| business-and-operations | 6 |
+| development | 15 |
+| meta-and-agent-skills | 9 |
+| business-and-operations | 5 |
 | data-and-ai | 3 |
 | quality-and-security | 2 |
 | workflow-and-automation | 1 |
-| **total** | **70** |
+| **total** | **68** |
 
-**55 skills leave design entirely. 15 move within it** — those are misfiled inside `design-and-experience`, not outside it.
+**53 skills leave design entirely. 15 move within it** — misfiled inside `design-and-experience`, not outside.
 
 ## Where they go
 
@@ -29,20 +29,22 @@
 `copywriting`, `speech-adaptation`, `voice-analysis`, `storytelling` → `copywriting/`
 `json-canvas`, `mermaid-expert`, `summarization`, `doc-coauthoring`, `blind-spot-detective`, `non-fiction-revision`, `content-strategy` → `technical-writing/`
 
-### development (14)
+### development (15)
 
-`frontend-design`, `front-end-developer`, `frontend-dev`, `frontend-skill`, `frontend-enhancer`, `frontend-ui-dark-ts`, `react-nextjs-development`, `senior-frontend`, `antigravity-design-expert`, `ce-frontend-design`, `lovable-cleanup`, `algorithmic-art` → `frontend/`
+`frontend-design`, `frontend-design2`, `front-end-developer`, `frontend-dev`, `frontend-skill`, `frontend-enhancer`, `frontend-ui-dark-ts`, `react-nextjs-development`, `senior-frontend`, `antigravity-design-expert`, `ce-frontend-design`, `lovable-cleanup`, `algorithmic-art` → `frontend/`
 `system-design`, `domain-driven-design` → `software-architecture/`
 
-### meta-and-agent-skills (11)
+`frontend-design`, `frontend-design2`, and `front-end-developer` are the three-way duplicate. They land together so the merge can happen in one place.
 
-`agent-to-agent`, `evaluate`, `fortify`, `investigate`, `organize`, `intent`, `include`, `output-skill`, `writing-skills`, `canvas-design`, `design-philosophy`
+### meta-and-agent-skills (9)
 
-These are agent orchestration and meta guidance. They were sitting in design because they mention design.
+`agent-to-agent`, `evaluate`, `fortify`, `investigate`, `organize`, `intent`, `include`, `output-skill`, `writing-skills`
 
-### business-and-operations (6)
+Agent orchestration and skill-authoring guidance that was sitting in design because it mentions design.
 
-`product-inventor`, `product-design`, `jobs-to-be-done`, `value-proposition-canvas`, `strategize`, `travel-planner`
+### business-and-operations (5)
+
+`product-inventor`, `product-design`, `jobs-to-be-done`, `value-proposition-canvas`, `strategize`
 
 ### data-and-ai (3)
 
@@ -63,15 +65,27 @@ These are agent orchestration and meta guidance. They were sitting in design bec
 `minimalist-ui`, `soft-skill` → `taste-and-critique/`
 `ui-motion`, `email-design-eng`, `review-animations` → `motion-and-graphics/`
 
-## Calls worth confirming
+## Calls settled
 
-**`frontend-design` and `front-end-developer` move, but `frontend-design2` does not.** It is marked *merge* in the design-systems review, not *move*, so it would be left behind while its two duplicates move to `development/frontend/`. I'd add it to this batch so all three land together and can be merged in one place.
+**Stays in design (3):**
 
-**`json-canvas` → technical-writing.** It is an Obsidian Canvas tool, not documentation. `workflow-and-automation` or a knowledge-management home might fit better.
+- `travel-planner` — it is about designing travel-planning applications, so it is design work, not itinerary planning.
+- `canvas-design` and `design-philosophy` — design philosophy, kept in `taste-and-critique/`.
 
-**`travel-planner` → business-and-operations.** Weak fit. It is itinerary planning with no obvious home in the current taxonomy.
+**Added to the batch (1):**
 
-**`canvas-design` and `design-philosophy` → meta-and-agent-skills.** They are meta guidance about how to approach design, not design work. If you would rather keep design philosophy inside design, these two should stay.
+- `frontend-design2` — joins `frontend-design` and `front-end-developer` in `development/frontend/` so the three-way duplicate can be merged in one place.
+
+**Accepted as-is (1):**
+
+- `json-canvas` → `technical-writing/` is a compromise; it is an Obsidian Canvas format rather than documentation, but nothing better exists.
+
+## Validation of the map
+
+- Every destination parent exists on disk
+- Every destination path is unique
+- Every source still exists
+- 68 rows, matching the 68 approved moves
 
 ## What this does not change
 
@@ -79,7 +93,7 @@ No skill content is rewritten. No merges happen. Every move is a `git mv` plus a
 
 ## After approval
 
-1. Move the 70 (71 with `frontend-design2`).
+1. Move the 68.
 5. Update the 13 source routers and the destination routers.
 5. Update `audit/runtime-manifest.json` and regenerate the census.
 5. Re-run `validate` — target is 0 broken links, 0 orphans, physical == router == manifest.
