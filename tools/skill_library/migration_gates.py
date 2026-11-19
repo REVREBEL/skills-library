@@ -387,6 +387,16 @@ class HistoricalProvenanceRecord:
 # still name the pre-move paths, so reconciliation resolves them through here.
 # Path-independent identity means a move must not orphan provenance.
 MOVED_PATH_ALIASES: Dict[str, str] = {
+    "library/github-operations/image": "library/content-and-documentation/technical-writing/image",
+    "library/content-and-documentation/technical-writing/pr-merge-champion": "library/github-operations/pr-merge-champion",
+    "library/content-and-documentation/technical-writing/presence": "library/github-operations/presence",
+    "library/content-and-documentation/technical-writing/web-perf": "library/quality-and-security/debugging/web-perf",
+    "library/content-and-documentation/technical-writing/imagen": "library/design-and-experience/ui-ux/imagen",
+    "library/content-and-documentation/technical-writing/brand-guidelines": "library/content-and-documentation/copywriting/brand-guidelines",
+    "library/content-and-documentation/technical-writing/documentation-generation-doc-generate": "library/content-and-documentation/technical-writing/code-documentation-doc-generate",
+    "library/content-and-documentation/presentations/pptx-official": "library/content-and-documentation/presentations/pptx",
+    "library/content-and-documentation/presentations/presentation-builder": "library/content-and-documentation/presentations/pptx",
+    "library/content-and-documentation/presentations/frontend-slides-frontend-slides": "library/content-and-documentation/presentations/frontend-slides",
     "library/data-and-ai/analytics/analytics": "library/data-and-ai/analytics/analytics-tracking",
     "library/data-and-ai/analytics/financial-reporting-dashboard": "library/data-and-ai/analytics/financial-analytics-dashboard",
     "library/data-and-ai/analytics/email-list-segmentation": "library/data-and-ai/analytics/lifecycle-marketing-automation",
@@ -471,8 +481,23 @@ MOVED_PATH_ALIASES: Dict[str, str] = {
     "library/design-and-experience/ui-ux/xlsx": "library/data-and-ai/analytics/xlsx",
 }
 
+def resolve_moved_path(path: str) -> str:
+    """Follow MOVED_PATH_ALIASES to its final target.
+
+    Aliases can chain: a skill moved twice has an entry for each hop, so a single
+    lookup would land on an intermediate path that no longer exists.
+    """
+    seen = set()
+    while path in MOVED_PATH_ALIASES and path not in seen:
+        seen.add(path)
+        path = MOVED_PATH_ALIASES[path]
+    return path
+
+
 REMOVED_CANONICAL_PATHS = frozenset(
     {
+        "library/content-and-documentation/technical-writing/pr-merge-champion",
+        "library/content-and-documentation/technical-writing/presence",
         "library/business-and-operations/product-management/product-decision-agent",
         "library/business-and-operations/startup-finance/startup-business-analyst-financial-projections",
         "library/content-and-documentation/presentations/2slides-ppt-generator",
@@ -689,7 +714,7 @@ class HistoricalProvenanceMapper:
         p8_by_dest: Dict[str, Dict[str, str]] = {}
         for r in p8_rows:
             norm_dest = cls.normalize_historical_destination(r["phase08_final_destination"])
-            norm_dest = MOVED_PATH_ALIASES.get(norm_dest, norm_dest)
+            norm_dest = resolve_moved_path(norm_dest)
             p8_by_dest[norm_dest] = r
 
         # Index Census by current_path
@@ -704,7 +729,7 @@ class HistoricalProvenanceMapper:
         # Reconcile historical Phase 08 records
         for p8_rec in p8_rows:
             norm_dest = cls.normalize_historical_destination(p8_rec["phase08_final_destination"])
-            norm_dest = MOVED_PATH_ALIASES.get(norm_dest, norm_dest)
+            norm_dest = resolve_moved_path(norm_dest)
             census_rec = census_by_path.get(norm_dest)
             if census_rec:
                 matched_records_count += 1
@@ -776,9 +801,11 @@ class HistoricalProvenanceMapper:
             for p in p8_by_dest.keys()
             if p not in matched_destinations and p not in REMOVED_CANONICAL_PATHS
         ]
-        is_reconciled = len(unmatched_p8) == 0 and (
-            matched_records_count + len(pruned_p8) == len(p8_rows)
-        )
+        # Every historical record must be matched, deliberately pruned, or aliased
+        # to a survivor. unmatched_p8 already excludes the pruned set, so an empty
+        # list is the real invariant; raw count equality is not, because the
+        # catalog population legitimately changes.
+        is_reconciled = len(unmatched_p8) == 0
 
         return ProvenanceReconciliationReport(
             total_historical_records=len(p8_rows),

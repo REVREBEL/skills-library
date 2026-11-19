@@ -572,7 +572,7 @@ SAMPLE_100_PATHS = [
     "library/development/backend/social-proof-architect",
     "library/business-and-operations/legal-and-governance/aria",
     "library/development/fullstack/gmail-automation",
-    "library/content-and-documentation/technical-writing/brand-guidelines",
+    "library/content-and-documentation/copywriting/copywriting",
     "library/development/fullstack/delegating-to-agents",
     "library/design-and-experience/ui-ux/ui-ux-designer",
     "library/business-and-operations/legal-and-governance/ai-native-cli",

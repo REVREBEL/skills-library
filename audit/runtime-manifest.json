@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_at": "2026-10-07T15:51:34Z",
-  "total_managed_skills": 2026,
+  "total_managed_skills": 2020,
   "skills": {
     "007": {
       "runtime_name": "007",
@@ -6383,16 +6383,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "documentation-generation-doc-generate": {
-      "runtime_name": "documentation-generation-doc-generate",
-      "canonical_name": "documentation-generation-doc-generate",
-      "canonical_path": "library/content-and-documentation/technical-writing/documentation-generation-doc-generate",
-      "functional_parent": "library/content-and-documentation/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "documentation-templates": {
       "runtime_name": "documentation-templates",
       "canonical_name": "documentation-templates",
@@ -8113,16 +8103,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "frontend-slides-frontend-slides": {
-      "runtime_name": "frontend-slides-frontend-slides",
-      "canonical_name": "frontend-slides-frontend-slides",
-      "canonical_path": "library/content-and-documentation/presentations/frontend-slides-frontend-slides",
-      "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "frontend-ui-dark-ts": {
       "runtime_name": "frontend-ui-dark-ts",
       "canonical_name": "frontend-ui-dark-ts",
@@ -9278,16 +9258,6 @@
       "canonical_name": "illustration-style",
       "canonical_path": "library/design-and-experience/ui-ux/illustration-style",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "image": {
-      "runtime_name": "image",
-      "canonical_name": "image",
-      "canonical_path": "library/content-and-documentation/technical-writing/image",
-      "functional_parent": "library/content-and-documentation/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -13653,31 +13623,11 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "pptx-official": {
-      "runtime_name": "pptx-official",
-      "canonical_name": "pptx-official",
-      "canonical_path": "library/content-and-documentation/presentations/pptx-official",
-      "functional_parent": "library/content-and-documentation/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "pql-framework": {
       "runtime_name": "pql-framework",
       "canonical_name": "pql-framework",
       "canonical_path": "library/marketing-and-seo/on-page-seo/pql-framework",
       "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "pr-merge-champion": {
-      "runtime_name": "pr-merge-champion",
-      "canonical_name": "pr-merge-champion",
-      "canonical_path": "library/content-and-documentation/technical-writing/pr-merge-champion",
-      "functional_parent": "library/content-and-documentation/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -13787,26 +13737,6 @@
       "runtime_name": "premium-3d-website",
       "canonical_name": "premium-3d-website",
       "canonical_path": "library/design-and-experience/motion-and-graphics/premium-3d-website",
-      "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "presence": {
-      "runtime_name": "presence",
-      "canonical_name": "presence",
-      "canonical_path": "library/content-and-documentation/technical-writing/presence",
-      "functional_parent": "library/content-and-documentation/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "presentation-builder": {
-      "runtime_name": "presentation-builder",
-      "canonical_name": "presentation-builder",
-      "canonical_path": "library/content-and-documentation/presentations/presentation-builder",
       "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -19523,16 +19453,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "web-perf": {
-      "runtime_name": "web-perf",
-      "canonical_name": "web-perf",
-      "canonical_path": "library/content-and-documentation/technical-writing/web-perf",
-      "functional_parent": "library/content-and-documentation/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "web-performance-optimization": {
       "runtime_name": "web-performance-optimization",
       "canonical_name": "web-performance-optimization",
@@ -20241,10 +20161,30 @@
       "source": "canonical_rebuild",
       "managed": true
     },
+    "image": {
+      "runtime_name": "image",
+      "canonical_name": "image",
+      "canonical_path": "library/content-and-documentation/technical-writing/image",
+      "functional_parent": "library/content-and-documentation/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-10-07T09:16:13Z",
+      "last_validated": "2026-10-07T09:16:13Z"
+    },
+    "web-perf": {
+      "runtime_name": "web-perf",
+      "canonical_name": "web-perf",
+      "canonical_path": "library/quality-and-security/debugging/web-perf",
+      "functional_parent": "library/content-and-documentation/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-10-07T09:16:13Z",
+      "last_validated": "2026-10-07T09:16:13Z"
+    },
     "content-and-documentation-brand-guidelines": {
       "runtime_name": "content-and-documentation-brand-guidelines",
       "canonical_name": "brand-guidelines",
-      "canonical_path": "library/content-and-documentation/technical-writing/brand-guidelines",
+      "canonical_path": "library/content-and-documentation/copywriting/brand-guidelines",
       "functional_parent": "library/content-and-documentation/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -20254,7 +20194,7 @@
     "content-and-documentation-imagen": {
       "runtime_name": "content-and-documentation-imagen",
       "canonical_name": "imagen",
-      "canonical_path": "library/content-and-documentation/technical-writing/imagen",
+      "canonical_path": "library/design-and-experience/ui-ux/imagen",
       "functional_parent": "library/content-and-documentation/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,

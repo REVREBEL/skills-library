@@ -27,8 +27,8 @@ To ensure complete transparency and scientific rigor, this audit strictly distin
 
 | Heuristic Census Role | Sampled Count | Second-Pass Agreed | Raw Agreement % | Primary Boundary Dynamics |
 | :--- | :---: | :---: | :---: | :--- |
-| `independent_capability` | 52 | 48 | 92.3% | High agreement. Discrepancies represent complex capabilities with internal phase headings. |
-| `workflow` | 26 | 20 | 76.9% | Substantial agreement. Boundary with capabilities that define sequential steps without full multi-phase lifecycle. |
+| `independent_capability` | 51 | 47 | 92.2% | High agreement. Discrepancies represent complex capabilities with internal phase headings. |
+| `workflow` | 27 | 21 | 77.8% | Substantial agreement. Boundary with capabilities that define sequential steps without full multi-phase lifecycle. |
 | `alias_candidate` | 3 | 3 | 100.0% | Complete agreement. Deterministic duplicate pairs and explicit alias declarations. |
 | `overlay` | 5 | 0 | 0.0% | Systemic boundary divergence. Heuristic assigned platform overlays based on family membership; second pass distinguishes independent domain tools. |
 | `adapter` | 4 | 0 | 0.0% | Systemic boundary divergence. Heuristic assigned adapter based on provider keywords (MCP/CLI); manual inspection reveals full capabilities calling MCP tools. |
@@ -252,7 +252,7 @@ This ledger documents all 100 packages evaluated in the multi-role divergence au
 | 40 | `social-proof-architect` | `library/development/backend/social-proof-architect` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 41 | `aria` | `library/business-and-operations/legal-and-governance/aria` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 42 | `gmail-automation` | `library/development/fullstack/gmail-automation` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
-| 43 | `content-and-documentation-brand-guidelines` | `library/content-and-documentation/technical-writing/brand-guidelines` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
+| 43 | `content-and-documentation-copywriting` | `library/content-and-documentation/copywriting/copywriting` | `workflow` | `workflow` | `workflow` | **CLASSIFIER_CONSENSUS** | Multi-phase sequential outcome orchestration pipeline |
 | 44 | `delegating-to-agents` | `library/development/fullstack/delegating-to-agents` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 45 | `ui-ux-designer` | `library/design-and-experience/ui-ux/ui-ux-designer` | `independent_capability` | `independent_capability` | `independent_capability` | **CLASSIFIER_CONSENSUS** | Discrete, focused single-task technical capability |
 | 46 | `ai-native-cli` | `library/business-and-operations/legal-and-governance/ai-native-cli` | `workflow` | `workflow` | `workflow` | **CLASSIFIER_CONSENSUS** | Multi-phase sequential outcome orchestration pipeline |
