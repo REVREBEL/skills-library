@@ -1440,26 +1440,6 @@
     "token_estimate": 2077
   },
   {
-    "canonical_id": "analytics",
-    "name": "analytics",
-    "current_path": "library/data-and-ai/analytics/analytics",
-    "current_category": "data-and-ai",
-    "current_subcategory": "analytics",
-    "semantic_role": "independent_capability",
-    "confidence": "high",
-    "classification_method": "targeted_semantic_deep_read",
-    "content_inspected": true,
-    "evidence_rationale": "Singular, self-contained domain capability with discrete task instructions.",
-    "candidate_family": "None",
-    "family_tier": "None",
-    "target_domain": "data-and-ai/analytics",
-    "execution_provider": "agent_native",
-    "dependencies_or_extends": "None",
-    "manual_review_reason": "None",
-    "notes": "Singular domain capability",
-    "token_estimate": 1631
-  },
-  {
     "canonical_id": "analytics-insights",
     "name": "analytics-insights",
     "current_path": "library/data-and-ai/analytics/analytics-insights",
@@ -1537,7 +1517,7 @@
     "dependencies_or_extends": "None",
     "manual_review_reason": "None",
     "notes": "Singular domain capability",
-    "token_estimate": 1497
+    "token_estimate": 3108
   },
   {
     "canonical_id": "analyze-project",
@@ -5900,26 +5880,6 @@
     "token_estimate": 1366
   },
   {
-    "canonical_id": "click-test-plan",
-    "name": "click-test-plan",
-    "current_path": "library/design-and-experience/ui-ux/click-test-plan",
-    "current_category": "design-and-experience",
-    "current_subcategory": "ui-ux",
-    "semantic_role": "independent_capability",
-    "confidence": "high",
-    "classification_method": "targeted_semantic_deep_read",
-    "content_inspected": true,
-    "evidence_rationale": "Singular, self-contained domain capability with discrete task instructions.",
-    "candidate_family": "None",
-    "family_tier": "None",
-    "target_domain": "design-and-experience/ui-ux",
-    "execution_provider": "cli",
-    "dependencies_or_extends": "None",
-    "manual_review_reason": "None",
-    "notes": "Singular domain capability",
-    "token_estimate": 338
-  },
-  {
     "canonical_id": "client-onboarding",
     "name": "client-onboarding",
     "current_path": "library/development/fullstack/client-onboarding",
@@ -9438,26 +9398,6 @@
     "manual_review_reason": "None",
     "notes": "Singular domain capability",
     "token_estimate": 839
-  },
-  {
-    "canonical_id": "customer-analytics",
-    "name": "customer-analytics",
-    "current_path": "library/data-and-ai/analytics/customer-analytics",
-    "current_category": "data-and-ai",
-    "current_subcategory": "analytics",
-    "semantic_role": "workflow",
-    "confidence": "high",
-    "classification_method": "targeted_semantic_deep_read",
-    "content_inspected": true,
-    "evidence_rationale": "Multi-step outcome pipeline composing sequential stages (4 distinct step/phase markers).",
-    "candidate_family": "None",
-    "family_tier": "None",
-    "target_domain": "data-and-ai/analytics",
-    "execution_provider": "agent_native",
-    "dependencies_or_extends": "None",
-    "manual_review_reason": "None",
-    "notes": "Singular domain capability",
-    "token_estimate": 2030
   },
   {
     "canonical_id": "customer-feedback-taxonomy",
@@ -13540,26 +13480,6 @@
     "token_estimate": 5211
   },
   {
-    "canonical_id": "email-list-segmentation",
-    "name": "email-list-segmentation",
-    "current_path": "library/data-and-ai/analytics/email-list-segmentation",
-    "current_category": "data-and-ai",
-    "current_subcategory": "analytics",
-    "semantic_role": "workflow",
-    "confidence": "high",
-    "classification_method": "targeted_semantic_deep_read",
-    "content_inspected": true,
-    "evidence_rationale": "Multi-step outcome pipeline composing sequential stages (5 distinct step/phase markers).",
-    "candidate_family": "None",
-    "family_tier": "None",
-    "target_domain": "data-and-ai/analytics",
-    "execution_provider": "agent_native",
-    "dependencies_or_extends": "None",
-    "manual_review_reason": "None",
-    "notes": "Singular domain capability",
-    "token_estimate": 1632
-  },
-  {
     "canonical_id": "email-marketing-automation",
     "name": "email-marketing-automation",
     "current_path": "library/development/fullstack/email-marketing-automation",
@@ -15297,7 +15217,7 @@
     "dependencies_or_extends": "None",
     "manual_review_reason": "None",
     "notes": "Singular domain capability",
-    "token_estimate": 2241
+    "token_estimate": 4478
   },
   {
     "canonical_id": "financial-product-blueprint",
@@ -15318,26 +15238,6 @@
     "manual_review_reason": "None",
     "notes": "Singular domain capability",
     "token_estimate": 234
-  },
-  {
-    "canonical_id": "financial-reporting-dashboard",
-    "name": "financial-reporting-dashboard",
-    "current_path": "library/data-and-ai/analytics/financial-reporting-dashboard",
-    "current_category": "data-and-ai",
-    "current_subcategory": "analytics",
-    "semantic_role": "workflow",
-    "confidence": "high",
-    "classification_method": "targeted_semantic_deep_read",
-    "content_inspected": true,
-    "evidence_rationale": "Multi-step outcome pipeline composing sequential stages (5 distinct step/phase markers).",
-    "candidate_family": "None",
-    "family_tier": "None",
-    "target_domain": "data-and-ai/analytics",
-    "execution_provider": "agent_native",
-    "dependencies_or_extends": "None",
-    "manual_review_reason": "None",
-    "notes": "Singular domain capability",
-    "token_estimate": 2247
   },
   {
     "canonical_id": "find-bugs",
@@ -21157,7 +21057,7 @@
     "dependencies_or_extends": "None",
     "manual_review_reason": "None",
     "notes": "Singular domain capability",
-    "token_estimate": 1870
+    "token_estimate": 3495
   },
   {
     "canonical_id": "lighthouse",
@@ -36397,7 +36297,7 @@
     "dependencies_or_extends": "None",
     "manual_review_reason": "None",
     "notes": "Singular domain capability",
-    "token_estimate": 338
+    "token_estimate": 683
   },
   {
     "canonical_id": "testing-patterns",
@@ -37597,7 +37497,7 @@
     "dependencies_or_extends": "None",
     "manual_review_reason": "None",
     "notes": "Singular domain capability",
-    "token_estimate": 2393
+    "token_estimate": 4421
   },
   {
     "canonical_id": "unreal-engine-cpp-pro",

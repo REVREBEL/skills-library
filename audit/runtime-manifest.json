@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_at": "2026-10-07T15:51:34Z",
-  "total_managed_skills": 2031,
+  "total_managed_skills": 2026,
   "skills": {
     "007": {
       "runtime_name": "007",
@@ -718,16 +718,6 @@
       "canonical_name": "alternatives-pages",
       "canonical_path": "library/development/fullstack/alternatives-pages",
       "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "analytics": {
-      "runtime_name": "analytics",
-      "canonical_name": "analytics",
-      "canonical_path": "library/data-and-ai/analytics/analytics",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -2953,16 +2943,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "click-test-plan": {
-      "runtime_name": "click-test-plan",
-      "canonical_name": "click-test-plan",
-      "canonical_path": "library/design-and-experience/ui-ux/click-test-plan",
-      "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "client-onboarding": {
       "runtime_name": "client-onboarding",
       "canonical_name": "client-onboarding",
@@ -4717,16 +4697,6 @@
       "runtime_name": "custom-code-management",
       "canonical_name": "custom-code-management",
       "canonical_path": "library/data-and-ai/analytics/custom-code-management",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "customer-analytics": {
-      "runtime_name": "customer-analytics",
-      "canonical_name": "customer-analytics",
-      "canonical_path": "library/data-and-ai/analytics/customer-analytics",
       "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -6783,16 +6753,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "email-list-segmentation": {
-      "runtime_name": "email-list-segmentation",
-      "canonical_name": "email-list-segmentation",
-      "canonical_path": "library/data-and-ai/analytics/email-list-segmentation",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "email-marketing-automation": {
       "runtime_name": "email-marketing-automation",
       "canonical_name": "email-marketing-automation",
@@ -7668,16 +7628,6 @@
       "canonical_name": "financial-product-blueprint",
       "canonical_path": "library/marketing-and-seo/on-page-seo/financial-product-blueprint",
       "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "financial-reporting-dashboard": {
-      "runtime_name": "financial-reporting-dashboard",
-      "canonical_name": "financial-reporting-dashboard",
-      "canonical_path": "library/data-and-ai/analytics/financial-reporting-dashboard",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",

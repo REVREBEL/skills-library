@@ -56,27 +56,27 @@ class TestSemanticCensusInvariants(unittest.TestCase):
 
     def test_population_exact_count_and_parity(self):
         """CSV and JSON must contain exactly 2,133 skills matching authoritative population."""
-        self.assertEqual(len(self.csv_rows), 2061)
-        self.assertEqual(len(self.json_rows), 2061)
+        self.assertEqual(len(self.csv_rows), 2056)
+        self.assertEqual(len(self.json_rows), 2056)
 
         csv_ids = [r["canonical_id"] for r in self.csv_rows]
         json_ids = [r["canonical_id"] for r in self.json_rows]
         self.assertEqual(csv_ids, json_ids)
-        self.assertEqual(len(set(csv_ids)), 2061, "All canonical IDs must be unique")
+        self.assertEqual(len(set(csv_ids)), 2056, "All canonical IDs must be unique")
 
     def test_role_distribution_invariants(self):
         """Authoritative breakdown across the 8 accepted semantic roles."""
         counts = Counter(r["semantic_role"] for r in self.csv_rows)
 
-        self.assertEqual(counts[ROLE_INDEPENDENT_CAPABILITY], 1644)
-        self.assertEqual(counts[ROLE_WORKFLOW], 376)
+        self.assertEqual(counts[ROLE_INDEPENDENT_CAPABILITY], 1642)
+        self.assertEqual(counts[ROLE_WORKFLOW], 373)
         self.assertEqual(counts[ROLE_MANUAL_REVIEW], 22)
         self.assertEqual(counts[ROLE_OVERLAY], 6)
         self.assertEqual(counts[ROLE_REFERENCE], 5)
         self.assertEqual(counts[ROLE_ADAPTER], 4)
         self.assertEqual(counts[ROLE_ALIAS], 3)
         self.assertEqual(counts[ROLE_FAMILY_PRIMITIVE], 1)
-        self.assertEqual(sum(counts.values()), 2061)
+        self.assertEqual(sum(counts.values()), 2056)
 
     def test_asset_audit_classification_integrity(self):
         """Verify asset-audit is classified as workflow across datasets and reports."""
@@ -113,8 +113,8 @@ class TestSemanticCensusInvariants(unittest.TestCase):
         counts = Counter(r["semantic_role"] for r in self.csv_rows)
 
         expected_pcts = {role: round((count / total) * 100, 1) for role, count in counts.items()}
-        self.assertEqual(expected_pcts[ROLE_INDEPENDENT_CAPABILITY], 79.8)
-        self.assertEqual(expected_pcts[ROLE_WORKFLOW], 18.2)
+        self.assertEqual(expected_pcts[ROLE_INDEPENDENT_CAPABILITY], 79.9)
+        self.assertEqual(expected_pcts[ROLE_WORKFLOW], 18.1)
         self.assertEqual(expected_pcts[ROLE_MANUAL_REVIEW], 1.1)
         self.assertEqual(expected_pcts[ROLE_OVERLAY], 0.3)
         self.assertEqual(expected_pcts[ROLE_REFERENCE], 0.2)
@@ -123,8 +123,8 @@ class TestSemanticCensusInvariants(unittest.TestCase):
         self.assertEqual(expected_pcts[ROLE_FAMILY_PRIMITIVE], 0.0)
 
         report_text = (CENSUS_DIR / "census-validation-report.md").read_text(encoding="utf-8")
-        self.assertIn("79.8%", report_text)
-        self.assertIn("18.2%", report_text)
+        self.assertIn("79.9%", report_text)
+        self.assertIn("18.1%", report_text)
         self.assertIn("1.1%", report_text)
         self.assertIn("0.3%", report_text)
 
@@ -175,11 +175,11 @@ class TestNegativeSemanticRegression(unittest.TestCase):
                 raise AssertionError(f"Percentage mismatch: computed {computed_pct}%, reported {reported_pct}%")
 
         # True count matches
-        verify_percentage(1644, 2061, 79.8)
+        verify_percentage(1642, 2056, 79.9)
 
         # Injected discrepancy (e.g. stale 85.0%) must raise AssertionError
         with self.assertRaises(AssertionError) as ctx:
-            verify_percentage(1644, 2061, 85.0)
+            verify_percentage(1642, 2056, 85.0)
         self.assertIn("Percentage mismatch", str(ctx.exception))
 
     def test_negative_untracked_files_detection(self):

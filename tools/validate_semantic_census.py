@@ -320,7 +320,7 @@ CAPABILITY_SAMPLE_AUDIT_LEDGER = {
     },
 
     # 3. data-and-ai (2)
-    "library/data-and-ai/analytics/analytics": {
+    "library/data-and-ai/analytics/analytics-tracking": {
         "role": ROLE_INDEPENDENT_CAPABILITY,
         "confidence": "high",
         "rationale": "Event tracking schema and telemetry analysis capability; single-domain analytics specification without multi-phase workflow."
