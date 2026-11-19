@@ -24,9 +24,7 @@ Use this subcategory router when working on design systems tasks.
 
 | Skill | Description | Primary Outcome |
 |---|---|---|
-| [`artifacts-builder-reports`](artifacts-builder-reports/SKILL.md) | Suite of tools for creating elaborate, multi-component claude.ai HTML artifacts using modern frontend web technologies (React, Tailwind CSS, shadcn/ui). Use ... | Artifacts Builder Reports: Suite of tools for creating elaborate, multi-component claude.ai HTML artifacts us... |
 | [`ckw-design`](ckw-design/SKILL.md) | Frontend design entry point: direction, design system, visual philosophy. Use whenever building or touching the look of any web UI (components, pages, dashbo... | Ckw Design: Frontend design entry point: direction, design system, visual philosophy. Use when... |
-| [`code-showcase-core-components`](code-showcase-core-components/SKILL.md) | Core component library and design system patterns. Use when building UI, using design tokens, or working with the component library. | Code Showcase Core Components: Core component library and design system patterns. Use when building UI, using des... |
 | [`color-palette`](color-palette/SKILL.md) | Generate complete, accessible colour palettes from a single brand hex. Produces 11-shade scale (50-950), semantic tokens, dark mode variants, Tailwind v4 CSS... | Color Palette: Generate complete, accessible colour palettes from a single brand hex. Produces 11... |
 | [`core-components`](core-components/SKILL.md) | Core component library and design system patterns. Use when building UI, using design tokens, or working with the component library. | Core Components: Core component library and design system patterns. Use when building UI, using des... |
 | [`design-md`](design-md/SKILL.md) | Analyze Stitch projects and synthesize a semantic design system into DESIGN.md files. Use when working with design md. | Design Md: Analyze Stitch projects and synthesize a semantic design system into DESIGN.md fil... |

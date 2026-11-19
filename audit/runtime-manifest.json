@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_at": "2026-10-07T15:51:34Z",
-  "total_managed_skills": 2040,
+  "total_managed_skills": 2036,
   "skills": {
     "007": {
       "runtime_name": "007",
@@ -1193,16 +1193,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "artifacts-builder-reports": {
-      "runtime_name": "artifacts-builder-reports",
-      "canonical_name": "artifacts-builder-reports",
-      "canonical_path": "library/design-and-experience/design-systems/artifacts-builder-reports",
-      "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "ask-questions-if-underspecified": {
       "runtime_name": "ask-questions-if-underspecified",
       "canonical_name": "ask-questions-if-underspecified",
@@ -2037,16 +2027,6 @@
       "runtime_name": "brandkit",
       "canonical_name": "brandkit",
       "canonical_path": "library/design-and-experience/ui-ux/brandkit",
-      "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "brandkit2": {
-      "runtime_name": "brandkit2",
-      "canonical_name": "brandkit2",
-      "canonical_path": "library/design-and-experience/ui-ux/brandkit2",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -3318,16 +3298,6 @@
       "canonical_name": "code-reviewer",
       "canonical_path": "library/development/fullstack/code-reviewer",
       "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "code-showcase-core-components": {
-      "runtime_name": "code-showcase-core-components",
-      "canonical_name": "code-showcase-core-components",
-      "canonical_path": "library/design-and-experience/design-systems/code-showcase-core-components",
-      "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -5908,16 +5878,6 @@
       "canonical_name": "design-system-patterns",
       "canonical_path": "library/design-and-experience/design-systems/design-system-patterns",
       "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "design-taste-frontend": {
-      "runtime_name": "design-taste-frontend",
-      "canonical_name": "design-taste-frontend",
-      "canonical_path": "library/design-and-experience/taste-and-critique/design-taste-frontend",
-      "functional_parent": "library/development/frontend/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
