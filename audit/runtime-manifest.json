@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_at": "2026-10-07T15:51:34Z",
-  "total_managed_skills": 2020,
+  "total_managed_skills": 2051,
   "skills": {
     "007": {
       "runtime_name": "007",
@@ -20200,6 +20200,316 @@
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
+    },
+    "actions-advanced": {
+      "runtime_name": "actions-advanced",
+      "canonical_name": "actions-advanced",
+      "canonical_path": "library/github-operations/actions-advanced",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "llms-maintain": {
+      "runtime_name": "llms-maintain",
+      "canonical_name": "llms-maintain",
+      "canonical_path": "library/github-operations/llms-maintain",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "pr-merge-champion": {
+      "runtime_name": "pr-merge-champion",
+      "canonical_name": "pr-merge-champion",
+      "canonical_path": "library/github-operations/pr-merge-champion",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "presence": {
+      "runtime_name": "presence",
+      "canonical_name": "presence",
+      "canonical_path": "library/github-operations/presence",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "publish-changes": {
+      "runtime_name": "publish-changes",
+      "canonical_name": "publish-changes",
+      "canonical_path": "library/github-operations/publish-changes",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "skill-audit": {
+      "runtime_name": "skill-audit",
+      "canonical_name": "skill-audit",
+      "canonical_path": "library/skills-create-manage-update/skill-audit",
+      "functional_parent": "library/skills-create-manage-update/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "skill-check": {
+      "runtime_name": "skill-check",
+      "canonical_name": "skill-check",
+      "canonical_path": "library/skills-create-manage-update/skill-check",
+      "functional_parent": "library/skills-create-manage-update/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "skill-creator": {
+      "runtime_name": "skill-creator",
+      "canonical_name": "skill-creator",
+      "canonical_path": "library/skills-create-manage-update/skill-creator",
+      "functional_parent": "library/skills-create-manage-update/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "skill-improver": {
+      "runtime_name": "skill-improver",
+      "canonical_name": "skill-improver",
+      "canonical_path": "library/skills-create-manage-update/skill-improver",
+      "functional_parent": "library/skills-create-manage-update/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "skill-inventory": {
+      "runtime_name": "skill-inventory",
+      "canonical_name": "skill-inventory",
+      "canonical_path": "library/skills-create-manage-update/skill-inventory",
+      "functional_parent": "library/skills-create-manage-update/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "skill-library-restructure": {
+      "runtime_name": "skill-library-restructure",
+      "canonical_name": "skill-library-restructure",
+      "canonical_path": "library/skills-create-manage-update/skill-library-restructure",
+      "functional_parent": "library/skills-create-manage-update/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "skill-make-template": {
+      "runtime_name": "skill-make-template",
+      "canonical_name": "skill-make-template",
+      "canonical_path": "library/skills-create-manage-update/skill-make-template",
+      "functional_parent": "library/skills-create-manage-update/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "skill-manage": {
+      "runtime_name": "skill-manage",
+      "canonical_name": "skill-manage",
+      "canonical_path": "library/skills-create-manage-update/skill-manage",
+      "functional_parent": "library/skills-create-manage-update/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "skill-optimizer": {
+      "runtime_name": "skill-optimizer",
+      "canonical_name": "skill-optimizer",
+      "canonical_path": "library/skills-create-manage-update/skill-optimizer",
+      "functional_parent": "library/skills-create-manage-update/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "skill-review": {
+      "runtime_name": "skill-review",
+      "canonical_name": "skill-review",
+      "canonical_path": "library/skills-create-manage-update/skill-review",
+      "functional_parent": "library/skills-create-manage-update/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "skill-writer": {
+      "runtime_name": "skill-writer",
+      "canonical_name": "skill-writer",
+      "canonical_path": "library/skills-create-manage-update/skill-writer",
+      "functional_parent": "library/skills-create-manage-update/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "skills-writing": {
+      "runtime_name": "skills-writing",
+      "canonical_name": "skills-writing",
+      "canonical_path": "library/skills-create-manage-update/skills-writing",
+      "functional_parent": "library/skills-create-manage-update/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "template-skill-enhanced": {
+      "runtime_name": "template-skill-enhanced",
+      "canonical_name": "template-skill-enhanced",
+      "canonical_path": "library/skills-create-manage-update/template-skill-enhanced",
+      "functional_parent": "library/skills-create-manage-update/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:13:46Z",
+      "last_validated": "2026-11-19T21:13:46Z"
+    },
+    "github-operations-actions-debugger": {
+      "runtime_name": "github-operations-actions-debugger",
+      "canonical_name": "actions-debugger",
+      "canonical_path": "library/github-operations/actions-debugger",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:15:10Z",
+      "last_validated": "2026-11-19T21:15:10Z"
+    },
+    "github-operations-advanced-workflows": {
+      "runtime_name": "github-operations-advanced-workflows",
+      "canonical_name": "advanced-workflows",
+      "canonical_path": "library/github-operations/advanced-workflows",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:15:10Z",
+      "last_validated": "2026-11-19T21:15:10Z"
+    },
+    "github-operations-commit": {
+      "runtime_name": "github-operations-commit",
+      "canonical_name": "commit",
+      "canonical_path": "library/github-operations/commit",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:15:10Z",
+      "last_validated": "2026-11-19T21:15:10Z"
+    },
+    "github-operations-create-branch": {
+      "runtime_name": "github-operations-create-branch",
+      "canonical_name": "create-branch",
+      "canonical_path": "library/github-operations/create-branch",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:15:10Z",
+      "last_validated": "2026-11-19T21:15:10Z"
+    },
+    "github-operations-create-issue-gate": {
+      "runtime_name": "github-operations-create-issue-gate",
+      "canonical_name": "create-issue-gate",
+      "canonical_path": "library/github-operations/create-issue-gate",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:15:10Z",
+      "last_validated": "2026-11-19T21:15:10Z"
+    },
+    "github-operations-feature-tracking": {
+      "runtime_name": "github-operations-feature-tracking",
+      "canonical_name": "feature-tracking",
+      "canonical_path": "library/github-operations/feature-tracking",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:15:10Z",
+      "last_validated": "2026-11-19T21:15:10Z"
+    },
+    "github-operations-github": {
+      "runtime_name": "github-operations-github",
+      "canonical_name": "github",
+      "canonical_path": "library/github-operations/github",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:15:10Z",
+      "last_validated": "2026-11-19T21:15:10Z"
+    },
+    "github-operations-hooks-automation": {
+      "runtime_name": "github-operations-hooks-automation",
+      "canonical_name": "hooks-automation",
+      "canonical_path": "library/github-operations/hooks-automation",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:15:10Z",
+      "last_validated": "2026-11-19T21:15:10Z"
+    },
+    "github-operations-issue-creator": {
+      "runtime_name": "github-operations-issue-creator",
+      "canonical_name": "issue-creator",
+      "canonical_path": "library/github-operations/issue-creator",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:15:10Z",
+      "last_validated": "2026-11-19T21:15:10Z"
+    },
+    "github-operations-pr-review": {
+      "runtime_name": "github-operations-pr-review",
+      "canonical_name": "pr-review",
+      "canonical_path": "library/github-operations/pr-review",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:15:10Z",
+      "last_validated": "2026-11-19T21:15:10Z"
+    },
+    "github-operations-pr-writer": {
+      "runtime_name": "github-operations-pr-writer",
+      "canonical_name": "pr-writer",
+      "canonical_path": "library/github-operations/pr-writer",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:15:10Z",
+      "last_validated": "2026-11-19T21:15:10Z"
+    },
+    "github-operations-review-requests": {
+      "runtime_name": "github-operations-review-requests",
+      "canonical_name": "review-requests",
+      "canonical_path": "library/github-operations/review-requests",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:15:10Z",
+      "last_validated": "2026-11-19T21:15:10Z"
+    },
+    "github-operations-security-review": {
+      "runtime_name": "github-operations-security-review",
+      "canonical_name": "security-review",
+      "canonical_path": "library/github-operations/security-review",
+      "functional_parent": "library/github-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-19T21:15:10Z",
+      "last_validated": "2026-11-19T21:15:10Z"
     }
   }
 }

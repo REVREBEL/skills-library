@@ -212,7 +212,13 @@ SECRET_PATTERNS = [
 
 
 def get_all_routers(library_dir: str = LIBRARY_DIR) -> List[str]:
-    """Return all 26 router file paths in the canonical library."""
+    """Return every router file path in the canonical library.
+
+    Covers the root router, the 10 functional category routers, their deep
+    subcategory routers, and the operational roots (github-operations,
+    skills-create-manage-update). Operational roots own real packages, so
+    leaving them out would put their skills outside validation.
+    """
     root_router = os.path.join(library_dir, "SKILL.md")
     cat_routers = [os.path.join(library_dir, c, "SKILL.md") for c in CATEGORIES]
     subcat_routers = [
@@ -220,4 +226,8 @@ def get_all_routers(library_dir: str = LIBRARY_DIR) -> List[str]:
         for c, scs in DEEP_CATEGORIES.items()
         for sc in scs
     ]
-    return [root_router] + cat_routers + subcat_routers
+    operational_routers = [
+        os.path.join(library_dir, root, "SKILL.md")
+        for root in sorted(OPERATIONAL_SYSTEM_PACKAGES)
+    ]
+    return [root_router] + cat_routers + subcat_routers + operational_routers
