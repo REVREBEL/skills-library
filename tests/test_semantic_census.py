@@ -68,8 +68,8 @@ class TestSemanticCensusInvariants(unittest.TestCase):
         """Authoritative breakdown across the 8 accepted semantic roles."""
         counts = Counter(r["semantic_role"] for r in self.csv_rows)
 
-        self.assertEqual(counts[ROLE_INDEPENDENT_CAPABILITY], 1638)
-        self.assertEqual(counts[ROLE_WORKFLOW], 371)
+        self.assertEqual(counts[ROLE_INDEPENDENT_CAPABILITY], 1651)
+        self.assertEqual(counts[ROLE_WORKFLOW], 358)
         self.assertEqual(counts[ROLE_MANUAL_REVIEW], 22)
         self.assertEqual(counts[ROLE_OVERLAY], 6)
         self.assertEqual(counts[ROLE_REFERENCE], 5)
@@ -113,8 +113,8 @@ class TestSemanticCensusInvariants(unittest.TestCase):
         counts = Counter(r["semantic_role"] for r in self.csv_rows)
 
         expected_pcts = {role: round((count / total) * 100, 1) for role, count in counts.items()}
-        self.assertEqual(expected_pcts[ROLE_INDEPENDENT_CAPABILITY], 79.9)
-        self.assertEqual(expected_pcts[ROLE_WORKFLOW], 18.1)
+        self.assertEqual(expected_pcts[ROLE_INDEPENDENT_CAPABILITY], 80.5)
+        self.assertEqual(expected_pcts[ROLE_WORKFLOW], 17.5)
         self.assertEqual(expected_pcts[ROLE_MANUAL_REVIEW], 1.1)
         self.assertEqual(expected_pcts[ROLE_OVERLAY], 0.3)
         self.assertEqual(expected_pcts[ROLE_REFERENCE], 0.2)
@@ -123,8 +123,8 @@ class TestSemanticCensusInvariants(unittest.TestCase):
         self.assertEqual(expected_pcts[ROLE_FAMILY_PRIMITIVE], 0.0)
 
         report_text = (CENSUS_DIR / "census-validation-report.md").read_text(encoding="utf-8")
-        self.assertIn("79.9%", report_text)
-        self.assertIn("18.1%", report_text)
+        self.assertIn("80.5%", report_text)
+        self.assertIn("17.5%", report_text)
         self.assertIn("1.1%", report_text)
         self.assertIn("0.3%", report_text)
 
@@ -175,7 +175,7 @@ class TestNegativeSemanticRegression(unittest.TestCase):
                 raise AssertionError(f"Percentage mismatch: computed {computed_pct}%, reported {reported_pct}%")
 
         # True count matches
-        verify_percentage(1638, 2050, 79.9)
+        verify_percentage(1651, 2050, 80.5)
 
         # Injected discrepancy (e.g. stale 85.0%) must raise AssertionError
         with self.assertRaises(AssertionError) as ctx:

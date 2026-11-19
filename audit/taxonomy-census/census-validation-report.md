@@ -14,7 +14,7 @@ This report documents the independent methodology and classification validation 
 - **Manual Review & Boundary Register**: Exactly **22 packages** assigned to `manual_review` with `confidence = low` (6 original catalog outliers + 16 unresolved boundary cases), fully cataloged in `audit/taxonomy-census/manual-review-outliers.md`.
 - **Platform Family Pruning**: False-positive keyword matches were eliminated; the GitHub family was pruned from 49 keyword mentions to **18 consolidated operations** plus 4 specific platform integrations.
 - **Skills Lifecycle Architectural Resolution**: Documented as an explicit **meta-capability family** belonging in `meta-and-agent-skills/skill-lifecycle`, resolving the `tools-and-platforms` contradiction.
-- **Population Token Density Differential**: Workflows average **2111 tokens** versus **1364 tokens** for capabilities (a **35.4% structural differential** across the library population).
+- **Population Token Density Differential**: Workflows average **2160 tokens** versus **1359 tokens** for capabilities (a **37.1% structural differential** across the library population).
 
 ---
 
@@ -38,8 +38,8 @@ Every census record provides: `canonical_id`, `name`, `current_path`, `current_c
 
 | Canonical Work-Order Role | Validated Count | Catalog % | Definition & Criteria |
 | :--- | :---: | :---: | :--- |
-| **`independent_capability`** | 1638 | 79.9% | Singular, reusable domain task with independent execution contract. |
-| **`workflow`** | 371 | 18.1% | Multi-step composite pipeline with sequential phases or stages. |
+| **`independent_capability`** | 1651 | 80.5% | Singular, reusable domain task with independent execution contract. |
+| **`workflow`** | 358 | 17.5% | Multi-step composite pipeline with sequential phases or stages. |
 | **`manual_review`** | 22 | 1.1% | Ambiguous, multi-purpose, persona-based, or unresolved boundary skill requiring architectural arbitration. |
 | **`alias_candidate`** | 3 | 0.1% | Compatibility redirect pointing to a canonical survivor (3 self-declared aliases). |
 | **`overlay`** | 6 | 0.3% | Domain specialization extending an underlying base platform (`extends`). |
@@ -125,14 +125,14 @@ The narrative previously conflated the subcategory count (3) with the top-level 
 
 | Semantic Role | Member Count | Total Token Volume | Average Tokens per Skill | Max Token Volume |
 | :--- | :---: | :---: | :---: | :---: |
-| **`workflow`** | 371 | 783,024 | 2111 tokens | 10,761 tokens |
-| **`independent_capability`** | 1638 | 2,233,931 | 1364 tokens | 16,684 tokens |
+| **`workflow`** | 358 | 773,355 | 2160 tokens | 10,761 tokens |
+| **`independent_capability`** | 1651 | 2,243,628 | 1359 tokens | 16,684 tokens |
 | **`reference_or_support`** | 5 | 2,493 | 499 tokens | 825 tokens |
 
 ### Population Token Density Differential Finding
-- Monolithic workflows average **2111 tokens**.
-- Focused independent capabilities average **1364 tokens**.
-- **Structural Density Differential**: **35.4%** difference in token volume across catalog package types.
+- Monolithic workflows average **2160 tokens**.
+- Focused independent capabilities average **1359 tokens**.
+- **Structural Density Differential**: **37.1%** difference in token volume across catalog package types.
 - **Context Savings Clarification**: This differential reflects the inherent size contrast between multi-stage playbooks and single-task capabilities across the library population. Real runtime context reduction during task execution is an architectural hypothesis to be verified in runtime execution benchmarks under REV-130.
 
 ---

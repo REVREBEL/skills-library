@@ -36,6 +36,10 @@ REPO_ROOT = Path(os.environ.get("SKILLS_REPO_ROOT", Path(__file__).resolve().par
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 CENSUS_DIR = REPO_ROOT / "audit" / "taxonomy-census"
+
+# Ownership roots that hold packages directly (library/<root>/<skill>) and
+# therefore have no subcategory.
+OPERATIONAL_ROOTS = frozenset({"github-operations", "skills-create-manage-update"})
 MANIFEST_FILE = REPO_ROOT / "audit" / "runtime-manifest.json"
 
 # Canonical Work-Order Semantic Roles
@@ -659,7 +663,10 @@ def load_authoritative_population() -> List[Dict[str, Any]]:
         skill_file = full_dir / "SKILL.md"
         parts = Path(rel_path).parts
         cat = parts[1] if len(parts) > 1 else ""
-        sub = parts[2] if len(parts) > 2 else ""
+        # Operational roots own packages directly (library/<root>/<skill>), so
+        # there is no subcategory. Deriving one from the leaf name would invent a
+        # taxonomy that does not exist.
+        sub = "" if cat in OPERATIONAL_ROOTS else (parts[2] if len(parts) > 2 else "")
 
         population.append({
             "canonical_id": cname,
