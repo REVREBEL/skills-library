@@ -1,0 +1,71 @@
+skill,source_path,destination_path,destination_category,destination_subcategory,reason
+jobs-to-be-done,library/design-and-experience/motion-and-graphics/jobs-to-be-done,library/business-and-operations/jobs-to-be-done,business-and-operations,,JTBD framework
+product-design,library/design-and-experience/motion-and-graphics/product-design,library/business-and-operations/product-design,business-and-operations,,product strategy
+product-inventor,library/design-and-experience/design-systems/product-inventor,library/business-and-operations/product-inventor,business-and-operations,,product strategy
+strategize,library/design-and-experience/ui-ux/strategize,library/business-and-operations/strategize,business-and-operations,,strategy facilitation
+travel-planner,library/design-and-experience/ui-ux/travel-planner,library/business-and-operations/travel-planner,business-and-operations,,itinerary planning
+value-proposition-canvas,library/design-and-experience/motion-and-graphics/value-proposition-canvas,library/business-and-operations/value-proposition-canvas,business-and-operations,,Osterwalder VPC
+copywriting,library/design-and-experience/ui-ux/copywriting,library/content-and-documentation/copywriting/copywriting,content-and-documentation,copywriting,copywriting
+speech-adaptation,library/design-and-experience/ui-ux/speech-adaptation,library/content-and-documentation/copywriting/speech-adaptation,content-and-documentation,copywriting,spoken-word adaptation of prose
+storytelling,library/design-and-experience/motion-and-graphics/storytelling,library/content-and-documentation/copywriting/storytelling,content-and-documentation,copywriting,narrative craft
+voice-analysis,library/design-and-experience/ui-ux/voice-analysis,library/content-and-documentation/copywriting/voice-analysis,content-and-documentation,copywriting,writer voice extraction
+frontend-slides,library/design-and-experience/motion-and-graphics/frontend-slides,library/content-and-documentation/presentations/frontend-slides,content-and-documentation,presentations,"HTML slide generation, not design"
+frontend-slides-frontend-slides,library/design-and-experience/taste-and-critique/frontend-slides-frontend-slides,library/content-and-documentation/presentations/frontend-slides-frontend-slides,content-and-documentation,presentations,duplicate of frontend-slides; merge after the move
+pitch-deck,library/design-and-experience/ui-ux/pitch-deck,library/content-and-documentation/presentations/pitch-deck,content-and-documentation,presentations,pitch deck authoring
+pptx,library/design-and-experience/ui-ux/pptx,library/content-and-documentation/presentations/pptx,content-and-documentation,presentations,PowerPoint manipulation
+presentation-builder,library/design-and-experience/motion-and-graphics/presentation-builder,library/content-and-documentation/presentations/presentation-builder,content-and-documentation,presentations,presentation authoring
+blind-spot-detective,library/design-and-experience/ui-ux/blind-spot-detective,library/content-and-documentation/technical-writing/blind-spot-detective,content-and-documentation,technical-writing,prose revision
+content-strategy,library/design-and-experience/ui-ux/content-strategy,library/content-and-documentation/technical-writing/content-strategy,content-and-documentation,technical-writing,content planning
+doc-coauthoring,library/design-and-experience/ui-ux/doc-coauthoring,library/content-and-documentation/technical-writing/doc-coauthoring,content-and-documentation,technical-writing,document co-authoring
+docx,library/design-and-experience/ui-ux/docx,library/content-and-documentation/technical-writing/docx,content-and-documentation,technical-writing,document authoring
+json-canvas,library/design-and-experience/motion-and-graphics/json-canvas,library/content-and-documentation/technical-writing/json-canvas,content-and-documentation,technical-writing,Obsidian Canvas document format
+mermaid-expert,library/design-and-experience/ui-ux/mermaid-expert,library/content-and-documentation/technical-writing/mermaid-expert,content-and-documentation,technical-writing,diagram authoring
+non-fiction-revision,library/design-and-experience/ui-ux/non-fiction-revision,library/content-and-documentation/technical-writing/non-fiction-revision,content-and-documentation,technical-writing,prose revision
+pdf,library/design-and-experience/ui-ux/pdf,library/content-and-documentation/technical-writing/pdf,content-and-documentation,technical-writing,PDF manipulation
+summarization,library/design-and-experience/ui-ux/summarization,library/content-and-documentation/technical-writing/summarization,content-and-documentation,technical-writing,summarisation
+business-analytics-reporter,library/design-and-experience/ui-ux/business-analytics-reporter,library/data-and-ai/analytics/business-analytics-reporter,data-and-ai,analytics,revenue and sales reporting
+xlsx,library/design-and-experience/ui-ux/xlsx,library/data-and-ai/analytics/xlsx,data-and-ai,analytics,spreadsheet analysis
+gemini-omni-flash-api,library/design-and-experience/motion-and-graphics/gemini-omni-flash-api,library/data-and-ai/machine-learning/gemini-omni-flash-api,data-and-ai,machine-learning,generative video model API
+interface-kit,library/design-and-experience/motion-and-graphics/interface-kit,library/design-and-experience/design-systems/interface-kit,design-and-experience,design-systems,design-system tooling
+ui-component,library/design-and-experience/taste-and-critique/ui-component,library/design-and-experience/design-systems/ui-component,design-and-experience,design-systems,design-system component generator
+ui-page,library/design-and-experience/taste-and-critique/ui-page,library/design-and-experience/design-systems/ui-page,design-and-experience,design-systems,design-system page scaffolding
+ui-tokens,library/design-and-experience/taste-and-critique/ui-tokens,library/design-and-experience/design-systems/ui-tokens,design-and-experience,design-systems,design tokens
+ui-update,library/design-and-experience/taste-and-critique/ui-update,library/design-and-experience/design-systems/ui-update,design-and-experience,design-systems,design-system engine updates
+webflow-ui-skills,library/design-and-experience/taste-and-critique/webflow-ui-skills,library/design-and-experience/design-systems/webflow-ui-skills,design-and-experience,design-systems,design-system reference
+email-design-eng,library/design-and-experience/taste-and-critique/email-design-eng,library/design-and-experience/motion-and-graphics/email-design-eng,design-and-experience,motion-and-graphics,animation and interaction craft
+review-animations,library/design-and-experience/taste-and-critique/review-animations,library/design-and-experience/motion-and-graphics/review-animations,design-and-experience,motion-and-graphics,motion code review
+ui-motion,library/design-and-experience/taste-and-critique/ui-motion,library/design-and-experience/motion-and-graphics/ui-motion,design-and-experience,motion-and-graphics,motion specification
+minimalist-ui,library/design-and-experience/motion-and-graphics/minimalist-ui,library/design-and-experience/taste-and-critique/minimalist-ui,design-and-experience,taste-and-critique,"aesthetic style, not a UI kit"
+soft-skill,library/design-and-experience/motion-and-graphics/soft-skill,library/design-and-experience/taste-and-critique/soft-skill,design-and-experience,taste-and-critique,aesthetic art direction
+affinity-diagram,library/design-and-experience/design-systems/affinity-diagram,library/design-and-experience/ui-ux/affinity-diagram,design-and-experience,ui-ux,UX research synthesis belongs in ui-ux
+journey-map,library/design-and-experience/motion-and-graphics/journey-map,library/design-and-experience/ui-ux/journey-map,design-and-experience,ui-ux,UX journey mapping
+summarize-interview,library/design-and-experience/design-systems/summarize-interview,library/design-and-experience/ui-ux/summarize-interview,design-and-experience,ui-ux,UX research synthesis
+ui-ux-designer,library/design-and-experience/design-systems/ui-ux-designer,library/design-and-experience/ui-ux/ui-ux-designer,design-and-experience,ui-ux,duplicates user-interface-designer
+algorithmic-art,library/design-and-experience/taste-and-critique/algorithmic-art,library/development/frontend/algorithmic-art,development,frontend,creative coding in the browser
+antigravity-design-expert,library/design-and-experience/motion-and-graphics/antigravity-design-expert,library/development/frontend/antigravity-design-expert,development,frontend,frontend UI engineering
+ce-frontend-design,library/design-and-experience/motion-and-graphics/ce-frontend-design,library/development/frontend/ce-frontend-design,development,frontend,frontend UI engineering
+front-end-developer,library/design-and-experience/ui-ux/front-end-developer,library/development/frontend/front-end-developer,development,frontend,frontend engineering
+frontend-design,library/design-and-experience/ui-ux/frontend-design,library/development/frontend/frontend-design,development,frontend,frontend UI; joins the three-way duplicate
+frontend-dev,library/design-and-experience/motion-and-graphics/frontend-dev,library/development/frontend/frontend-dev,development,frontend,frontend engineering
+frontend-enhancer,library/design-and-experience/taste-and-critique/frontend-enhancer,library/development/frontend/frontend-enhancer,development,frontend,frontend enhancement
+frontend-skill,library/design-and-experience/ui-ux/frontend-skill,library/development/frontend/frontend-skill,development,frontend,frontend engineering
+frontend-ui-dark-ts,library/design-and-experience/taste-and-critique/frontend-ui-dark-ts,library/development/frontend/frontend-ui-dark-ts,development,frontend,React + Tailwind UI system
+lovable-cleanup,library/design-and-experience/design-systems/lovable-cleanup,library/development/frontend/lovable-cleanup,development,frontend,Vite + React scaffolding cleanup
+react-nextjs-development,library/design-and-experience/design-systems/react-nextjs-development,library/development/frontend/react-nextjs-development,development,frontend,React / Next.js
+senior-frontend,library/design-and-experience/design-systems/senior-frontend,library/development/frontend/senior-frontend,development,frontend,frontend engineering
+domain-driven-design,library/design-and-experience/ui-ux/domain-driven-design,library/development/software-architecture/domain-driven-design,development,software-architecture,domain-modelling architecture
+system-design,library/design-and-experience/design-systems/system-design,library/development/software-architecture/system-design,development,software-architecture,system architecture
+agent-to-agent,library/design-and-experience/ui-ux/agent-to-agent,library/meta-and-agent-skills/agent-to-agent,meta-and-agent-skills,,agent-to-agent protocol
+canvas-design,library/design-and-experience/taste-and-critique/canvas-design,library/meta-and-agent-skills/canvas-design,meta-and-agent-skills,,design-philosophy meta guidance
+design-philosophy,library/design-and-experience/taste-and-critique/design-philosophy,library/meta-and-agent-skills/design-philosophy,meta-and-agent-skills,,design-philosophy meta guidance
+evaluate,library/design-and-experience/ui-ux/evaluate,library/meta-and-agent-skills/evaluate,meta-and-agent-skills,,agent orchestration
+fortify,library/design-and-experience/ui-ux/fortify,library/meta-and-agent-skills/fortify,meta-and-agent-skills,,agent orchestration
+include,library/design-and-experience/motion-and-graphics/include,library/meta-and-agent-skills/include,meta-and-agent-skills,,agent orchestration
+intent,library/design-and-experience/design-systems/intent,library/meta-and-agent-skills/intent,meta-and-agent-skills,,agent briefing
+investigate,library/design-and-experience/ui-ux/investigate,library/meta-and-agent-skills/investigate,meta-and-agent-skills,,agent orchestration
+organize,library/design-and-experience/ui-ux/organize,library/meta-and-agent-skills/organize,meta-and-agent-skills,,agent orchestration
+output-skill,library/design-and-experience/ui-ux/output-skill,library/meta-and-agent-skills/output-skill,meta-and-agent-skills,,agent output control
+writing-skills,library/design-and-experience/design-systems/writing-skills,library/meta-and-agent-skills/writing-skills,meta-and-agent-skills,,skill authoring
+threat-modeling-expert,library/design-and-experience/design-systems/threat-modeling-expert,library/quality-and-security/threat-modeling-expert,quality-and-security,,threat modelling
+transilience-report-style,library/design-and-experience/design-systems/transilience-report-style,library/quality-and-security/transilience-report-style,quality-and-security,,threat-intelligence report format
+version-control-strategy,library/design-and-experience/ui-ux/version-control-strategy,library/workflow-and-automation/git-and-vcs/version-control-strategy,workflow-and-automation,git-and-vcs,git workflow
