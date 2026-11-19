@@ -38,7 +38,7 @@ Every census record provides: `canonical_id`, `name`, `current_path`, `current_c
 
 | Canonical Work-Order Role | Validated Count | Catalog % | Definition & Criteria |
 | :--- | :---: | :---: | :--- |
-| **`independent_capability`** | 1649 | 79.8% | Singular, reusable domain task with independent execution contract. |
+| **`independent_capability`** | 1644 | 79.8% | Singular, reusable domain task with independent execution contract. |
 | **`workflow`** | 376 | 18.2% | Multi-step composite pipeline with sequential phases or stages. |
 | **`manual_review`** | 22 | 1.1% | Ambiguous, multi-purpose, persona-based, or unresolved boundary skill requiring architectural arbitration. |
 | **`alias_candidate`** | 3 | 0.1% | Compatibility redirect pointing to a canonical survivor (3 self-declared aliases). |
@@ -82,7 +82,7 @@ To satisfy the REV-150 review requirements, three distinct audit layers were con
 - **Contract Verification**: Every package evaluated directly from its full `SKILL.md` body on disk to verify atomic single-task capability contracts without multi-phase workflow orchestration.
 
 ### Reported Confidence Distribution across 2,073 Skills
-- **High Confidence**: 2016 skills (97.6%) — Unambiguous contract matching deterministic criteria.
+- **High Confidence**: 2011 skills (97.6%) — Unambiguous contract matching deterministic criteria.
 - **Medium Confidence**: 28 skills (1.4%) — Short prompts (<30 lines) or single-phase workflows.
 - **Low Confidence / Manual Review**: 22 skills (1.1%) — Persona prompts or multi-domain umbrella skills.
 
@@ -126,7 +126,7 @@ The narrative previously conflated the subcategory count (3) with the top-level 
 | Semantic Role | Member Count | Total Token Volume | Average Tokens per Skill | Max Token Volume |
 | :--- | :---: | :---: | :---: | :---: |
 | **`workflow`** | 376 | 784,095 | 2085 tokens | 10,761 tokens |
-| **`independent_capability`** | 1649 | 2,243,166 | 1360 tokens | 16,684 tokens |
+| **`independent_capability`** | 1644 | 2,236,323 | 1360 tokens | 16,684 tokens |
 | **`reference_or_support`** | 5 | 2,493 | 499 tokens | 825 tokens |
 
 ### Population Token Density Differential Finding

@@ -11677,27 +11677,7 @@
     "dependencies_or_extends": "None",
     "manual_review_reason": "None",
     "notes": "Singular domain capability",
-    "token_estimate": 2662
-  },
-  {
-    "canonical_id": "design-system-generator",
-    "name": "design-system-generator",
-    "current_path": "library/design-and-experience/design-systems/design-system-generator",
-    "current_category": "design-and-experience",
-    "current_subcategory": "design-systems",
-    "semantic_role": "independent_capability",
-    "confidence": "high",
-    "classification_method": "targeted_semantic_deep_read",
-    "content_inspected": true,
-    "evidence_rationale": "Singular, self-contained domain capability with discrete task instructions.",
-    "candidate_family": "None",
-    "family_tier": "None",
-    "target_domain": "design-and-experience/design-systems",
-    "execution_provider": "agent_native",
-    "dependencies_or_extends": "None",
-    "manual_review_reason": "None",
-    "notes": "Singular domain capability",
-    "token_estimate": 608
+    "token_estimate": 2863
   },
   {
     "canonical_id": "design-system-governance",
@@ -11718,26 +11698,6 @@
     "manual_review_reason": "None",
     "notes": "Singular domain capability",
     "token_estimate": 978
-  },
-  {
-    "canonical_id": "design-system-patterns",
-    "name": "design-system-patterns",
-    "current_path": "library/design-and-experience/design-systems/design-system-patterns",
-    "current_category": "design-and-experience",
-    "current_subcategory": "design-systems",
-    "semantic_role": "independent_capability",
-    "confidence": "high",
-    "classification_method": "targeted_semantic_deep_read",
-    "content_inspected": true,
-    "evidence_rationale": "Singular, self-contained domain capability with discrete task instructions.",
-    "candidate_family": "None",
-    "family_tier": "None",
-    "target_domain": "design-and-experience/design-systems",
-    "execution_provider": "agent_native",
-    "dependencies_or_extends": "None",
-    "manual_review_reason": "None",
-    "notes": "Singular domain capability",
-    "token_estimate": 635
   },
   {
     "canonical_id": "design-thinking",
@@ -30180,26 +30140,6 @@
     "token_estimate": 2250
   },
   {
-    "canonical_id": "remotion-best-practices",
-    "name": "remotion-best-practices",
-    "current_path": "library/design-and-experience/motion-and-graphics/remotion-best-practices",
-    "current_category": "design-and-experience",
-    "current_subcategory": "motion-and-graphics",
-    "semantic_role": "independent_capability",
-    "confidence": "high",
-    "classification_method": "targeted_semantic_deep_read",
-    "content_inspected": true,
-    "evidence_rationale": "Singular, self-contained domain capability with discrete task instructions.",
-    "candidate_family": "None",
-    "family_tier": "None",
-    "target_domain": "design-and-experience/motion-and-graphics",
-    "execution_provider": "browser",
-    "dependencies_or_extends": "None",
-    "manual_review_reason": "None",
-    "notes": "Singular domain capability",
-    "token_estimate": 560
-  },
-  {
     "canonical_id": "render-automation",
     "name": "render-automation",
     "current_path": "library/development/fullstack/render-automation",
@@ -33637,7 +33577,7 @@
     "dependencies_or_extends": "None",
     "manual_review_reason": "None",
     "notes": "Singular domain capability",
-    "token_estimate": 2674
+    "token_estimate": 2775
   },
   {
     "canonical_id": "shadcn-layouts",
@@ -33658,26 +33598,6 @@
     "manual_review_reason": "None",
     "notes": "Singular domain capability",
     "token_estimate": 967
-  },
-  {
-    "canonical_id": "shadcn-ui",
-    "name": "shadcn-ui",
-    "current_path": "library/design-and-experience/design-systems/shadcn-ui",
-    "current_category": "design-and-experience",
-    "current_subcategory": "design-systems",
-    "semantic_role": "independent_capability",
-    "confidence": "high",
-    "classification_method": "targeted_semantic_deep_read",
-    "content_inspected": true,
-    "evidence_rationale": "Singular, self-contained domain capability with discrete task instructions.",
-    "candidate_family": "None",
-    "family_tier": "None",
-    "target_domain": "design-and-experience/design-systems",
-    "execution_provider": "cli",
-    "dependencies_or_extends": "None",
-    "manual_review_reason": "None",
-    "notes": "Singular domain capability",
-    "token_estimate": 1545
   },
   {
     "canonical_id": "shader-programming-glsl",
@@ -35978,26 +35898,6 @@
     "manual_review_reason": "None",
     "notes": "Corrected from workflow to independent_capability",
     "token_estimate": 16684
-  },
-  {
-    "canonical_id": "taste-skill-v1",
-    "name": "taste-skill-v1",
-    "current_path": "library/design-and-experience/taste-and-critique/taste-skill-v1",
-    "current_category": "design-and-experience",
-    "current_subcategory": "taste-and-critique",
-    "semantic_role": "independent_capability",
-    "confidence": "high",
-    "classification_method": "targeted_semantic_deep_read",
-    "content_inspected": true,
-    "evidence_rationale": "Singular, self-contained domain capability with discrete task instructions.",
-    "candidate_family": "None",
-    "family_tier": "None",
-    "target_domain": "design-and-experience/taste-and-critique",
-    "execution_provider": "agent_native",
-    "dependencies_or_extends": "None",
-    "manual_review_reason": "None",
-    "notes": "Singular domain capability",
-    "token_estimate": 3797
   },
   {
     "canonical_id": "tavily-web",

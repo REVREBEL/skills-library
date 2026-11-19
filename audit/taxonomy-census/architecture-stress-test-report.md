@@ -27,7 +27,7 @@ The Semantic Plane governs stable identity, canonical naming, taxonomy classific
 The Composition Plane governs how packages assemble: primitives providing low-level operations, overlays specializing base platforms, and workflows orchestrating multi-step pipelines.
 - **Role Distribution**:
   - **`family_primitive`**: 1 low-level primitives (auth, tokens, parsers).
-  - **`independent_capability`**: 1649 singular reusable building blocks.
+  - **`independent_capability`**: 1644 singular reusable building blocks.
   - **`overlay`**: 6 domain specializations extending base platform families via `extends` metadata without polluting core vendor tools.
   - **`workflow`**: 376 composite outcome pipelines orchestrating sequential stages.
 - **Dependency Modeling**: The `dependencies_or_extends` schema field captures upstream/downstream relationships cleanly.

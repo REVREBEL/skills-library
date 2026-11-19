@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_at": "2026-10-07T15:51:34Z",
-  "total_managed_skills": 2036,
+  "total_managed_skills": 2031,
   "skills": {
     "007": {
       "runtime_name": "007",
@@ -5853,30 +5853,10 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "design-system-generator": {
-      "runtime_name": "design-system-generator",
-      "canonical_name": "design-system-generator",
-      "canonical_path": "library/design-and-experience/design-systems/design-system-generator",
-      "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "design-system-governance": {
       "runtime_name": "design-system-governance",
       "canonical_name": "design-system-governance",
       "canonical_path": "library/design-and-experience/design-systems/design-system-governance",
-      "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "design-system-patterns": {
-      "runtime_name": "design-system-patterns",
-      "canonical_name": "design-system-patterns",
-      "canonical_path": "library/design-and-experience/design-systems/design-system-patterns",
       "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -15103,16 +15083,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "remotion-best-practices": {
-      "runtime_name": "remotion-best-practices",
-      "canonical_name": "remotion-best-practices",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/remotion-best-practices",
-      "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "render-automation": {
       "runtime_name": "render-automation",
       "canonical_name": "render-automation",
@@ -16843,16 +16813,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "shadcn-ui": {
-      "runtime_name": "shadcn-ui",
-      "canonical_name": "shadcn-ui",
-      "canonical_path": "library/design-and-experience/design-systems/shadcn-ui",
-      "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "shader-programming-glsl": {
       "runtime_name": "shader-programming-glsl",
       "canonical_name": "shader-programming-glsl",
@@ -17997,16 +17957,6 @@
       "runtime_name": "taste-skill",
       "canonical_name": "taste-skill",
       "canonical_path": "library/design-and-experience/taste-and-critique/taste-skill",
-      "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "taste-skill-v1": {
-      "runtime_name": "taste-skill-v1",
-      "canonical_name": "taste-skill-v1",
-      "canonical_path": "library/design-and-experience/taste-and-critique/taste-skill-v1",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
