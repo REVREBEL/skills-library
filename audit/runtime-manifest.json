@@ -20164,8 +20164,8 @@
     "image": {
       "runtime_name": "image",
       "canonical_name": "image",
-      "canonical_path": "library/content-and-documentation/technical-writing/image",
-      "functional_parent": "library/content-and-documentation/SKILL.md",
+      "canonical_path": "library/github-operations/image",
+      "functional_parent": "library/github-operations/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",

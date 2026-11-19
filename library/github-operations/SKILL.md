@@ -139,3 +139,4 @@ Before completing any GitHub job, confirm:
 - requested mutations were authorized
 - final local and remote states were read back
 - every unresolved blocker is stated precisely
+| [`image`](image/SKILL.md) | Upload local images to GitHub and get canonical user-attachments embed URLs | Image: Upload local images to GitHub and get canonical user-attachments embed URLs... |

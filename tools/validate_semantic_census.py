@@ -1404,7 +1404,7 @@ def write_family_register(path: Path, rows: List[Dict[str, Any]]):
     sl_count = len(fam_skills.get("Skills Lifecycle", []))
 
     # Assert expected counts to fail generation immediately on any divergence
-    assert gh_count == 22, f"GitHub Operations count mismatch: {gh_count} != 22"
+    assert gh_count == 23, f"GitHub Operations count mismatch: {gh_count} != 23"
     assert wf_count == 22, f"Webflow count mismatch: {wf_count} != 22"
     assert fig_count == 14, f"Figma count mismatch: {fig_count} != 14"
     assert n8n_count == 14, f"n8n count mismatch: {n8n_count} != 14"

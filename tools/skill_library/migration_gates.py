@@ -387,7 +387,7 @@ class HistoricalProvenanceRecord:
 # still name the pre-move paths, so reconciliation resolves them through here.
 # Path-independent identity means a move must not orphan provenance.
 MOVED_PATH_ALIASES: Dict[str, str] = {
-    "library/github-operations/image": "library/content-and-documentation/technical-writing/image",
+    "library/content-and-documentation/technical-writing/image": "library/github-operations/image",
     "library/content-and-documentation/technical-writing/pr-merge-champion": "library/github-operations/pr-merge-champion",
     "library/content-and-documentation/technical-writing/presence": "library/github-operations/presence",
     "library/content-and-documentation/technical-writing/web-perf": "library/quality-and-security/debugging/web-perf",

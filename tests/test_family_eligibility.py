@@ -847,7 +847,7 @@ class TestCensusBackedEvidenceIntegrity(unittest.TestCase):
             family_slug="github",
             candidate_name=gh_record.candidate_name,
             source_paths=list(gh_record.source_paths),
-            candidate_membership_count=22,
+            candidate_membership_count=len(gh_record.source_paths),
             duplicate_adjusted_count=7,  # Prematurely assuming 15 pairs deduplicated!
             category_coverage=list(gh_record.category_coverage),
             subcategory_coverage=list(gh_record.subcategory_coverage),
