@@ -2,7 +2,7 @@
 
 ## Overview
 
-The current catalog contains **908 skills** concentrated in three massive catch-all subcategories:
+The current catalog contains **883 skills** concentrated in three massive catch-all subcategories:
 - `development/fullstack`: 406 skills
 - `marketing-and-seo/on-page-seo`: 271 skills
 - `marketing-and-seo/cro`: 206 skills

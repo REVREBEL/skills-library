@@ -37,6 +37,8 @@ Measured at `origin/main` by enumerating tracked files:
 | `task-folder/agents/skills/` | 2,101 | **2,100** | −1 |
 | `task-folder/agents/not-needed/` | 238 | **238** | 0 |
 | `task-folder/agents/archived/` | 20 | **20** | 0 |
+| `task-example/` | 49 | **49** | 0 |
+| `.agents/` | 7 | **7** | 0 |
 
 `audit/runtime-manifest.json` is internally inconsistent: it declares
 `total_managed_skills: 2103` but contains **2,102** skill entries.

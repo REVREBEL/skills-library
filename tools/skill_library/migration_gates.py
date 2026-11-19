@@ -383,6 +383,12 @@ class HistoricalProvenanceRecord:
 # consolidated into a successor, or dropped as templated stubs. Historical Phase 08
 # provenance stays traceable without pretending these still exist; they are excluded
 # from unmatched-historical counts, not from the audit trail.
+#
+# This set is intentionally larger than the `dump` rows in
+# audit/quality-pilot/non-english-inventory.csv. That inventory records the
+# recommendation; the recorded decision was to prune every non-English skill, so
+# `ignore` and `keep_multilingual` rows were removed too. The set reflects what was
+# executed, not what was recommended.
 REMOVED_CANONICAL_PATHS = frozenset(
     {
         "library/business-and-operations/product-management/product-decision-agent",
