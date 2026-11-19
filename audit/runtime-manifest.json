@@ -356,7 +356,7 @@
     "affinity-diagram": {
       "runtime_name": "affinity-diagram",
       "canonical_name": "affinity-diagram",
-      "canonical_path": "library/design-and-experience/design-systems/affinity-diagram",
+      "canonical_path": "library/design-and-experience/ui-ux/affinity-diagram",
       "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -486,7 +486,7 @@
     "agent-to-agent": {
       "runtime_name": "agent-to-agent",
       "canonical_name": "agent-to-agent",
-      "canonical_path": "library/design-and-experience/ui-ux/agent-to-agent",
+      "canonical_path": "library/meta-and-agent-skills/agent-architecture/agent-to-agent",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -706,7 +706,7 @@
     "algorithmic-art": {
       "runtime_name": "algorithmic-art",
       "canonical_name": "algorithmic-art",
-      "canonical_path": "library/design-and-experience/taste-and-critique/algorithmic-art",
+      "canonical_path": "library/development/frontend/algorithmic-art",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -856,7 +856,7 @@
     "antigravity-design-expert": {
       "runtime_name": "antigravity-design-expert",
       "canonical_name": "antigravity-design-expert",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/antigravity-design-expert",
+      "canonical_path": "library/development/frontend/antigravity-design-expert",
       "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -1796,7 +1796,7 @@
     "blind-spot-detective": {
       "runtime_name": "blind-spot-detective",
       "canonical_name": "blind-spot-detective",
-      "canonical_path": "library/design-and-experience/ui-ux/blind-spot-detective",
+      "canonical_path": "library/content-and-documentation/technical-writing/blind-spot-detective",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -2276,7 +2276,7 @@
     "business-analytics-reporter": {
       "runtime_name": "business-analytics-reporter",
       "canonical_name": "business-analytics-reporter",
-      "canonical_path": "library/design-and-experience/ui-ux/business-analytics-reporter",
+      "canonical_path": "library/data-and-ai/analytics/business-analytics-reporter",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -2706,7 +2706,7 @@
     "ce-frontend-design": {
       "runtime_name": "ce-frontend-design",
       "canonical_name": "ce-frontend-design",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/ce-frontend-design",
+      "canonical_path": "library/development/frontend/ce-frontend-design",
       "functional_parent": "library/development/frontend/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -5576,7 +5576,7 @@
     "design-and-experience-content-strategy": {
       "runtime_name": "design-and-experience-content-strategy",
       "canonical_name": "content-strategy",
-      "canonical_path": "library/design-and-experience/ui-ux/content-strategy",
+      "canonical_path": "library/content-and-documentation/technical-writing/content-strategy",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -5596,7 +5596,7 @@
     "design-and-experience-doc-coauthoring": {
       "runtime_name": "design-and-experience-doc-coauthoring",
       "canonical_name": "doc-coauthoring",
-      "canonical_path": "library/design-and-experience/ui-ux/doc-coauthoring",
+      "canonical_path": "library/content-and-documentation/technical-writing/doc-coauthoring",
       "functional_parent": "library/content-and-documentation/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -5616,7 +5616,7 @@
     "design-and-experience-jobs-to-be-done": {
       "runtime_name": "design-and-experience-jobs-to-be-done",
       "canonical_name": "jobs-to-be-done",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/jobs-to-be-done",
+      "canonical_path": "library/business-and-operations/product-management/jobs-to-be-done",
       "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -5636,7 +5636,7 @@
     "design-and-experience-storytelling": {
       "runtime_name": "design-and-experience-storytelling",
       "canonical_name": "storytelling",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/storytelling",
+      "canonical_path": "library/content-and-documentation/copywriting/storytelling",
       "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -6516,7 +6516,7 @@
     "docx": {
       "runtime_name": "docx",
       "canonical_name": "docx",
-      "canonical_path": "library/design-and-experience/ui-ux/docx",
+      "canonical_path": "library/content-and-documentation/technical-writing/docx",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -6536,7 +6536,7 @@
     "domain-driven-design": {
       "runtime_name": "domain-driven-design",
       "canonical_name": "domain-driven-design",
-      "canonical_path": "library/design-and-experience/ui-ux/domain-driven-design",
+      "canonical_path": "library/development/software-architecture/domain-driven-design",
       "functional_parent": "library/development/software-architecture/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -6856,7 +6856,7 @@
     "email-design-eng": {
       "runtime_name": "email-design-eng",
       "canonical_name": "email-design-eng",
-      "canonical_path": "library/design-and-experience/taste-and-critique/email-design-eng",
+      "canonical_path": "library/design-and-experience/motion-and-graphics/email-design-eng",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -7256,7 +7256,7 @@
     "evaluate": {
       "runtime_name": "evaluate",
       "canonical_name": "evaluate",
-      "canonical_path": "library/design-and-experience/ui-ux/evaluate",
+      "canonical_path": "library/meta-and-agent-skills/agent-architecture/evaluate",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -7996,7 +7996,7 @@
     "fortify": {
       "runtime_name": "fortify",
       "canonical_name": "fortify",
-      "canonical_path": "library/design-and-experience/ui-ux/fortify",
+      "canonical_path": "library/meta-and-agent-skills/agent-architecture/fortify",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -8086,7 +8086,7 @@
     "front-end-developer": {
       "runtime_name": "front-end-developer",
       "canonical_name": "front-end-developer",
-      "canonical_path": "library/design-and-experience/ui-ux/front-end-developer",
+      "canonical_path": "library/development/frontend/front-end-developer",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -8126,7 +8126,7 @@
     "frontend-design2": {
       "runtime_name": "frontend-design2",
       "canonical_name": "frontend-design2",
-      "canonical_path": "library/design-and-experience/design-systems/frontend-design2",
+      "canonical_path": "library/development/frontend/frontend-design2",
       "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -8136,7 +8136,7 @@
     "frontend-dev": {
       "runtime_name": "frontend-dev",
       "canonical_name": "frontend-dev",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/frontend-dev",
+      "canonical_path": "library/development/frontend/frontend-dev",
       "functional_parent": "library/development/frontend/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -8166,7 +8166,7 @@
     "frontend-enhancer": {
       "runtime_name": "frontend-enhancer",
       "canonical_name": "frontend-enhancer",
-      "canonical_path": "library/design-and-experience/taste-and-critique/frontend-enhancer",
+      "canonical_path": "library/development/frontend/frontend-enhancer",
       "functional_parent": "library/development/frontend/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -8226,7 +8226,7 @@
     "frontend-skill": {
       "runtime_name": "frontend-skill",
       "canonical_name": "frontend-skill",
-      "canonical_path": "library/design-and-experience/ui-ux/frontend-skill",
+      "canonical_path": "library/development/frontend/frontend-skill",
       "functional_parent": "library/development/frontend/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -8236,7 +8236,7 @@
     "frontend-slides": {
       "runtime_name": "frontend-slides",
       "canonical_name": "frontend-slides",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/frontend-slides",
+      "canonical_path": "library/content-and-documentation/presentations/frontend-slides",
       "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -8246,7 +8246,7 @@
     "frontend-slides-frontend-slides": {
       "runtime_name": "frontend-slides-frontend-slides",
       "canonical_name": "frontend-slides-frontend-slides",
-      "canonical_path": "library/design-and-experience/taste-and-critique/frontend-slides-frontend-slides",
+      "canonical_path": "library/content-and-documentation/presentations/frontend-slides-frontend-slides",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -8256,7 +8256,7 @@
     "frontend-ui-dark-ts": {
       "runtime_name": "frontend-ui-dark-ts",
       "canonical_name": "frontend-ui-dark-ts",
-      "canonical_path": "library/design-and-experience/taste-and-critique/frontend-ui-dark-ts",
+      "canonical_path": "library/development/frontend/frontend-ui-dark-ts",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -8426,7 +8426,7 @@
     "gemini-omni-flash-api": {
       "runtime_name": "gemini-omni-flash-api",
       "canonical_name": "gemini-omni-flash-api",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/gemini-omni-flash-api",
+      "canonical_path": "library/data-and-ai/machine-learning/gemini-omni-flash-api",
       "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -9616,7 +9616,7 @@
     "include": {
       "runtime_name": "include",
       "canonical_name": "include",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/include",
+      "canonical_path": "library/meta-and-agent-skills/agent-architecture/include",
       "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -9846,7 +9846,7 @@
     "intent": {
       "runtime_name": "intent",
       "canonical_name": "intent",
-      "canonical_path": "library/design-and-experience/design-systems/intent",
+      "canonical_path": "library/meta-and-agent-skills/agent-architecture/intent",
       "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -9886,7 +9886,7 @@
     "interface-kit": {
       "runtime_name": "interface-kit",
       "canonical_name": "interface-kit",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/interface-kit",
+      "canonical_path": "library/design-and-experience/design-systems/interface-kit",
       "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -9986,7 +9986,7 @@
     "investigate": {
       "runtime_name": "investigate",
       "canonical_name": "investigate",
-      "canonical_path": "library/design-and-experience/ui-ux/investigate",
+      "canonical_path": "library/meta-and-agent-skills/agent-architecture/investigate",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -10146,7 +10146,7 @@
     "journey-map": {
       "runtime_name": "journey-map",
       "canonical_name": "journey-map",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/journey-map",
+      "canonical_path": "library/design-and-experience/ui-ux/journey-map",
       "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -10176,7 +10176,7 @@
     "json-canvas": {
       "runtime_name": "json-canvas",
       "canonical_name": "json-canvas",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/json-canvas",
+      "canonical_path": "library/content-and-documentation/technical-writing/json-canvas",
       "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -11146,7 +11146,7 @@
     "lovable-cleanup": {
       "runtime_name": "lovable-cleanup",
       "canonical_name": "lovable-cleanup",
-      "canonical_path": "library/design-and-experience/design-systems/lovable-cleanup",
+      "canonical_path": "library/development/frontend/lovable-cleanup",
       "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -11816,7 +11816,7 @@
     "mermaid-expert": {
       "runtime_name": "mermaid-expert",
       "canonical_name": "mermaid-expert",
-      "canonical_path": "library/design-and-experience/ui-ux/mermaid-expert",
+      "canonical_path": "library/content-and-documentation/technical-writing/mermaid-expert",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -11956,7 +11956,7 @@
     "minimalist-ui": {
       "runtime_name": "minimalist-ui",
       "canonical_name": "minimalist-ui",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/minimalist-ui",
+      "canonical_path": "library/design-and-experience/taste-and-critique/minimalist-ui",
       "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -12576,7 +12576,7 @@
     "non-fiction-revision": {
       "runtime_name": "non-fiction-revision",
       "canonical_name": "non-fiction-revision",
-      "canonical_path": "library/design-and-experience/ui-ux/non-fiction-revision",
+      "canonical_path": "library/content-and-documentation/technical-writing/non-fiction-revision",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -12936,7 +12936,7 @@
     "organize": {
       "runtime_name": "organize",
       "canonical_name": "organize",
-      "canonical_path": "library/design-and-experience/ui-ux/organize",
+      "canonical_path": "library/meta-and-agent-skills/agent-architecture/organize",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -12966,7 +12966,7 @@
     "output-skill": {
       "runtime_name": "output-skill",
       "canonical_name": "output-skill",
-      "canonical_path": "library/design-and-experience/ui-ux/output-skill",
+      "canonical_path": "library/meta-and-agent-skills/agent-architecture/output-skill",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -13156,7 +13156,7 @@
     "pdf": {
       "runtime_name": "pdf",
       "canonical_name": "pdf",
-      "canonical_path": "library/design-and-experience/ui-ux/pdf",
+      "canonical_path": "library/content-and-documentation/technical-writing/pdf",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -13466,7 +13466,7 @@
     "pitch-deck": {
       "runtime_name": "pitch-deck",
       "canonical_name": "pitch-deck",
-      "canonical_path": "library/design-and-experience/ui-ux/pitch-deck",
+      "canonical_path": "library/content-and-documentation/presentations/pitch-deck",
       "functional_parent": "library/content-and-documentation/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -13766,7 +13766,7 @@
     "pptx": {
       "runtime_name": "pptx",
       "canonical_name": "pptx",
-      "canonical_path": "library/design-and-experience/ui-ux/pptx",
+      "canonical_path": "library/content-and-documentation/presentations/pptx",
       "functional_parent": "library/content-and-documentation/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -13936,7 +13936,7 @@
     "presentation-builder": {
       "runtime_name": "presentation-builder",
       "canonical_name": "presentation-builder",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/presentation-builder",
+      "canonical_path": "library/content-and-documentation/presentations/presentation-builder",
       "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -14066,7 +14066,7 @@
     "product-design": {
       "runtime_name": "product-design",
       "canonical_name": "product-design",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/product-design",
+      "canonical_path": "library/business-and-operations/product-management/product-design",
       "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -14086,7 +14086,7 @@
     "product-inventor": {
       "runtime_name": "product-inventor",
       "canonical_name": "product-inventor",
-      "canonical_path": "library/design-and-experience/design-systems/product-inventor",
+      "canonical_path": "library/business-and-operations/strategy/product-inventor",
       "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -14896,7 +14896,7 @@
     "react-nextjs-development": {
       "runtime_name": "react-nextjs-development",
       "canonical_name": "react-nextjs-development",
-      "canonical_path": "library/design-and-experience/design-systems/react-nextjs-development",
+      "canonical_path": "library/development/frontend/react-nextjs-development",
       "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -15476,7 +15476,7 @@
     "review-animations": {
       "runtime_name": "review-animations",
       "canonical_name": "review-animations",
-      "canonical_path": "library/design-and-experience/taste-and-critique/review-animations",
+      "canonical_path": "library/design-and-experience/motion-and-graphics/review-animations",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -16166,7 +16166,7 @@
     "senior-frontend": {
       "runtime_name": "senior-frontend",
       "canonical_name": "senior-frontend",
-      "canonical_path": "library/design-and-experience/design-systems/senior-frontend",
+      "canonical_path": "library/development/frontend/senior-frontend",
       "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -17366,7 +17366,7 @@
     "soft-skill": {
       "runtime_name": "soft-skill",
       "canonical_name": "soft-skill",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/soft-skill",
+      "canonical_path": "library/design-and-experience/taste-and-critique/soft-skill",
       "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -17476,7 +17476,7 @@
     "speech-adaptation": {
       "runtime_name": "speech-adaptation",
       "canonical_name": "speech-adaptation",
-      "canonical_path": "library/design-and-experience/ui-ux/speech-adaptation",
+      "canonical_path": "library/content-and-documentation/copywriting/speech-adaptation",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -17746,7 +17746,7 @@
     "strategize": {
       "runtime_name": "strategize",
       "canonical_name": "strategize",
-      "canonical_path": "library/design-and-experience/ui-ux/strategize",
+      "canonical_path": "library/business-and-operations/strategy/strategize",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -17816,7 +17816,7 @@
     "summarization": {
       "runtime_name": "summarization",
       "canonical_name": "summarization",
-      "canonical_path": "library/design-and-experience/ui-ux/summarization",
+      "canonical_path": "library/content-and-documentation/technical-writing/summarization",
       "functional_parent": "library/content-and-documentation/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -17826,7 +17826,7 @@
     "summarize-interview": {
       "runtime_name": "summarize-interview",
       "canonical_name": "summarize-interview",
-      "canonical_path": "library/design-and-experience/design-systems/summarize-interview",
+      "canonical_path": "library/design-and-experience/ui-ux/summarize-interview",
       "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -17956,7 +17956,7 @@
     "system-design": {
       "runtime_name": "system-design",
       "canonical_name": "system-design",
-      "canonical_path": "library/design-and-experience/design-systems/system-design",
+      "canonical_path": "library/development/software-architecture/system-design",
       "functional_parent": "library/development/software-architecture/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -18416,7 +18416,7 @@
     "threat-modeling-expert": {
       "runtime_name": "threat-modeling-expert",
       "canonical_name": "threat-modeling-expert",
-      "canonical_path": "library/design-and-experience/design-systems/threat-modeling-expert",
+      "canonical_path": "library/quality-and-security/security/threat-modeling-expert",
       "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -18596,7 +18596,7 @@
     "transilience-report-style": {
       "runtime_name": "transilience-report-style",
       "canonical_name": "transilience-report-style",
-      "canonical_path": "library/design-and-experience/design-systems/transilience-report-style",
+      "canonical_path": "library/quality-and-security/security/transilience-report-style",
       "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -18796,7 +18796,7 @@
     "ui-component": {
       "runtime_name": "ui-component",
       "canonical_name": "ui-component",
-      "canonical_path": "library/design-and-experience/taste-and-critique/ui-component",
+      "canonical_path": "library/design-and-experience/design-systems/ui-component",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -18816,7 +18816,7 @@
     "ui-motion": {
       "runtime_name": "ui-motion",
       "canonical_name": "ui-motion",
-      "canonical_path": "library/design-and-experience/taste-and-critique/ui-motion",
+      "canonical_path": "library/design-and-experience/motion-and-graphics/ui-motion",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -18826,7 +18826,7 @@
     "ui-page": {
       "runtime_name": "ui-page",
       "canonical_name": "ui-page",
-      "canonical_path": "library/design-and-experience/taste-and-critique/ui-page",
+      "canonical_path": "library/design-and-experience/design-systems/ui-page",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -18866,7 +18866,7 @@
     "ui-tokens": {
       "runtime_name": "ui-tokens",
       "canonical_name": "ui-tokens",
-      "canonical_path": "library/design-and-experience/taste-and-critique/ui-tokens",
+      "canonical_path": "library/design-and-experience/design-systems/ui-tokens",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -18876,7 +18876,7 @@
     "ui-update": {
       "runtime_name": "ui-update",
       "canonical_name": "ui-update",
-      "canonical_path": "library/design-and-experience/taste-and-critique/ui-update",
+      "canonical_path": "library/design-and-experience/design-systems/ui-update",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -18886,7 +18886,7 @@
     "ui-ux-designer": {
       "runtime_name": "ui-ux-designer",
       "canonical_name": "ui-ux-designer",
-      "canonical_path": "library/design-and-experience/design-systems/ui-ux-designer",
+      "canonical_path": "library/design-and-experience/ui-ux/ui-ux-designer",
       "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -19206,7 +19206,7 @@
     "value-proposition-canvas": {
       "runtime_name": "value-proposition-canvas",
       "canonical_name": "value-proposition-canvas",
-      "canonical_path": "library/design-and-experience/motion-and-graphics/value-proposition-canvas",
+      "canonical_path": "library/business-and-operations/strategy/value-proposition-canvas",
       "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -19366,7 +19366,7 @@
     "version-control-strategy": {
       "runtime_name": "version-control-strategy",
       "canonical_name": "version-control-strategy",
-      "canonical_path": "library/design-and-experience/ui-ux/version-control-strategy",
+      "canonical_path": "library/workflow-and-automation/git-and-vcs/version-control-strategy",
       "functional_parent": "library/workflow-and-automation/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -19556,7 +19556,7 @@
     "voice-analysis": {
       "runtime_name": "voice-analysis",
       "canonical_name": "voice-analysis",
-      "canonical_path": "library/design-and-experience/ui-ux/voice-analysis",
+      "canonical_path": "library/content-and-documentation/copywriting/voice-analysis",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -19916,7 +19916,7 @@
     "webflow-ui-skills": {
       "runtime_name": "webflow-ui-skills",
       "canonical_name": "webflow-ui-skills",
-      "canonical_path": "library/design-and-experience/taste-and-critique/webflow-ui-skills",
+      "canonical_path": "library/design-and-experience/design-systems/webflow-ui-skills",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -20306,7 +20306,7 @@
     "writing-skills": {
       "runtime_name": "writing-skills",
       "canonical_name": "writing-skills",
-      "canonical_path": "library/design-and-experience/design-systems/writing-skills",
+      "canonical_path": "library/meta-and-agent-skills/skill-lifecycle/writing-skills",
       "functional_parent": "library/design-and-experience/design-systems/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -20316,7 +20316,7 @@
     "xlsx": {
       "runtime_name": "xlsx",
       "canonical_name": "xlsx",
-      "canonical_path": "library/design-and-experience/ui-ux/xlsx",
+      "canonical_path": "library/data-and-ai/analytics/xlsx",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,

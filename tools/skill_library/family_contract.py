@@ -423,7 +423,7 @@ class FamilyCandidateEvaluator:
             family_slug="webflow",
             candidate_name="Webflow Platform",
             source_paths=[
-                "library/design-and-experience/taste-and-critique/webflow-ui-skills",
+                "library/design-and-experience/design-systems/webflow-ui-skills",
                 "library/design-and-experience/ui-ux/designer-tools",
                 "library/design-and-experience/ui-ux/flowkit-naming",
                 "library/design-and-experience/ui-ux/webflow-code-component-component-scaffold",
@@ -449,7 +449,7 @@ class FamilyCandidateEvaluator:
             candidate_membership_count=22,
             duplicate_adjusted_count=22,
             category_coverage=["design-and-experience", "development", "marketing-and-seo", "quality-and-security"],
-            subcategory_coverage=["backend", "cro", "debugging", "frontend", "fullstack", "mobile", "on-page-seo", "taste-and-critique", "ui-ux"],
+            subcategory_coverage=["backend", "cro", "debugging", "design-systems", "frontend", "fullstack", "mobile", "on-page-seo", "ui-ux"],
             gate_1_tool_surface_cohesion=True,
             gate_1_evidence="webflow-cli, Webflow Designer API, Webflow REST CMS v2 API",
             gate_1_status=EvidenceStatus.VERIFIED_INSPECTED,

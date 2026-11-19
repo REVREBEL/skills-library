@@ -30,7 +30,7 @@ Manage 4 skills for git and vcs.
 | [`repo-maintainer`](../marketing-and-seo/cro/repo-maintainer/SKILL.md) | Audit and repair repository hygiene across artifacts, dependencies, CI, docs, Git state, and code-quality signals. Use for repository maintenance, cleanup, h... | Repo Maintainer: Audit and repair repository hygiene across artifacts, dependencies, CI, docs, Git ... |
 | [`resolving-merge-conflicts`](../development/fullstack/resolving-merge-conflicts/SKILL.md) | Use when you need to resolve an in-progress git merge/rebase conflict. | Resolving Merge Conflicts: you need to resolve an in-progress git merge/rebase conflict |
 | [`using-git-worktrees`](git-and-vcs/using-git-worktrees/SKILL.md) | Git worktrees create isolated workspaces sharing the same repository, allowing work on multiple branches simultaneously without switching. Use when working w... | Using Git Worktrees: Git worktrees create isolated workspaces sharing the same repository, allowing wor... |
-| [`version-control-strategy`](../design-and-experience/ui-ux/version-control-strategy/SKILL.md) | Define version control strategies for design files, components, and libraries. Use when working with version control strategy. | Version Control Strategy: Define version control strategies for design files, components, and libraries. Use... |
+| [`version-control-strategy`](git-and-vcs/version-control-strategy/SKILL.md) | Define version control strategies for design files, components, and libraries. Use when working with version control strategy. | Version Control Strategy: Define version control strategies for design files, components, and libraries. Use when working with version c... |
 
 ### Task Orchestration
 

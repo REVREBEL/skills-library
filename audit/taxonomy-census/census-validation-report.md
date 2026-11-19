@@ -14,7 +14,7 @@ This report documents the independent methodology and classification validation 
 - **Manual Review & Boundary Register**: Exactly **22 packages** assigned to `manual_review` with `confidence = low` (6 original catalog outliers + 16 unresolved boundary cases), fully cataloged in `audit/taxonomy-census/manual-review-outliers.md`.
 - **Platform Family Pruning**: False-positive keyword matches were eliminated; the GitHub family was pruned from 49 keyword mentions to **18 consolidated operations** plus 4 specific platform integrations.
 - **Skills Lifecycle Architectural Resolution**: Documented as an explicit **meta-capability family** belonging in `meta-and-agent-skills/skill-lifecycle`, resolving the `tools-and-platforms` contradiction.
-- **Population Token Density Differential**: Workflows average **2120 tokens** versus **1359 tokens** for capabilities (a **35.9% structural differential** across the library population).
+- **Population Token Density Differential**: Workflows average **2120 tokens** versus **1360 tokens** for capabilities (a **35.9% structural differential** across the library population).
 
 ---
 
@@ -38,7 +38,7 @@ Every census record provides: `canonical_id`, `name`, `current_path`, `current_c
 
 | Canonical Work-Order Role | Validated Count | Catalog % | Definition & Criteria |
 | :--- | :---: | :---: | :--- |
-| **`independent_capability`** | 1654 | 79.8% | Singular, reusable domain task with independent execution contract. |
+| **`independent_capability`** | 1653 | 79.8% | Singular, reusable domain task with independent execution contract. |
 | **`workflow`** | 378 | 18.2% | Multi-step composite pipeline with sequential phases or stages. |
 | **`manual_review`** | 22 | 1.1% | Ambiguous, multi-purpose, persona-based, or unresolved boundary skill requiring architectural arbitration. |
 | **`alias_candidate`** | 3 | 0.1% | Compatibility redirect pointing to a canonical survivor (3 self-declared aliases). |
@@ -82,7 +82,7 @@ To satisfy the REV-150 review requirements, three distinct audit layers were con
 - **Contract Verification**: Every package evaluated directly from its full `SKILL.md` body on disk to verify atomic single-task capability contracts without multi-phase workflow orchestration.
 
 ### Reported Confidence Distribution across 2,073 Skills
-- **High Confidence**: 2023 skills (97.6%) — Unambiguous contract matching deterministic criteria.
+- **High Confidence**: 2022 skills (97.6%) — Unambiguous contract matching deterministic criteria.
 - **Medium Confidence**: 28 skills (1.4%) — Short prompts (<30 lines) or single-phase workflows.
 - **Low Confidence / Manual Review**: 22 skills (1.1%) — Persona prompts or multi-domain umbrella skills.
 
@@ -126,12 +126,12 @@ The narrative previously conflated the subcategory count (3) with the top-level 
 | Semantic Role | Member Count | Total Token Volume | Average Tokens per Skill | Max Token Volume |
 | :--- | :---: | :---: | :---: | :---: |
 | **`workflow`** | 378 | 801,359 | 2120 tokens | 16,725 tokens |
-| **`independent_capability`** | 1654 | 2,248,309 | 1359 tokens | 16,684 tokens |
+| **`independent_capability`** | 1653 | 2,247,992 | 1360 tokens | 16,684 tokens |
 | **`reference_or_support`** | 5 | 2,493 | 499 tokens | 825 tokens |
 
 ### Population Token Density Differential Finding
 - Monolithic workflows average **2120 tokens**.
-- Focused independent capabilities average **1359 tokens**.
+- Focused independent capabilities average **1360 tokens**.
 - **Structural Density Differential**: **35.9%** difference in token volume across catalog package types.
 - **Context Savings Clarification**: This differential reflects the inherent size contrast between multi-stage playbooks and single-task capabilities across the library population. Real runtime context reduction during task execution is an architectural hypothesis to be verified in runtime execution benchmarks under REV-130.
 

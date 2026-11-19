@@ -383,6 +383,78 @@ class HistoricalProvenanceRecord:
 # consolidated into a successor, or dropped as templated stubs. Historical Phase 08
 # provenance stays traceable without pretending these still exist; they are excluded
 # from unmatched-historical counts, not from the audit trail.
+# Canonical packages relocated by the design review. Historical Phase 08 records
+# still name the pre-move paths, so reconciliation resolves them through here.
+# Path-independent identity means a move must not orphan provenance.
+MOVED_PATH_ALIASES: Dict[str, str] = {
+    "library/design-and-experience/design-systems/affinity-diagram": "library/design-and-experience/ui-ux/affinity-diagram",
+    "library/design-and-experience/design-systems/frontend-design2": "library/development/frontend/frontend-design2",
+    "library/design-and-experience/design-systems/intent": "library/meta-and-agent-skills/agent-architecture/intent",
+    "library/design-and-experience/design-systems/lovable-cleanup": "library/development/frontend/lovable-cleanup",
+    "library/design-and-experience/design-systems/product-inventor": "library/business-and-operations/strategy/product-inventor",
+    "library/design-and-experience/design-systems/react-nextjs-development": "library/development/frontend/react-nextjs-development",
+    "library/design-and-experience/design-systems/senior-frontend": "library/development/frontend/senior-frontend",
+    "library/design-and-experience/design-systems/summarize-interview": "library/design-and-experience/ui-ux/summarize-interview",
+    "library/design-and-experience/design-systems/system-design": "library/development/software-architecture/system-design",
+    "library/design-and-experience/design-systems/threat-modeling-expert": "library/quality-and-security/security/threat-modeling-expert",
+    "library/design-and-experience/design-systems/transilience-report-style": "library/quality-and-security/security/transilience-report-style",
+    "library/design-and-experience/design-systems/ui-ux-designer": "library/design-and-experience/ui-ux/ui-ux-designer",
+    "library/design-and-experience/design-systems/writing-skills": "library/meta-and-agent-skills/skill-lifecycle/writing-skills",
+    "library/design-and-experience/motion-and-graphics/antigravity-design-expert": "library/development/frontend/antigravity-design-expert",
+    "library/design-and-experience/motion-and-graphics/ce-frontend-design": "library/development/frontend/ce-frontend-design",
+    "library/design-and-experience/motion-and-graphics/frontend-dev": "library/development/frontend/frontend-dev",
+    "library/design-and-experience/motion-and-graphics/frontend-slides": "library/content-and-documentation/presentations/frontend-slides",
+    "library/design-and-experience/motion-and-graphics/gemini-omni-flash-api": "library/data-and-ai/machine-learning/gemini-omni-flash-api",
+    "library/design-and-experience/motion-and-graphics/include": "library/meta-and-agent-skills/agent-architecture/include",
+    "library/design-and-experience/motion-and-graphics/interface-kit": "library/design-and-experience/design-systems/interface-kit",
+    "library/design-and-experience/motion-and-graphics/jobs-to-be-done": "library/business-and-operations/product-management/jobs-to-be-done",
+    "library/design-and-experience/motion-and-graphics/journey-map": "library/design-and-experience/ui-ux/journey-map",
+    "library/design-and-experience/motion-and-graphics/json-canvas": "library/content-and-documentation/technical-writing/json-canvas",
+    "library/design-and-experience/motion-and-graphics/minimalist-ui": "library/design-and-experience/taste-and-critique/minimalist-ui",
+    "library/design-and-experience/motion-and-graphics/presentation-builder": "library/content-and-documentation/presentations/presentation-builder",
+    "library/design-and-experience/motion-and-graphics/product-design": "library/business-and-operations/product-management/product-design",
+    "library/design-and-experience/motion-and-graphics/soft-skill": "library/design-and-experience/taste-and-critique/soft-skill",
+    "library/design-and-experience/motion-and-graphics/storytelling": "library/content-and-documentation/copywriting/storytelling",
+    "library/design-and-experience/motion-and-graphics/value-proposition-canvas": "library/business-and-operations/strategy/value-proposition-canvas",
+    "library/design-and-experience/taste-and-critique/algorithmic-art": "library/development/frontend/algorithmic-art",
+    "library/design-and-experience/taste-and-critique/email-design-eng": "library/design-and-experience/motion-and-graphics/email-design-eng",
+    "library/design-and-experience/taste-and-critique/frontend-enhancer": "library/development/frontend/frontend-enhancer",
+    "library/design-and-experience/taste-and-critique/frontend-slides-frontend-slides": "library/content-and-documentation/presentations/frontend-slides-frontend-slides",
+    "library/design-and-experience/taste-and-critique/frontend-ui-dark-ts": "library/development/frontend/frontend-ui-dark-ts",
+    "library/design-and-experience/taste-and-critique/review-animations": "library/design-and-experience/motion-and-graphics/review-animations",
+    "library/design-and-experience/taste-and-critique/ui-component": "library/design-and-experience/design-systems/ui-component",
+    "library/design-and-experience/taste-and-critique/ui-motion": "library/design-and-experience/motion-and-graphics/ui-motion",
+    "library/design-and-experience/taste-and-critique/ui-page": "library/design-and-experience/design-systems/ui-page",
+    "library/design-and-experience/taste-and-critique/ui-tokens": "library/design-and-experience/design-systems/ui-tokens",
+    "library/design-and-experience/taste-and-critique/ui-update": "library/design-and-experience/design-systems/ui-update",
+    "library/design-and-experience/taste-and-critique/webflow-ui-skills": "library/design-and-experience/design-systems/webflow-ui-skills",
+    "library/design-and-experience/ui-ux/agent-to-agent": "library/meta-and-agent-skills/agent-architecture/agent-to-agent",
+    "library/design-and-experience/ui-ux/blind-spot-detective": "library/content-and-documentation/technical-writing/blind-spot-detective",
+    "library/design-and-experience/ui-ux/business-analytics-reporter": "library/data-and-ai/analytics/business-analytics-reporter",
+    "library/design-and-experience/ui-ux/content-strategy": "library/content-and-documentation/technical-writing/content-strategy",
+    "library/design-and-experience/ui-ux/doc-coauthoring": "library/content-and-documentation/technical-writing/doc-coauthoring",
+    "library/design-and-experience/ui-ux/docx": "library/content-and-documentation/technical-writing/docx",
+    "library/design-and-experience/ui-ux/domain-driven-design": "library/development/software-architecture/domain-driven-design",
+    "library/design-and-experience/ui-ux/evaluate": "library/meta-and-agent-skills/agent-architecture/evaluate",
+    "library/design-and-experience/ui-ux/fortify": "library/meta-and-agent-skills/agent-architecture/fortify",
+    "library/design-and-experience/ui-ux/front-end-developer": "library/development/frontend/front-end-developer",
+    "library/design-and-experience/ui-ux/frontend-skill": "library/development/frontend/frontend-skill",
+    "library/design-and-experience/ui-ux/investigate": "library/meta-and-agent-skills/agent-architecture/investigate",
+    "library/design-and-experience/ui-ux/mermaid-expert": "library/content-and-documentation/technical-writing/mermaid-expert",
+    "library/design-and-experience/ui-ux/non-fiction-revision": "library/content-and-documentation/technical-writing/non-fiction-revision",
+    "library/design-and-experience/ui-ux/organize": "library/meta-and-agent-skills/agent-architecture/organize",
+    "library/design-and-experience/ui-ux/output-skill": "library/meta-and-agent-skills/agent-architecture/output-skill",
+    "library/design-and-experience/ui-ux/pdf": "library/content-and-documentation/technical-writing/pdf",
+    "library/design-and-experience/ui-ux/pitch-deck": "library/content-and-documentation/presentations/pitch-deck",
+    "library/design-and-experience/ui-ux/pptx": "library/content-and-documentation/presentations/pptx",
+    "library/design-and-experience/ui-ux/speech-adaptation": "library/content-and-documentation/copywriting/speech-adaptation",
+    "library/design-and-experience/ui-ux/strategize": "library/business-and-operations/strategy/strategize",
+    "library/design-and-experience/ui-ux/summarization": "library/content-and-documentation/technical-writing/summarization",
+    "library/design-and-experience/ui-ux/version-control-strategy": "library/workflow-and-automation/git-and-vcs/version-control-strategy",
+    "library/design-and-experience/ui-ux/voice-analysis": "library/content-and-documentation/copywriting/voice-analysis",
+    "library/design-and-experience/ui-ux/xlsx": "library/data-and-ai/analytics/xlsx",
+}
+
 REMOVED_CANONICAL_PATHS = frozenset(
     {
         "library/business-and-operations/product-management/product-decision-agent",
@@ -601,6 +673,7 @@ class HistoricalProvenanceMapper:
         p8_by_dest: Dict[str, Dict[str, str]] = {}
         for r in p8_rows:
             norm_dest = cls.normalize_historical_destination(r["phase08_final_destination"])
+            norm_dest = MOVED_PATH_ALIASES.get(norm_dest, norm_dest)
             p8_by_dest[norm_dest] = r
 
         # Index Census by current_path
@@ -615,6 +688,7 @@ class HistoricalProvenanceMapper:
         # Reconcile historical Phase 08 records
         for p8_rec in p8_rows:
             norm_dest = cls.normalize_historical_destination(p8_rec["phase08_final_destination"])
+            norm_dest = MOVED_PATH_ALIASES.get(norm_dest, norm_dest)
             census_rec = census_by_path.get(norm_dest)
             if census_rec:
                 matched_records_count += 1
