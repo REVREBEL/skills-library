@@ -387,6 +387,8 @@ class HistoricalProvenanceRecord:
 # still name the pre-move paths, so reconciliation resolves them through here.
 # Path-independent identity means a move must not orphan provenance.
 MOVED_PATH_ALIASES: Dict[str, str] = {
+    "library/design-and-experience/ui-ux/copywriting": "library/content-and-documentation/copywriting/copywriting",
+    "library/design-and-experience/ui-ux/frontend-design": "library/development/frontend/frontend-design",
     "library/design-and-experience/design-systems/affinity-diagram": "library/design-and-experience/ui-ux/affinity-diagram",
     "library/design-and-experience/design-systems/frontend-design2": "library/development/frontend/frontend-design2",
     "library/design-and-experience/design-systems/intent": "library/meta-and-agent-skills/agent-architecture/intent",

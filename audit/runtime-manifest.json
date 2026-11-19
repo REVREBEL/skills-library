@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_at": "2026-10-07T15:51:34Z",
-  "total_managed_skills": 2042,
+  "total_managed_skills": 2040,
   "skills": {
     "007": {
       "runtime_name": "007",
@@ -5583,31 +5583,11 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "design-and-experience-copywriting": {
-      "runtime_name": "design-and-experience-copywriting",
-      "canonical_name": "copywriting",
-      "canonical_path": "library/design-and-experience/ui-ux/copywriting",
-      "functional_parent": "library/content-and-documentation/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "design-and-experience-doc-coauthoring": {
       "runtime_name": "design-and-experience-doc-coauthoring",
       "canonical_name": "doc-coauthoring",
       "canonical_path": "library/content-and-documentation/technical-writing/doc-coauthoring",
       "functional_parent": "library/content-and-documentation/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "design-and-experience-frontend-design": {
-      "runtime_name": "design-and-experience-frontend-design",
-      "canonical_name": "frontend-design",
-      "canonical_path": "library/design-and-experience/ui-ux/frontend-design",
-      "functional_parent": "library/development/frontend/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",

@@ -7977,7 +7977,7 @@
     "dependencies_or_extends": "None",
     "manual_review_reason": "None",
     "notes": "Singular domain capability",
-    "token_estimate": 1105
+    "token_estimate": 1154
   },
   {
     "canonical_id": "content-and-documentation-notebooklm",
@@ -11160,26 +11160,6 @@
     "token_estimate": 657
   },
   {
-    "canonical_id": "design-and-experience-copywriting",
-    "name": "design-and-experience-copywriting",
-    "current_path": "library/design-and-experience/ui-ux/copywriting",
-    "current_category": "design-and-experience",
-    "current_subcategory": "ui-ux",
-    "semantic_role": "independent_capability",
-    "confidence": "high",
-    "classification_method": "targeted_semantic_deep_read",
-    "content_inspected": true,
-    "evidence_rationale": "Singular, self-contained domain capability with discrete task instructions.",
-    "candidate_family": "None",
-    "family_tier": "None",
-    "target_domain": "design-and-experience/ui-ux",
-    "execution_provider": "cli",
-    "dependencies_or_extends": "None",
-    "manual_review_reason": "None",
-    "notes": "Singular domain capability",
-    "token_estimate": 180
-  },
-  {
     "canonical_id": "design-and-experience-doc-coauthoring",
     "name": "design-and-experience-doc-coauthoring",
     "current_path": "library/content-and-documentation/technical-writing/doc-coauthoring",
@@ -11198,26 +11178,6 @@
     "manual_review_reason": "None",
     "notes": "Singular domain capability",
     "token_estimate": 3213
-  },
-  {
-    "canonical_id": "design-and-experience-frontend-design",
-    "name": "design-and-experience-frontend-design",
-    "current_path": "library/design-and-experience/ui-ux/frontend-design",
-    "current_category": "design-and-experience",
-    "current_subcategory": "ui-ux",
-    "semantic_role": "independent_capability",
-    "confidence": "high",
-    "classification_method": "targeted_semantic_deep_read",
-    "content_inspected": true,
-    "evidence_rationale": "Singular, self-contained domain capability with discrete task instructions.",
-    "candidate_family": "None",
-    "family_tier": "None",
-    "target_domain": "design-and-experience/ui-ux",
-    "execution_provider": "agent_native",
-    "dependencies_or_extends": "None",
-    "manual_review_reason": "None",
-    "notes": "Singular domain capability",
-    "token_estimate": 804
   },
   {
     "canonical_id": "design-and-experience-responsive-design",
@@ -12437,7 +12397,7 @@
     "dependencies_or_extends": "None",
     "manual_review_reason": "None",
     "notes": "Singular domain capability",
-    "token_estimate": 1310
+    "token_estimate": 1716
   },
   {
     "canonical_id": "development-keyword-research",

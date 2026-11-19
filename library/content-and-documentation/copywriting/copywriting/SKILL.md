@@ -244,6 +244,13 @@ It persuades **the right person** to take **the right action**.
 If the copy feels clever but unclear,  
 rewrite it until it feels obvious.
 
+## Provenance
+
+Merged from the former `design-and-experience/ui-ux/copywriting` catalogue entry
+(curated from Corey Haines, upstream `coreyhaines31/marketingskills`,
+category `marketing-creative`). That entry was a pointer with no procedure; this
+skill carries the workflow, so the pointer was retired rather than kept.
+
 ## When to Use
 This skill is applicable to execute the workflow or actions described in the overview.
 
