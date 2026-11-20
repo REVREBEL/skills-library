@@ -668,8 +668,21 @@ def load_authoritative_population() -> List[Dict[str, Any]]:
         # taxonomy that does not exist.
         sub = "" if cat in OPERATIONAL_ROOTS else (parts[2] if len(parts) > 2 else "")
 
+        # Operational roots use a consistent <scope>:<leaf> canonical_id,
+        # matching the form used for packages added directly below. The
+        # manifest's runtime_name may be bare or prefixed depending on
+        # collision history; normalising here keeps the census internally
+        # consistent. The scope comes from SCOPE_MAP so that curated names
+        # (skills-create-manage-update -> skills-lifecycle) are honoured.
+        if cat in OPERATIONAL_ROOTS:
+            from skill_library.identity import SCOPE_MAP
+            scope = SCOPE_MAP.get(cat, cat)
+            canonical_id = f"{scope}:{parts[-1]}"
+        else:
+            canonical_id = cname
+
         population.append({
-            "canonical_id": cname,
+            "canonical_id": canonical_id,
             "raw_name": cname,
             "rel_path": rel_path,
             "file": skill_file,
@@ -680,15 +693,17 @@ def load_authoritative_population() -> List[Dict[str, Any]]:
         })
 
     # 2. Add library/github-operations/* (18 skills)
+    from skill_library.identity import SCOPE_MAP
     gh_dir = REPO_ROOT / "library" / "github-operations"
     if gh_dir.exists():
+        gh_scope = SCOPE_MAP.get("github-operations", "github-operations")
         for p in sorted(gh_dir.iterdir()):
             if p.is_dir() and (p / "SKILL.md").exists():
                 rel = f"library/github-operations/{p.name}"
                 if rel not in seen_paths:
                     seen_paths.add(rel)
                     population.append({
-                        "canonical_id": f"github-operations:{p.name}",
+                        "canonical_id": f"{gh_scope}:{p.name}",
                         "raw_name": p.name,
                         "rel_path": rel,
                         "file": p / "SKILL.md",
@@ -701,13 +716,14 @@ def load_authoritative_population() -> List[Dict[str, Any]]:
     # 3. Add library/skills-create-manage-update/* (13 skills)
     sk_dir = REPO_ROOT / "library" / "skills-create-manage-update"
     if sk_dir.exists():
+        sk_scope = SCOPE_MAP.get("skills-create-manage-update", "skills-create-manage-update")
         for p in sorted(sk_dir.iterdir()):
             if p.is_dir() and (p / "SKILL.md").exists():
                 rel = f"library/skills-create-manage-update/{p.name}"
                 if rel not in seen_paths:
                     seen_paths.add(rel)
                     population.append({
-                        "canonical_id": f"skills-lifecycle:{p.name}",
+                        "canonical_id": f"{sk_scope}:{p.name}",
                         "raw_name": p.name,
                         "rel_path": rel,
                         "file": p / "SKILL.md",

@@ -14,7 +14,7 @@ This report documents the independent methodology and classification validation 
 - **Manual Review & Boundary Register**: Exactly **22 packages** assigned to `manual_review` with `confidence = low` (6 original catalog outliers + 16 unresolved boundary cases), fully cataloged in `audit/taxonomy-census/manual-review-outliers.md`.
 - **Platform Family Pruning**: False-positive keyword matches were eliminated; the GitHub family was pruned from 49 keyword mentions to **18 consolidated operations** plus 4 specific platform integrations.
 - **Skills Lifecycle Architectural Resolution**: Documented as an explicit **meta-capability family** belonging in `meta-and-agent-skills/skill-lifecycle`, resolving the `tools-and-platforms` contradiction.
-- **Population Token Density Differential**: Workflows average **2160 tokens** versus **1359 tokens** for capabilities (a **37.1% structural differential** across the library population).
+- **Population Token Density Differential**: Workflows average **2158 tokens** versus **1360 tokens** for capabilities (a **37.0% structural differential** across the library population).
 
 ---
 
@@ -125,14 +125,14 @@ The narrative previously conflated the subcategory count (3) with the top-level 
 
 | Semantic Role | Member Count | Total Token Volume | Average Tokens per Skill | Max Token Volume |
 | :--- | :---: | :---: | :---: | :---: |
-| **`workflow`** | 358 | 773,355 | 2160 tokens | 10,761 tokens |
-| **`independent_capability`** | 1651 | 2,243,628 | 1359 tokens | 16,684 tokens |
+| **`workflow`** | 358 | 772,376 | 2158 tokens | 10,761 tokens |
+| **`independent_capability`** | 1651 | 2,244,615 | 1360 tokens | 16,684 tokens |
 | **`reference_or_support`** | 5 | 2,493 | 499 tokens | 825 tokens |
 
 ### Population Token Density Differential Finding
-- Monolithic workflows average **2160 tokens**.
-- Focused independent capabilities average **1359 tokens**.
-- **Structural Density Differential**: **37.1%** difference in token volume across catalog package types.
+- Monolithic workflows average **2158 tokens**.
+- Focused independent capabilities average **1360 tokens**.
+- **Structural Density Differential**: **37.0%** difference in token volume across catalog package types.
 - **Context Savings Clarification**: This differential reflects the inherent size contrast between multi-stage playbooks and single-task capabilities across the library population. Real runtime context reduction during task execution is an architectural hypothesis to be verified in runtime execution benchmarks under REV-130.
 
 ---

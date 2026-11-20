@@ -25,7 +25,8 @@
 
 ### content-and-documentation (18)
 
-`pptx`, `pdf`, `docx`, `pitch-deck`, `presentation-builder`, `frontend-slides`, `frontend-slides-frontend-slides` → `presentations/`
+`pptx`, `pitch-deck`, `presentation-builder`, `frontend-slides`, `frontend-slides-frontend-slides` → `presentations/`
+`pdf`, `docx` → `technical-writing/`
 `copywriting`, `speech-adaptation`, `voice-analysis`, `storytelling` → `copywriting/`
 `json-canvas`, `mermaid-expert`, `summarization`, `doc-coauthoring`, `blind-spot-detective`, `non-fiction-revision`, `content-strategy` → `technical-writing/`
 
@@ -94,6 +95,6 @@ No skill content is rewritten. No merges happen. Every move is a `git mv` plus a
 ## After approval
 
 1. Move the 68.
-5. Update the 13 source routers and the destination routers.
-5. Update `audit/runtime-manifest.json` and regenerate the census.
-5. Re-run `validate` — target is 0 broken links, 0 orphans, physical == router == manifest.
+2. Update the 4 source routers (`design-systems`, `motion-and-graphics`, `taste-and-critique`, `ui-ux`) and the destination routers.
+3. Update `audit/runtime-manifest.json` and regenerate the census.
+4. Re-run `validate` — target is 0 broken links, 0 orphans, physical == router == manifest.

@@ -37,11 +37,11 @@ The Composition Plane governs how packages assemble: primitives providing low-le
 The Execution Plane governs runtime projections, tool adapters, invocation boundaries, and active context overhead.
 - **Tool Adapters**: Provider coupling (CLI, MCP, browser runner) is encapsulated within adapter packages rather than polluting general capabilities.
 - **Population Token Density Differential**:
-  - Workflows average: **2160 tokens**.
-  - Independent capabilities average: **1359 tokens**.
-  - Population Density Differential: **37.1%**.
+  - Workflows average: **2158 tokens**.
+  - Independent capabilities average: **1360 tokens**.
+  - Population Density Differential: **37.0%**.
 - **Runtime Context Overhead Clarification**: This token density differential demonstrates a structural size difference across package populations. It is not an active execution benchmark. Real runtime context savings constitute an architectural hypothesis to be tested during runtime execution benchmarking under REV-130.
-- **Census Evidence Finding**: Structural token density differential (37.1%) is observed between workflows and capabilities. Tool adapters isolate runtime couplings. Formal execution contracts, runtime projection targets, and active execution context savings remain to be benchmarked and closed under **REV-130**.
+- **Census Evidence Finding**: Structural token density differential (37.0%) is observed between workflows and capabilities. Tool adapters isolate runtime couplings. Formal execution contracts, runtime projection targets, and active execution context savings remain to be benchmarked and closed under **REV-130**.
 
 ### 4. Lifecycle Plane
 The Lifecycle Plane governs intake validation, continuous drift detection, runtime publication, deprecation, and alias management.
