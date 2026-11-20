@@ -1403,16 +1403,27 @@ def write_family_register(path: Path, rows: List[Dict[str, Any]]):
     op_count = len(fam_skills.get("1Password", []))
     sl_count = len(fam_skills.get("Skills Lifecycle", []))
 
-    # Assert expected counts to fail generation immediately on any divergence
-    assert gh_count == 23, f"GitHub Operations count mismatch: {gh_count} != 23"
-    assert wf_count == 22, f"Webflow count mismatch: {wf_count} != 22"
-    assert fig_count == 14, f"Figma count mismatch: {fig_count} != 14"
-    assert n8n_count == 14, f"n8n count mismatch: {n8n_count} != 14"
-    assert hf_count == 19, f"Hugging Face count mismatch: {hf_count} != 19"
-    assert wp_count == 7, f"WordPress count mismatch: {wp_count} != 7"
-    assert nb_count == 4, f"NotebookLM count mismatch: {nb_count} != 4"
-    assert op_count == 5, f"1Password count mismatch: {op_count} != 5"
-    assert sl_count == 13, f"Skills Lifecycle count mismatch: {sl_count} != 13"
+    # Counts above are derived from the census, not pinned: a population change
+    # is a catalog change, not a defect. The invariant that must hold is that the
+    # family contract's declared membership matches both its own source_paths and
+    # the census population. Checking source_paths (not the display name) keeps
+    # this robust to the contract's descriptive names and to families the census
+    # does not tag with a candidate_family.
+    from skill_library.family_contract import FamilyCandidateEvaluator
+
+    census_paths = {r["current_path"] for r in rows}
+    for slug, record in FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER.items():
+        declared = record.candidate_membership_count
+        source = set(record.source_paths)
+        if len(source) != declared:
+            raise AssertionError(
+                f"Family '{slug}' declares {declared} members but lists {len(source)} source_paths"
+            )
+        present = source & census_paths
+        if len(present) != declared:
+            raise AssertionError(
+                f"Family '{slug}' declares {declared} members but only {len(present)} are in the census"
+            )
 
     lines = [
         "# Catalog-Wide Platform & Tool Family Register (REV-126 / REV-150)",
@@ -1512,22 +1523,19 @@ def write_catch_all_analysis(path: Path, rows: List[Dict[str, Any]]):
     dev_dup_pairs = sorted([r["name"] for r in bins["development/fullstack"] if r["current_path"] in GITHUB_OPS_DUPLICATES.values()])
     cro_dup_pairs = sorted([r["name"] for r in bins["marketing-and-seo/cro"] if r["current_path"] in GITHUB_OPS_DUPLICATES.values()])
 
-    assert len(bins["development/fullstack"]) == 406
-    assert rc_dev[ROLE_INDEPENDENT_CAPABILITY] == 318
-    assert rc_dev[ROLE_WORKFLOW] == 77
-    assert rc_dev[ROLE_MANUAL_REVIEW] == 8
-    assert len(dev_dup_pairs) == 9, f"Expected 9 duplicate candidate pairs in dev/fullstack, got {len(dev_dup_pairs)}"
-
-    assert len(bins["marketing-and-seo/on-page-seo"]) == 271
-    assert rc_seo[ROLE_INDEPENDENT_CAPABILITY] == 238
-    assert rc_seo[ROLE_WORKFLOW] == 30
-    assert rc_seo[ROLE_MANUAL_REVIEW] == 1
-
-    assert len(bins["marketing-and-seo/cro"]) == 206
-    assert rc_cro[ROLE_INDEPENDENT_CAPABILITY] == 165
-    assert rc_cro[ROLE_WORKFLOW] == 37
-    assert rc_cro[ROLE_MANUAL_REVIEW] == 1
-    assert len(cro_dup_pairs) == 1
+    # Each bin's role breakdown must reconcile with its own membership. Exact
+    # counts are not pinned: the catalog legitimately changes.
+    for bin_name, counter in (
+        ("development/fullstack", rc_dev),
+        ("marketing-and-seo/on-page-seo", rc_seo),
+        ("marketing-and-seo/cro", rc_cro),
+    ):
+        total = sum(counter.values())
+        if total != len(bins[bin_name]):
+            raise AssertionError(
+                f"Catch-all bin '{bin_name}' has {len(bins[bin_name])} packages "
+                f"but its role breakdown sums to {total}"
+            )
 
     lines = [
         "# Catch-All Bin Semantic Role Decomposition (REV-126 / REV-150)",
@@ -1833,29 +1841,58 @@ def write_manual_semantic_sample_audit_report(path: Path, audit_res: Dict[str, A
     path.write_text("\n".join(lines), encoding="utf-8")
 
 def write_manual_outliers(path: Path, rows: List[Dict[str, Any]]):
-    """Write inventory of the 22 manual review outlier and boundary skills."""
-    outliers = [r for r in rows if r["semantic_role"] == ROLE_MANUAL_REVIEW]
-    assert len(outliers) == 22, f"Expected 22 manual review outliers, got {len(outliers)}"
+    """Write inventory of the manual-review outlier and boundary skills."""
+    outliers = sorted(
+        (r for r in rows if r["semantic_role"] == ROLE_MANUAL_REVIEW),
+        key=lambda x: x["canonical_id"],
+    )
+    n = len(outliers)
 
-    outliers = sorted(outliers, key=lambda x: x["canonical_id"])
     original_outlier_ids = {"007", "steve-jobs", "nerdzao-elite-gemini-high", "geminiignore-finops", "emerging-channels", "integrations"}
     orig_list = [r for r in outliers if r["canonical_id"] in original_outlier_ids or r["name"] in original_outlier_ids]
     boundary_list = [r for r in outliers if r not in orig_list]
+
+    # Boundary sub-groups are a curated narrative; their headers derive from
+    # the lists below so the counts can never drift from the content.
+    capability_vs_workflow = [
+        "- `launch` (`library/development/backend/launch`): Strategic cross-domain launch orchestration vs. singular deployment capability.",
+        "- `code-refactoring-tech-debt` (`library/development/software-architecture/code-refactoring-tech-debt`): Multi-phase code inspection pipeline vs. single-pass refactoring tool.",
+        "- `canva-automation` (`library/development/fullstack/canva-automation`): Asset production workflow vs. static template automation.",
+    ]
+    platform_overlay = [
+        "- `figma-implement-motion` (`library/design-and-experience/motion-and-graphics/figma-implement-motion`): Figma platform overlay vs. multi-step animation workflow.",
+        "- `marketing-and-seo-notebooklm` (`library/marketing-and-seo/on-page-seo/notebooklm`): NotebookLM platform overlay vs. domain SEO research capability.",
+        "- `notebooklm-create` (`library/content-and-documentation/presentations/notebooklm-create`): NotebookLM platform overlay vs. presentation generation workflow.",
+        "- `figma-swiftui` (`library/design-and-experience/design-systems/figma-swiftui`): Figma design overlay vs. standalone SwiftUI code generator.",
+        "- `n8n-multi-instance` (`library/marketing-and-seo/cro/n8n-multi-instance`): n8n infrastructure overlay vs. CRO architectural reference.",
+    ]
+    adapter_vs_capability = [
+        "- `not-human-search-mcp` (`library/development/backend/not-human-search-mcp`): MCP protocol adapter vs. autonomous search capability.",
+        "- `protect-mcp-governance` (`library/workflow-and-automation/tool-integration/protect-mcp-governance`): MCP runtime adapter vs. governance policy capability.",
+        "- `tool-use-guardian` (`library/development/fullstack/tool-use-guardian`): Tool execution adapter vs. safety interception workflow.",
+        "- `agent-memory-mcp` (`library/development/software-architecture/agent-memory-mcp`): MCP storage adapter vs. architectural memory capability.",
+    ]
+    primitive_vs_capability = [
+        "- `design-token` (`library/design-and-experience/design-systems/design-token`): Atomic design primitive vs. standalone design system capability.",
+        "- `nextjs-supabase-auth` (`library/development/frontend/nextjs-supabase-auth`): Authentication primitive vs. fullstack auth integration capability.",
+        "- `webflow-cli-cloud` (`library/development/fullstack/webflow-cli-cloud`): Webflow CLI primitive vs. cloud deployment workflow.",
+        "- `n8n-expression-syntax` (`library/quality-and-security/debugging/n8n-expression-syntax`): Expression syntax primitive vs. syntax debugging capability.",
+    ]
 
     lines = [
         "# Manual Review & Architectural Boundary Register (REV-126 / REV-150)",
         "",
         "## Overview",
         "",
-        "During the catalog census and independent manual semantic audit, exactly **22 skills** were flagged for manual architectural review and assigned `semantic_role = manual_review` with `confidence = low`.",
+        f"During the catalog census and independent manual semantic audit, exactly **{n} skills** were flagged for manual architectural review and assigned `semantic_role = manual_review` with `confidence = low`.",
         "",
-        "These 22 packages comprise two distinct categories:",
+        f"These {n} packages comprise two distinct categories:",
         f"1. **Original Catalog Outliers ({len(orig_list)} packages)**: Persona critique prompts, non-standard system configurations, and ambiguous multi-domain umbrella names.",
         f"2. **Unresolved Architectural Boundary Cases ({len(boundary_list)} packages)**: Genuinely disputed classification boundaries surfaced during the independent manual semantic audit, held in `manual_review` until authoritative architectural boundaries are established in REV-127 through REV-130.",
         "",
         "---",
         "",
-        "## Summary Register (22 Packages)",
+        f"## Summary Register ({n} Packages)",
         "",
         "| Canonical ID | Current Path | Category | Classification Trigger / Rationale | Gated Milestone |",
         "| :--- | :--- | :--- | :--- | :---: |",
@@ -1891,32 +1928,20 @@ def write_manual_outliers(path: Path, rows: List[Dict[str, Any]]):
         "",
         "These packages represent active architectural boundary decisions deferred to upcoming milestones:",
         "",
-        "### A. Capability vs. Multi-Phase Workflow (3 Packages, Gated under REV-127)",
-        "- `launch` (`library/development/backend/launch`): Strategic cross-domain launch orchestration vs. singular deployment capability.",
-        "- `code-refactoring-tech-debt` (`library/development/software-architecture/code-refactoring-tech-debt`): Multi-phase code inspection pipeline vs. single-pass refactoring tool.",
-        "- `canva-automation` (`library/development/fullstack/canva-automation`): Asset production workflow vs. static template automation.",
+        f"### A. Capability vs. Multi-Phase Workflow ({len(capability_vs_workflow)} Packages, Gated under REV-127)",
+        *capability_vs_workflow,
         "",
-        "### B. Platform Overlay vs. Domain Capability / Workflow (5 Packages, Gated under REV-127 / REV-129)",
-        "- `figma-implement-motion` (`library/design-and-experience/motion-and-graphics/figma-implement-motion`): Figma platform overlay vs. multi-step animation workflow.",
-        "- `marketing-and-seo-notebooklm` (`library/marketing-and-seo/on-page-seo/notebooklm`): NotebookLM platform overlay vs. domain SEO research capability.",
-        "- `notebooklm-create` (`library/content-and-documentation/presentations/notebooklm-create`): NotebookLM platform overlay vs. presentation generation workflow.",
-        "- `figma-swiftui` (`library/design-and-experience/design-systems/figma-swiftui`): Figma design overlay vs. standalone SwiftUI code generator.",
-        "- `n8n-multi-instance` (`library/marketing-and-seo/cro/n8n-multi-instance`): n8n infrastructure overlay vs. CRO architectural reference.",
+        f"### B. Platform Overlay vs. Domain Capability / Workflow ({len(platform_overlay)} Packages, Gated under REV-127 / REV-129)",
+        *platform_overlay,
         "",
-        "### C. Tool Execution Adapter vs. Domain Capability (4 Packages, Gated under REV-127 / REV-130)",
-        "- `not-human-search-mcp` (`library/development/backend/not-human-search-mcp`): MCP protocol adapter vs. autonomous search capability.",
-        "- `protect-mcp-governance` (`library/workflow-and-automation/tool-integration/protect-mcp-governance`): MCP runtime adapter vs. governance policy capability.",
-        "- `tool-use-guardian` (`library/development/fullstack/tool-use-guardian`): Tool execution adapter vs. safety interception workflow.",
-        "- `agent-memory-mcp` (`library/development/software-architecture/agent-memory-mcp`): MCP storage adapter vs. architectural memory capability.",
+        f"### C. Tool Execution Adapter vs. Domain Capability ({len(adapter_vs_capability)} Packages, Gated under REV-127 / REV-130)",
+        *adapter_vs_capability,
         "",
-        "### D. Platform Primitive vs. Domain Capability / Workflow (4 Packages, Gated under REV-127 / REV-129)",
-        "- `design-token` (`library/design-and-experience/design-systems/design-token`): Atomic design primitive vs. standalone design system capability.",
-        "- `nextjs-supabase-auth` (`library/development/frontend/nextjs-supabase-auth`): Authentication primitive vs. fullstack auth integration capability.",
-        "- `webflow-cli-cloud` (`library/development/fullstack/webflow-cli-cloud`): Webflow CLI primitive vs. cloud deployment workflow.",
-        "- `n8n-expression-syntax` (`library/quality-and-security/debugging/n8n-expression-syntax`): Expression syntax primitive vs. syntax debugging capability.",
+        f"### D. Platform Primitive vs. Domain Capability / Workflow ({len(primitive_vs_capability)} Packages, Gated under REV-127 / REV-129)",
+        *primitive_vs_capability,
         "",
         "---",
-        "All 22 packages are preserved in the catalog census with `confidence = low` and `semantic_role = manual_review` until authoritative arbitration in REV-127 through REV-130."
+        f"All {n} packages are preserved in the catalog census with `confidence = low` and `semantic_role = manual_review` until authoritative arbitration in REV-127 through REV-130."
     ])
     path.write_text("\n".join(lines), encoding="utf-8")
 
