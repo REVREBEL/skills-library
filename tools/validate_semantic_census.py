@@ -1394,11 +1394,16 @@ def assert_family_census_completeness(rows: List[Dict[str, Any]]) -> None:
     Families the census does not tag (supabase, curl, docker-basics) are
     contract-only by design and are not an error.
     """
-    from skill_library.family_contract import FamilyCandidateEvaluator
+    from skill_library.family_contract import AuthoritativeCensus, FamilyCandidateEvaluator
 
+    # Only census families claim members. Tier 2 / disqualified families
+    # (supabase, curl, docker-basics) are contract-only, so their source_paths
+    # must not be able to "claim" a census-tagged member.
+    census_family_slugs = set(AuthoritativeCensus.FAMILY_SLUG_TO_CENSUS_NAME)
     contract_paths = set()
-    for record in FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER.values():
-        contract_paths.update(record.source_paths)
+    for slug, record in FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER.items():
+        if slug in census_family_slugs:
+            contract_paths.update(record.source_paths)
 
     unclaimed = sorted(
         r["current_path"]

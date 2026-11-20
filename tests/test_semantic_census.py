@@ -304,6 +304,23 @@ class TestFamilyCensusCompleteness(unittest.TestCase):
         }]
         assert_family_census_completeness(rows)  # must not raise
 
+    def test_non_census_family_path_does_not_claim_member(self):
+        """A path only a non-census family claims must not count as claimed.
+
+        supabase is contract-only (no census tag). A census-tagged member whose
+        path happens to sit in supabase's source_paths must still be rejected.
+        """
+        rows = [{
+            "candidate_family": "Webflow",
+            "current_path": "library/marketing-and-seo/cro/supabase",
+            "current_category": "marketing-and-seo",
+            "current_subcategory": "cro",
+            "semantic_role": ROLE_INDEPENDENT_CAPABILITY,
+        }]
+        with self.assertRaises(AssertionError) as ctx:
+            assert_family_census_completeness(rows)
+        self.assertIn("not claimed by any contract", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()
