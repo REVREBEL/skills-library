@@ -24,11 +24,12 @@
     "task_folder_agents_archived": 20,
     "task_example_skill_md": 49,
     "by_path": {
+      ".agents": 7,
       "library": 2656,
-      "task-folder/agents/skills": 2100,
-      "task-folder/agents/not-needed": 238,
+      "task-example": 49,
       "task-folder/agents/archived": 20,
-      "task-example": 49
+      "task-folder/agents/not-needed": 238,
+      "task-folder/agents/skills": 2100
     }
   },
   "manifest": {

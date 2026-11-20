@@ -514,7 +514,10 @@ def validate_library_integrity(
             elif "secret leak" in err:
                 result.secret_leaks.append(f"{s_rel}: {err}")
         for warning in rep.frontmatter_warnings:
-            field_name = warning.split("'")[1] if "'" in warning else "unknown"
+            # Messages read "Frontmatter missing required '<field>'"; pull the
+            # quoted field rather than assuming a fixed position.
+            match = re.search(r"'([^']+)'", warning)
+            field_name = match.group(1) if match else "unknown"
             result.frontmatter_warnings[field_name] = (
                 result.frontmatter_warnings.get(field_name, 0) + 1
             )

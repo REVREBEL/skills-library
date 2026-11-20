@@ -116,7 +116,8 @@ class ChangeLedger:
         ``SkillObject.transition_to`` does that.
         """
         if not urn and ":" in canonical_id:
-            urn = f"urn:skill:{canonical_id}"
+            # canonical_id may already be a URN; never double-wrap it.
+            urn = canonical_id if canonical_id.startswith("urn:") else f"urn:skill:{canonical_id}"
 
         record = {
             "record_id": f"LFC-{uuid.uuid4().hex[:12].upper()}",

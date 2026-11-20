@@ -1588,12 +1588,18 @@ def write_catch_all_analysis(path: Path, rows: List[Dict[str, Any]]):
                 f"but its role breakdown sums to {total}"
             )
 
+    catch_all_total = (
+        len(bins["development/fullstack"])
+        + len(bins["marketing-and-seo/on-page-seo"])
+        + len(bins["marketing-and-seo/cro"])
+    )
+
     lines = [
         "# Catch-All Bin Semantic Role Decomposition (REV-126 / REV-150)",
         "",
         "## Overview",
         "",
-        "The current catalog contains **908 skills** concentrated in three massive catch-all subcategories:",
+        f"The current catalog contains **{catch_all_total} skills** concentrated in three massive catch-all subcategories:",
         f"- `development/fullstack`: {len(bins['development/fullstack'])} skills",
         f"- `marketing-and-seo/on-page-seo`: {len(bins['marketing-and-seo/on-page-seo'])} skills",
         f"- `marketing-and-seo/cro`: {len(bins['marketing-and-seo/cro'])} skills",

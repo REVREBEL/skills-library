@@ -383,6 +383,12 @@ class HistoricalProvenanceRecord:
 # consolidated into a successor, or dropped as templated stubs. Historical Phase 08
 # provenance stays traceable without pretending these still exist; they are excluded
 # from unmatched-historical counts, not from the audit trail.
+# This set is intentionally larger than the `dump` rows in
+# audit/quality-pilot/non-english-inventory.csv. That inventory records the
+# recommendation; the recorded decision was to prune every non-English skill, so
+# `ignore` and `keep_multilingual` rows were removed too. The set reflects what was
+# executed, not what was recommended.
+#
 # Canonical packages relocated by the design review. Historical Phase 08 records
 # still name the pre-move paths, so reconciliation resolves them through here.
 # Path-independent identity means a move must not orphan provenance.
