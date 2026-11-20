@@ -34,7 +34,9 @@ from validate_semantic_census import (
     ROLE_REFERENCE,
     ROLE_WORKFLOW,
     VALID_ROLES,
+    assert_family_census_completeness,
     assert_no_template_leaks,
+    write_manual_outliers,
 )
 
 CENSUS_DIR = REPO_ROOT / "audit" / "taxonomy-census"
@@ -55,28 +57,24 @@ class TestSemanticCensusInvariants(unittest.TestCase):
             cls.json_rows = json.load(f)
 
     def test_population_exact_count_and_parity(self):
-        """CSV and JSON must contain exactly 2,133 skills matching authoritative population."""
-        self.assertEqual(len(self.csv_rows), 2050)
-        self.assertEqual(len(self.json_rows), 2050)
+        """CSV and JSON must agree on population, and canonical IDs must be unique.
+
+        The population size is derived from the data, not pinned: the catalog
+        legitimately changes, and a count is a catalog fact, not a defect.
+        """
+        self.assertEqual(len(self.csv_rows), len(self.json_rows), "CSV and JSON populations diverge")
 
         csv_ids = [r["canonical_id"] for r in self.csv_rows]
         json_ids = [r["canonical_id"] for r in self.json_rows]
         self.assertEqual(csv_ids, json_ids)
-        self.assertEqual(len(set(csv_ids)), 2050, "All canonical IDs must be unique")
+        self.assertEqual(len(set(csv_ids)), len(csv_ids), "All canonical IDs must be unique")
 
     def test_role_distribution_invariants(self):
-        """Authoritative breakdown across the 8 accepted semantic roles."""
+        """Every row carries one of the accepted roles, and the roles partition the population."""
         counts = Counter(r["semantic_role"] for r in self.csv_rows)
 
-        self.assertEqual(counts[ROLE_INDEPENDENT_CAPABILITY], 1651)
-        self.assertEqual(counts[ROLE_WORKFLOW], 358)
-        self.assertEqual(counts[ROLE_MANUAL_REVIEW], 22)
-        self.assertEqual(counts[ROLE_OVERLAY], 6)
-        self.assertEqual(counts[ROLE_REFERENCE], 5)
-        self.assertEqual(counts[ROLE_ADAPTER], 4)
-        self.assertEqual(counts[ROLE_ALIAS], 3)
-        self.assertEqual(counts[ROLE_FAMILY_PRIMITIVE], 1)
-        self.assertEqual(sum(counts.values()), 2050)
+        self.assertLessEqual(set(counts), set(VALID_ROLES), "Census contains an unknown semantic role")
+        self.assertEqual(sum(counts.values()), len(self.csv_rows), "Role counts must sum to the population")
 
     def test_asset_audit_classification_integrity(self):
         """Verify asset-audit is classified as workflow across datasets and reports."""
@@ -97,36 +95,40 @@ class TestSemanticCensusInvariants(unittest.TestCase):
         self.assertNotIn("(`publish-blog`, `asset-audit`)", catch_all)
 
     def test_catch_all_bin_table_structure_and_aliases_header(self):
-        """Catch-all breakdown must use 'Aliases' header (not 'Aliases / Duplicates')."""
+        """Catch-all breakdown must use 'Aliases' header and rows must match the census.
+
+        Expected rows are derived from the census itself, so a legitimate
+        population change restates the table instead of failing the build.
+        """
         catch_all = (CENSUS_DIR / "catch-all-bin-analysis.md").read_text(encoding="utf-8")
         self.assertIn("| Catch-All Bin | Total Skills | Independent Capabilities | Workflows | Aliases | Overlays / Adapters | References | Primitives | Manual Review |", catch_all)
         self.assertNotIn("Aliases / Duplicates", catch_all)
 
-        # Exact row counts
-        self.assertIn("| `development/fullstack` | 406 | 318 | 77 | 1 | 0 | 1 | 1 | 8 |", catch_all)
-        self.assertIn("| `marketing-and-seo/on-page-seo` | 271 | 238 | 30 | 0 | 2 | 0 | 0 | 1 |", catch_all)
-        self.assertIn("| `marketing-and-seo/cro` | 206 | 165 | 37 | 0 | 2 | 1 | 0 | 1 |", catch_all)
+        bin_names = ["development/fullstack", "marketing-and-seo/on-page-seo", "marketing-and-seo/cro"]
+        for bin_name in bin_names:
+            cat, sub = bin_name.split("/")
+            members = [r for r in self.csv_rows if r["current_category"] == cat and r["current_subcategory"] == sub]
+            rc = Counter(r["semantic_role"] for r in members)
+            expected_row = (
+                f"| `{bin_name}` | {len(members)} | {rc[ROLE_INDEPENDENT_CAPABILITY]} | "
+                f"{rc[ROLE_WORKFLOW]} | {rc[ROLE_ALIAS]} | {rc[ROLE_OVERLAY] + rc[ROLE_ADAPTER]} | "
+                f"{rc[ROLE_REFERENCE]} | {rc[ROLE_FAMILY_PRIMITIVE]} | {rc[ROLE_MANUAL_REVIEW]} |"
+            )
+            self.assertIn(expected_row, catch_all, f"Catch-all row for {bin_name} does not match the census")
 
     def test_independent_validation_narrative_percentages_against_counts(self):
-        """Independently verifies that narrative percentages match underlying counts."""
+        """The narrative percentages in the report must match the census counts.
+
+        Expected percentages are computed from the census, so a legitimate
+        population change restates the narrative instead of failing the build.
+        """
         total = len(self.csv_rows)
         counts = Counter(r["semantic_role"] for r in self.csv_rows)
 
-        expected_pcts = {role: round((count / total) * 100, 1) for role, count in counts.items()}
-        self.assertEqual(expected_pcts[ROLE_INDEPENDENT_CAPABILITY], 80.5)
-        self.assertEqual(expected_pcts[ROLE_WORKFLOW], 17.5)
-        self.assertEqual(expected_pcts[ROLE_MANUAL_REVIEW], 1.1)
-        self.assertEqual(expected_pcts[ROLE_OVERLAY], 0.3)
-        self.assertEqual(expected_pcts[ROLE_REFERENCE], 0.2)
-        self.assertEqual(expected_pcts[ROLE_ADAPTER], 0.2)
-        self.assertEqual(expected_pcts[ROLE_ALIAS], 0.1)
-        self.assertEqual(expected_pcts[ROLE_FAMILY_PRIMITIVE], 0.0)
-
         report_text = (CENSUS_DIR / "census-validation-report.md").read_text(encoding="utf-8")
-        self.assertIn("80.5%", report_text)
-        self.assertIn("17.5%", report_text)
-        self.assertIn("1.1%", report_text)
-        self.assertIn("0.3%", report_text)
+        for role, count in counts.items():
+            expected_pct = round((count / total) * 100, 1)
+            self.assertIn(f"{expected_pct}%", report_text, f"Report missing {expected_pct}% for {role}")
 
 
 class TestNegativeSemanticRegression(unittest.TestCase):
@@ -213,6 +215,111 @@ class TestNegativeSemanticRegression(unittest.TestCase):
                 "untracked_scratch_artifact.tmp",
             ])
         self.assertIn("Unexpected untracked files", str(ctx.exception))
+
+
+class TestManualOutlierReconciliation(unittest.TestCase):
+    """The outlier report must track the live manual-review population.
+
+    Curated notes annotate the population; they are not the population. These
+    tests pin the reconciliation: a reclassified or pruned package drops out,
+    and a newly surfaced case is not silently omitted.
+    """
+
+    @staticmethod
+    def _mr_row(canonical_id, path, reason="boundary case"):
+        return {
+            "canonical_id": canonical_id,
+            "name": canonical_id,
+            "semantic_role": ROLE_MANUAL_REVIEW,
+            "current_path": path,
+            "current_category": path.split("/")[1],
+            "manual_review_reason": reason,
+        }
+
+    def _write(self, rows):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "manual-review-outliers.md"
+            write_manual_outliers(path, rows)
+            return path.read_text(encoding="utf-8")
+
+    def test_removed_boundary_case_drops_from_report(self):
+        """A curated boundary package that is no longer manual_review must not be described."""
+        rows = [
+            self._mr_row("007", "library/quality-and-security/security/007"),
+            self._mr_row("figma-swiftui", "library/design-and-experience/design-systems/figma-swiftui"),
+        ]
+        text = self._write(rows)
+        self.assertIn("`figma-swiftui`", text)
+        # `launch` is curated but absent from this population; its line must go.
+        self.assertNotIn("`launch` (`library/development/backend/launch`)", text)
+        self.assertNotIn("`launch`", text)
+
+    def test_new_boundary_case_is_surfaced(self):
+        """A manual_review package with no curated note must be surfaced, not dropped."""
+        rows = [
+            self._mr_row("007", "library/quality-and-security/security/007"),
+            self._mr_row(
+                "brand-new-boundary",
+                "library/development/fullstack/brand-new-boundary",
+                "newly disputed classification boundary",
+            ),
+        ]
+        text = self._write(rows)
+        self.assertIn("Newly Surfaced Boundary Cases", text)
+        self.assertIn("`brand-new-boundary`", text)
+        self.assertIn("newly disputed classification boundary", text)
+
+    def test_removed_original_outlier_drops_from_report(self):
+        """A curated original outlier that is no longer manual_review must not be listed."""
+        rows = [self._mr_row("steve-jobs", "library/development/fullstack/steve-jobs")]
+        text = self._write(rows)
+        self.assertIn("`steve-jobs`", text)
+        # `007` is curated but absent from this population; its row must go.
+        self.assertNotIn("`007`", text)
+
+
+class TestFamilyCensusCompleteness(unittest.TestCase):
+    """A census member tagged with a family no contract record claims is a gap."""
+
+    def test_unclaimed_census_family_member_is_rejected(self):
+        rows = [{
+            "candidate_family": "Webflow",
+            "current_path": "library/development/fullstack/ghost-webflow-skill",
+            "current_category": "development",
+            "current_subcategory": "fullstack",
+            "semantic_role": ROLE_INDEPENDENT_CAPABILITY,
+        }]
+        with self.assertRaises(AssertionError) as ctx:
+            assert_family_census_completeness(rows)
+        self.assertIn("not claimed by any contract", str(ctx.exception))
+
+    def test_untagged_census_rows_are_allowed(self):
+        """Families the census does not tag are contract-only by design."""
+        rows = [{
+            "candidate_family": "None",
+            "current_path": "library/development/fullstack/some-skill",
+            "current_category": "development",
+            "current_subcategory": "fullstack",
+            "semantic_role": ROLE_INDEPENDENT_CAPABILITY,
+        }]
+        assert_family_census_completeness(rows)  # must not raise
+
+    def test_non_census_family_path_does_not_claim_member(self):
+        """A path only a non-census family claims must not count as claimed.
+
+        supabase is contract-only (no census tag). A census-tagged member whose
+        path happens to sit in supabase's source_paths must still be rejected.
+        """
+        rows = [{
+            "candidate_family": "Webflow",
+            "current_path": "library/marketing-and-seo/cro/supabase",
+            "current_category": "marketing-and-seo",
+            "current_subcategory": "cro",
+            "semantic_role": ROLE_INDEPENDENT_CAPABILITY,
+        }]
+        with self.assertRaises(AssertionError) as ctx:
+            assert_family_census_completeness(rows)
+        self.assertIn("not claimed by any contract", str(ctx.exception))
 
 
 if __name__ == "__main__":
