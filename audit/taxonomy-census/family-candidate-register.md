@@ -4,7 +4,7 @@
 
 | Candidate Family | Tier | Validated Members | Categories Spanned | Subcategories Spanned | Proposed Ownership Home | Architectural Notes |
 | :--- | :---: | :---: | :---: | :---: | :--- | :--- |
-| **GitHub Operations** | Tier 1 | 22 | 3 (development, github-operations, quality-and-security) | 2 | `tools-and-platforms/github-operations` | 22 validated members: 18 consolidated operations + 4 core main-tree integrations. 27 keyword mentions pruned. |
+| **GitHub Operations** | Tier 1 | 23 | 3 (development, github-operations, quality-and-security) | 2 | `tools-and-platforms/github-operations` | 23 validated members: 18 consolidated operations + 4 core main-tree integrations. 27 keyword mentions pruned. |
 | **Webflow** | Tier 1 | 22 | 4 (design-and-experience, development, marketing-and-seo, quality-and-security) | 9 | `tools-and-platforms/webflow` | 22 validated members: 16 named webflow-* + 6 dedicated Webflow tools. 6 generic audit mentions pruned. |
 | **Figma** | Tier 1 | 14 | 2 (design-and-experience, development) | 3 | `tools-and-platforms/figma` | 14 validated members spanning 2 top-level categories and 3 subcategories. 2 generic design skills pruned. |
 | **n8n** | Tier 1 | 14 | 5 (business-and-operations, data-and-ai, marketing-and-seo, quality-and-security, workflow-and-automation) | 5 | `tools-and-platforms/n8n` | 14 validated members: dedicated n8n node, syntax, and multi-instance tools scattered across 5 categories. |
@@ -18,7 +18,7 @@
 
 ## Member-Level Validation Details
 
-### 1. GitHub Operations (22 Validated Members)
+### 1. GitHub Operations (23 Validated Members)
 - **Consolidated Operations (18)**: `actions-advanced`, `actions-debugger`, `advanced-workflows`, `commit`, `create-branch`, `create-issue-gate`, `feature-tracking`, `github`, `hooks-automation`, `issue-creator`, `llms-maintain`, `pr-merge-champion`, `pr-review`, `pr-writer`, `presence`, `publish-changes`, `review-requests`, `security-review`.
 - **Platform Integrations (4)**: `actions-templates`, `address-github-comments`, `openclaw-github-repo-commander`, `push-skill-to-github`.
 - **Pruned False Positives (27)**: Skills that merely execute git commands or reference GitHub repos (e.g., `high-contrast`, `high-end-visual-design`, `image`, `javascript-mastery`) were reclassified as `independent_capability`.

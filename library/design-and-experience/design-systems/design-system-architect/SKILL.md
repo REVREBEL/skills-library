@@ -408,3 +408,26 @@ Action: Build real token infrastructure with:
 Report using the standardized status protocol. Load: `Read("${SKILL_ROOT}/agents/shared/status-protocol.md")`.
 
 Your final output MUST include a `status` field: **DONE**, **DONE_WITH_CONCERNS**, **BLOCKED**, or **NEEDS_CONTEXT**. Never report DONE if you have concerns. Never silently produce work you are unsure about.
+
+---
+
+## Theme Starting Points
+
+Folded in from the former `design-system-generator` skill. Ten palettes to start from when the
+brief does not name a direction — each is a complete colour and type pairing, not just a swatch set:
+
+| Theme | Character |
+|---|---|
+| Ocean Depths | Professional, calming maritime |
+| Sunset Boulevard | Warm, vibrant sunset |
+| Forest Canopy | Natural, grounded earth |
+| Modern Minimalist | Clean contemporary grayscale |
+| Golden Hour | Rich warm autumnal |
+| Arctic Frost | Cool, crisp winter |
+| Desert Rose | Soft, sophisticated dusty tones |
+| Tech Innovation | Bold modern tech |
+| Botanical Garden | Fresh, organic garden |
+| Midnight Galaxy | Dramatic, cosmic deep tones |
+
+Treat these as starting points to be adapted to the product, not as deliverables. A theme that
+survives unchanged is usually a sign the design was not tailored.

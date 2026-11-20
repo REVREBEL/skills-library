@@ -28,6 +28,7 @@ from skill_library.config import (
     DEEP_CATEGORIES,
     RUNTIME_BRANCH,
     RuntimeTarget,
+    get_all_routers,
     load_runtime_targets,
 )
 from skill_library.intake import apply_candidate, evaluate_candidate
@@ -102,6 +103,15 @@ class TestRuntimeGitClonePublication(unittest.TestCase):
                 sub_r.parent.mkdir(parents=True, exist_ok=True)
                 if not sub_r.exists():
                     sub_r.write_text(f"# {sub} Router\n\n")
+
+        # Ensure every router the validator expects exists, whatever the current
+        # router set is. Deriving from get_all_routers keeps this test robust to
+        # operational roots being added to or removed from the validated set.
+        for router in get_all_routers(str(self.lib_dir)):
+            router_path = Path(router)
+            router_path.parent.mkdir(parents=True, exist_ok=True)
+            if not router_path.exists():
+                router_path.write_text(f"# {router_path.parent.name} Router\n\n")
 
         (self.lib_dir / "SKILL.md").write_text("# Root Router\n\n" + "\n".join(root_links) + "\n")
         (self.lib_dir / "quality-and-security" / "SKILL.md").write_text(

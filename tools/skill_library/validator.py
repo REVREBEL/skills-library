@@ -295,6 +295,17 @@ def validate_library_integrity(
                 rel_s_dir = os.path.relpath(s_dir, repo_root).replace(os.sep, "/")
                 physical_packages_set.add(rel_s_dir)
 
+    # Operational roots own packages at depth 2 (library/<root>/<skill>), not
+    # depth 3 like the functional categories.
+    for root_pkg in OPERATIONAL_SYSTEM_PACKAGES:
+        glob_pattern = os.path.join(library_dir, root_pkg, "*", "SKILL.md")
+        for s_file in glob.glob(glob_pattern):
+            s_abs = os.path.normpath(s_file)
+            if s_abs not in norm_routers:
+                s_dir = os.path.dirname(s_abs)
+                rel_s_dir = os.path.relpath(s_dir, repo_root).replace(os.sep, "/")
+                physical_packages_set.add(rel_s_dir)
+
     # Step 4: Extract manifest packages
     manifest_packages_set: Set[str] = {
         s["canonical_path"].replace(os.sep, "/").strip("/")

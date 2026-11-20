@@ -25,6 +25,16 @@ A framework for building ui, components and design systems. Components are added
 
 The JSON above contains the project config and installed components. Use `npx shadcn@latest docs <component>` to get documentation and example URLs for any component.
 
+## Primitive Choice: Radix vs Base UI
+
+shadcn/ui components are built on either **Radix UI** or **Base UI** primitives. The choice is made
+once, in \`components.json\`, and applies to every component added afterwards.
+
+- **Radix** is the default and has the widest component coverage.
+- **Base UI** is the alternative when you need its primitives or are avoiding Radix's API surface.
+
+Pick one before adding components. Mixing both in one project doubles the dependency surface for no benefit.
+
 ## Principles
 
 1. **Use existing components first.** Use `npx shadcn@latest search` to check registries before writing custom UI. Check community registries too.
