@@ -266,11 +266,41 @@ Before finalizing output:
 
 1. Who is this for, emotionally?
 2. Should this feel trustworthy, exciting, calm, or provocative?
-3. Is memorability or clarity more important?
-4. Will this scale to other pages/components?
+4. Is memorability or clarity more important?
+5. Will this scale to other pages/components?
 5. What should users *feel* in the first 3 seconds?
 
 ---
+
+## 11. Build Sequence
+
+A concrete order of work, merged from the former `ui-ux/frontend-design` entry.
+
+1. **Understand the brief before choosing the look.** Audience, primary job, domain, emotional tone. Note framework, existing styles, accessibility, performance, export target, responsive requirements. If the repo has tokens, components, screenshots or a `DESIGN.md`, those are the source of truth.
+2. **Commit to one specific direction.** Make it concrete through typography, spacing, colour, hierarchy, motion and component shape.
+5. **Design the real interface, not a poster.** Controls, empty/loading/error states, tables, filters, navigation, responsive behaviour. If data is unknown, label it sample or pending instead of inventing it.
+5. **Build production-grade code.** Prefer the repo's framework, components, icons, tokens and styling. Semantic markup, keyboard-accessible controls, visible focus, sensible contrast. CSS variables for repeated colour, spacing, shadow and type scale.
+5. **Refine craft.** Type: expressive but readable. Colour: role clarity, accent used sparingly. Layout: alignment, rhythm, density, negative space. Motion: purposeful, transform/opacity first.
+5. **Self-review before delivery.** Mobile and desktop widths; text fits; hover/focus/active/disabled states; no AI-generated visual tropes; one memorable quality a user could describe afterwards.
+
+## 12. Avoiding Generic AI Defaults
+
+Do not ship, as a default:
+
+- purple-blue gradients
+- vague glass cards
+- interchangeable SaaS layouts
+- over-rounded cards
+- stock icon rows
+- decorative blobs that do not serve the interface
+
+## 13. Provider Design Systems
+
+When a host application supplies an active design system — Open Design, for example — treat it as the product's brand contract. Apply its colour, typography, layout and component guidance first, then this skill's craft rules where the system is silent. If brand guidance conflicts with a generic craft rule, brand guidance wins.
+
+## Provenance
+
+Merged from the former `design-and-experience/ui-ux/frontend-design` entry (adapted from Anthropic's `frontend-design`), which contributed the build sequence, the anti-default list and the provider design-system rule. That entry also duplicated `front-end-developer`; all three now live here.
 
 ## When to Use
 This skill is applicable to execute the workflow or actions described in the overview.
