@@ -7,8 +7,8 @@
 | **GitHub Operations** | Tier 1 | 23 | 3 (development, github-operations, quality-and-security) | 2 | `tools-and-platforms/github-operations` | 23 validated members: 18 consolidated operations + 4 core main-tree integrations. 27 keyword mentions pruned. |
 | **Webflow** | Tier 1 | 22 | 4 (design-and-experience, development, marketing-and-seo, quality-and-security) | 9 | `tools-and-platforms/webflow` | 22 validated members: 16 named webflow-* + 6 dedicated Webflow tools. 6 generic audit mentions pruned. |
 | **Figma** | Tier 1 | 14 | 2 (design-and-experience, development) | 3 | `tools-and-platforms/figma` | 14 validated members spanning 2 top-level categories and 3 subcategories. 2 generic design skills pruned. |
-| **n8n** | Tier 1 | 14 | 5 (business-and-operations, data-and-ai, marketing-and-seo, quality-and-security, workflow-and-automation) | 5 | `tools-and-platforms/n8n` | 14 validated members: dedicated n8n node, syntax, and multi-instance tools scattered across 5 categories. |
-| **Hugging Face** | Tier 1 | 19 | 2 (data-and-ai, quality-and-security) | 4 | `tools-and-platforms/hugging-face` | 19 validated members: 13 hugging-face-* + 6 huggingface-* dedicated model/dataset tools within data-and-ai. |
+| **n8n** | Tier 1 | 14 | 4 (business-and-operations, marketing-and-seo, quality-and-security, workflow-and-automation) | 4 | `tools-and-platforms/n8n` | 14 validated members: dedicated n8n node, syntax, and multi-instance tools scattered across 5 categories. |
+| **Hugging Face** | Tier 1 | 8 | 2 (data-and-ai, quality-and-security) | 2 | `tools-and-platforms/hugging-face` | 8 validated members: 13 hugging-face-* + 6 huggingface-* dedicated model/dataset tools within data-and-ai. |
 | **WordPress** | Tier 1 | 7 | 2 (development, marketing-and-seo) | 2 | `tools-and-platforms/wordpress` | 7 validated members: dedicated WordPress/WooCommerce skills across development and marketing. |
 | **NotebookLM** | Tier 1 | 4 | 2 (content-and-documentation, marketing-and-seo) | 3 | `tools-and-platforms/notebooklm` | 4 validated members: dedicated NotebookLM research, synthesis, and audio overview tools. |
 | **1Password** | Tier 1 | 5 | 1 (infrastructure-and-ops) | 1 | `tools-and-platforms/1password` | 5 validated members: dedicated 1Password CLI and Kubernetes operator skills. |
@@ -33,7 +33,7 @@
 - **Validated Members (14)**: `figma`, `figma-code-connect`, `figma-create-new-file`, `figma-design-to-code`, `figma-generate-design`, `figma-generate-diagram`, `figma-generate-library`, `figma-implement-motion`, `figma-swiftui`, `figma-use`, `figma-use-figjam`, `figma-use-motion`, `figma-use-slides`, `generate-project-plan`.
 - **Pruned Non-Platform Mentions (2)**: `design-system-architect` and `product-design` were confirmed as broad design methodologies that merely reference Figma variables, and remain `independent_capability`.
 
-### 4. Hugging Face (19 Validated Members)
+### 4. Hugging Face (8 Validated Members)
 - **Validated Members (19)**: `hugging-face-cli`, `hugging-face-community-evals`, `hugging-face-dataset-viewer`, `hugging-face-datasets`, `hugging-face-evaluation`, `hugging-face-gradio`, `hugging-face-jobs`, `hugging-face-model-trainer`, `hugging-face-paper-publisher`, `hugging-face-papers`, `hugging-face-tool-builder`, `hugging-face-trackio`, `hugging-face-vision-trainer`, `huggingface-best`, `huggingface-local-models`, `huggingface-lora-space-builder`, `huggingface-spaces`, `huggingface-tool-builder`, `huggingface-zerogpu`.
 
 ### 5. 1Password (5 Validated Members)

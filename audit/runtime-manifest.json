@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "generated_at": "2026-10-07T15:51:34Z",
-  "total_managed_skills": 2051,
+  "generated_at": "2026-11-20T00:00:00Z",
+  "total_managed_skills": 2017,
   "skills": {
     "007": {
       "runtime_name": "007",
@@ -553,16 +553,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "ai-agent-development": {
-      "runtime_name": "ai-agent-development",
-      "canonical_name": "ai-agent-development",
-      "canonical_path": "library/data-and-ai/llm-and-rag/ai-agent-development",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "ai-agents-architect": {
       "runtime_name": "ai-agents-architect",
       "canonical_name": "ai-agents-architect",
@@ -593,16 +583,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "ai-engineer": {
-      "runtime_name": "ai-engineer",
-      "canonical_name": "ai-engineer",
-      "canonical_path": "library/data-and-ai/llm-and-rag/ai-engineer",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "ai-engineering-toolkit": {
       "runtime_name": "ai-engineering-toolkit",
       "canonical_name": "ai-engineering-toolkit",
@@ -618,16 +598,6 @@
       "canonical_name": "ai-loop",
       "canonical_path": "library/development/fullstack/ai-loop",
       "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "ai-ml": {
-      "runtime_name": "ai-ml",
-      "canonical_name": "ai-ml",
-      "canonical_path": "library/data-and-ai/llm-and-rag/ai-ml",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -1423,16 +1393,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "autonomous-agent-patterns": {
-      "runtime_name": "autonomous-agent-patterns",
-      "canonical_name": "autonomous-agent-patterns",
-      "canonical_path": "library/data-and-ai/machine-learning/autonomous-agent-patterns",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "autonomous-agents": {
       "runtime_name": "autonomous-agents",
       "canonical_name": "autonomous-agents",
@@ -1687,16 +1647,6 @@
       "runtime_name": "bigquery-analytics",
       "canonical_name": "bigquery-analytics",
       "canonical_path": "library/data-and-ai/analytics/bigquery-analytics",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "bigquery-basics": {
-      "runtime_name": "bigquery-basics",
-      "canonical_name": "bigquery-basics",
-      "canonical_path": "library/data-and-ai/llm-and-rag/bigquery-basics",
       "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -2913,16 +2863,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "clean-code-guard": {
-      "runtime_name": "clean-code-guard",
-      "canonical_name": "clean-code-guard",
-      "canonical_path": "library/data-and-ai/llm-and-rag/clean-code-guard",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "clerk-auth": {
       "runtime_name": "clerk-auth",
       "canonical_name": "clerk-auth",
@@ -3048,16 +2988,6 @@
       "canonical_name": "cloud-devops",
       "canonical_path": "library/infrastructure-and-ops/containers-and-orchestration/cloud-devops",
       "functional_parent": "library/infrastructure-and-ops/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "cloudflare": {
-      "runtime_name": "cloudflare",
-      "canonical_name": "cloudflare",
-      "canonical_path": "library/data-and-ai/llm-and-rag/cloudflare",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -3228,16 +3158,6 @@
       "canonical_name": "code-refactoring-tech-debt",
       "canonical_path": "library/development/software-architecture/code-refactoring-tech-debt",
       "functional_parent": "library/development/software-architecture/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "code-review-ai-ai-review": {
-      "runtime_name": "code-review-ai-ai-review",
-      "canonical_name": "code-review-ai-ai-review",
-      "canonical_path": "library/data-and-ai/llm-and-rag/code-review-ai-ai-review",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -3573,16 +3493,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "community-marketing": {
-      "runtime_name": "community-marketing",
-      "canonical_name": "community-marketing",
-      "canonical_path": "library/data-and-ai/llm-and-rag/community-marketing",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "community-ops": {
       "runtime_name": "community-ops",
       "canonical_name": "community-ops",
@@ -3813,30 +3723,10 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "comprehensive-review-pr-enhance": {
-      "runtime_name": "comprehensive-review-pr-enhance",
-      "canonical_name": "comprehensive-review-pr-enhance",
-      "canonical_path": "library/data-and-ai/llm-and-rag/comprehensive-review-pr-enhance",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "computer-use-agents": {
       "runtime_name": "computer-use-agents",
       "canonical_name": "computer-use-agents",
       "canonical_path": "library/data-and-ai/machine-learning/computer-use-agents",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "computer-vision-expert": {
-      "runtime_name": "computer-vision-expert",
-      "canonical_name": "computer-vision-expert",
-      "canonical_path": "library/data-and-ai/analytics/computer-vision-expert",
       "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -3958,16 +3848,6 @@
       "canonical_name": "content-brief",
       "canonical_path": "library/marketing-and-seo/on-page-seo/content-brief",
       "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "content-commerce_02": {
-      "runtime_name": "content-commerce_02",
-      "canonical_name": "content-commerce_02",
-      "canonical_path": "library/data-and-ai/machine-learning/content-commerce_02",
-      "functional_parent": "library/marketing-and-seo/cro/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -4183,31 +4063,11 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "context-manager": {
-      "runtime_name": "context-manager",
-      "canonical_name": "context-manager",
-      "canonical_path": "library/data-and-ai/vector-databases/context-manager",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "context-optimization": {
       "runtime_name": "context-optimization",
       "canonical_name": "context-optimization",
       "canonical_path": "library/development/backend/context-optimization",
       "functional_parent": "library/development/backend/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "context-window-management": {
-      "runtime_name": "context-window-management",
-      "canonical_name": "context-window-management",
-      "canonical_path": "library/data-and-ai/llm-and-rag/context-window-management",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -4243,16 +4103,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "conversation-memory": {
-      "runtime_name": "conversation-memory",
-      "canonical_name": "conversation-memory",
-      "canonical_path": "library/data-and-ai/llm-and-rag/conversation-memory",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "conversion-copywriting": {
       "runtime_name": "conversion-copywriting",
       "canonical_name": "conversion-copywriting",
@@ -4278,16 +4128,6 @@
       "canonical_name": "conversion-rate-optimization",
       "canonical_path": "library/marketing-and-seo/cro/conversion-rate-optimization",
       "functional_parent": "library/marketing-and-seo/cro/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "convex": {
-      "runtime_name": "convex",
-      "canonical_name": "convex",
-      "canonical_path": "library/data-and-ai/llm-and-rag/convex",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -4693,16 +4533,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "custom-code-management": {
-      "runtime_name": "custom-code-management",
-      "canonical_name": "custom-code-management",
-      "canonical_path": "library/data-and-ai/analytics/custom-code-management",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "customer-feedback-taxonomy": {
       "runtime_name": "customer-feedback-taxonomy",
       "canonical_name": "customer-feedback-taxonomy",
@@ -4913,36 +4743,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "data-and-ai-marketing-psychology": {
-      "runtime_name": "data-and-ai-marketing-psychology",
-      "canonical_name": "marketing-psychology",
-      "canonical_path": "library/data-and-ai/llm-and-rag/marketing-psychology",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "data-and-ai-positioning": {
-      "runtime_name": "data-and-ai-positioning",
-      "canonical_name": "positioning",
-      "canonical_path": "library/data-and-ai/analytics/positioning",
-      "functional_parent": "library/business-and-operations/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "data-and-ai-pricing-strategy": {
-      "runtime_name": "data-and-ai-pricing-strategy",
-      "canonical_name": "pricing-strategy",
-      "canonical_path": "library/data-and-ai/analytics/pricing-strategy",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "data-contract-framework": {
       "runtime_name": "data-contract-framework",
       "canonical_name": "data-contract-framework",
@@ -4958,16 +4758,6 @@
       "canonical_name": "data-dense-design",
       "canonical_path": "library/design-and-experience/taste-and-critique/data-dense-design",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "data-engineer": {
-      "runtime_name": "data-engineer",
-      "canonical_name": "data-engineer",
-      "canonical_path": "library/data-and-ai/data-engineering/data-engineer",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -5973,16 +5763,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "developer-sandbox": {
-      "runtime_name": "developer-sandbox",
-      "canonical_name": "developer-sandbox",
-      "canonical_path": "library/data-and-ai/machine-learning/developer-sandbox",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "developer-seo": {
       "runtime_name": "developer-seo",
       "canonical_name": "developer-seo",
@@ -6228,16 +6008,6 @@
       "canonical_name": "discovery-calls",
       "canonical_path": "library/marketing-and-seo/on-page-seo/discovery-calls",
       "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "dispatch": {
-      "runtime_name": "dispatch",
-      "canonical_name": "dispatch",
-      "canonical_path": "library/data-and-ai/machine-learning/dispatch",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -7583,16 +7353,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "file-uploads": {
-      "runtime_name": "file-uploads",
-      "canonical_name": "file-uploads",
-      "canonical_path": "library/data-and-ai/llm-and-rag/file-uploads",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "filesystem-context": {
       "runtime_name": "filesystem-context",
       "canonical_name": "filesystem-context",
@@ -7858,16 +7618,6 @@
       "canonical_name": "fortify",
       "canonical_path": "library/meta-and-agent-skills/agent-architecture/fortify",
       "functional_parent": "library/design-and-experience/ui-ux/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "four-core-documents": {
-      "runtime_name": "four-core-documents",
-      "canonical_name": "four-core-documents",
-      "canonical_path": "library/data-and-ai/analytics/four-core-documents",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -8223,26 +7973,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "gemini-api-dev": {
-      "runtime_name": "gemini-api-dev",
-      "canonical_name": "gemini-api-dev",
-      "canonical_path": "library/data-and-ai/machine-learning/gemini-api-dev",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "gemini-api-integration": {
-      "runtime_name": "gemini-api-integration",
-      "canonical_name": "gemini-api-integration",
-      "canonical_path": "library/data-and-ai/machine-learning/gemini-api-integration",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "gemini-deep-research": {
       "runtime_name": "gemini-deep-research",
       "canonical_name": "gemini-deep-research",
@@ -8253,31 +7983,11 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "gemini-interactions-api": {
-      "runtime_name": "gemini-interactions-api",
-      "canonical_name": "gemini-interactions-api",
-      "canonical_path": "library/data-and-ai/machine-learning/gemini-interactions-api",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "gemini-live-api-dev": {
       "runtime_name": "gemini-live-api-dev",
       "canonical_name": "gemini-live-api-dev",
       "canonical_path": "library/development/backend/gemini-live-api-dev",
       "functional_parent": "library/development/backend/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "gemini-omni-flash-api": {
-      "runtime_name": "gemini-omni-flash-api",
-      "canonical_name": "gemini-omni-flash-api",
-      "canonical_path": "library/data-and-ai/machine-learning/gemini-omni-flash-api",
-      "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -8558,16 +8268,6 @@
       "canonical_name": "gpt-tasteskill",
       "canonical_path": "library/marketing-and-seo/cro/gpt-tasteskill",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "grand-slam-offers": {
-      "runtime_name": "grand-slam-offers",
-      "canonical_name": "grand-slam-offers",
-      "canonical_path": "library/data-and-ai/llm-and-rag/grand-slam-offers",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -8903,60 +8603,10 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "hugging-face-community-evals": {
-      "runtime_name": "hugging-face-community-evals",
-      "canonical_name": "hugging-face-community-evals",
-      "canonical_path": "library/data-and-ai/llm-and-rag/hugging-face-community-evals",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "hugging-face-dataset-viewer": {
-      "runtime_name": "hugging-face-dataset-viewer",
-      "canonical_name": "hugging-face-dataset-viewer",
-      "canonical_path": "library/data-and-ai/machine-learning/hugging-face-dataset-viewer",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "hugging-face-datasets": {
-      "runtime_name": "hugging-face-datasets",
-      "canonical_name": "hugging-face-datasets",
-      "canonical_path": "library/data-and-ai/llm-and-rag/hugging-face-datasets",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "hugging-face-evaluation": {
-      "runtime_name": "hugging-face-evaluation",
-      "canonical_name": "hugging-face-evaluation",
-      "canonical_path": "library/data-and-ai/llm-and-rag/hugging-face-evaluation",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "hugging-face-gradio": {
       "runtime_name": "hugging-face-gradio",
       "canonical_name": "hugging-face-gradio",
       "canonical_path": "library/data-and-ai/machine-learning/hugging-face-gradio",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "hugging-face-jobs": {
-      "runtime_name": "hugging-face-jobs",
-      "canonical_name": "hugging-face-jobs",
-      "canonical_path": "library/data-and-ai/machine-learning/hugging-face-jobs",
       "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -8973,16 +8623,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "hugging-face-paper-publisher": {
-      "runtime_name": "hugging-face-paper-publisher",
-      "canonical_name": "hugging-face-paper-publisher",
-      "canonical_path": "library/data-and-ai/machine-learning/hugging-face-paper-publisher",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "hugging-face-papers": {
       "runtime_name": "hugging-face-papers",
       "canonical_name": "hugging-face-papers",
@@ -8993,60 +8633,10 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "hugging-face-tool-builder": {
-      "runtime_name": "hugging-face-tool-builder",
-      "canonical_name": "hugging-face-tool-builder",
-      "canonical_path": "library/data-and-ai/machine-learning/hugging-face-tool-builder",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "hugging-face-trackio": {
       "runtime_name": "hugging-face-trackio",
       "canonical_name": "hugging-face-trackio",
       "canonical_path": "library/data-and-ai/machine-learning/hugging-face-trackio",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "hugging-face-vision-trainer": {
-      "runtime_name": "hugging-face-vision-trainer",
-      "canonical_name": "hugging-face-vision-trainer",
-      "canonical_path": "library/data-and-ai/analytics/hugging-face-vision-trainer",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "huggingface-best": {
-      "runtime_name": "huggingface-best",
-      "canonical_name": "huggingface-best",
-      "canonical_path": "library/data-and-ai/machine-learning/huggingface-best",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "huggingface-local-models": {
-      "runtime_name": "huggingface-local-models",
-      "canonical_name": "huggingface-local-models",
-      "canonical_path": "library/data-and-ai/machine-learning/huggingface-local-models",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "huggingface-lora-space-builder": {
-      "runtime_name": "huggingface-lora-space-builder",
-      "canonical_name": "huggingface-lora-space-builder",
-      "canonical_path": "library/data-and-ai/machine-learning/huggingface-lora-space-builder",
       "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -9067,16 +8657,6 @@
       "runtime_name": "huggingface-tool-builder",
       "canonical_name": "huggingface-tool-builder",
       "canonical_path": "library/data-and-ai/machine-learning/huggingface-tool-builder",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "huggingface-zerogpu": {
-      "runtime_name": "huggingface-zerogpu",
-      "canonical_name": "huggingface-zerogpu",
-      "canonical_path": "library/data-and-ai/machine-learning/huggingface-zerogpu",
       "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -9553,16 +9133,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "influencer-tracking": {
-      "runtime_name": "influencer-tracking",
-      "canonical_name": "influencer-tracking",
-      "canonical_path": "library/data-and-ai/analytics/influencer-tracking",
-      "functional_parent": "library/marketing-and-seo/content-and-campaigns/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "information-architecture": {
       "runtime_name": "information-architecture",
       "canonical_name": "information-architecture",
@@ -9628,16 +9198,6 @@
       "canonical_name": "insights-repository-kit",
       "canonical_path": "library/marketing-and-seo/on-page-seo/insights-repository-kit",
       "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "instagram": {
-      "runtime_name": "instagram",
-      "canonical_name": "instagram",
-      "canonical_path": "library/data-and-ai/analytics/instagram",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -10148,16 +9708,6 @@
       "canonical_name": "landing-page-optimizer",
       "canonical_path": "library/marketing-and-seo/cro/landing-page-optimizer",
       "functional_parent": "library/marketing-and-seo/cro/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "langchain-architecture": {
-      "runtime_name": "langchain-architecture",
-      "canonical_name": "langchain-architecture",
-      "canonical_path": "library/data-and-ai/llm-and-rag/langchain-architecture",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -10693,46 +10243,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "llm-app-patterns": {
-      "runtime_name": "llm-app-patterns",
-      "canonical_name": "llm-app-patterns",
-      "canonical_path": "library/data-and-ai/llm-and-rag/llm-app-patterns",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "llm-application-dev-ai-assistant": {
-      "runtime_name": "llm-application-dev-ai-assistant",
-      "canonical_name": "llm-application-dev-ai-assistant",
-      "canonical_path": "library/data-and-ai/llm-and-rag/llm-application-dev-ai-assistant",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "llm-application-dev-langchain-agent": {
-      "runtime_name": "llm-application-dev-langchain-agent",
-      "canonical_name": "llm-application-dev-langchain-agent",
-      "canonical_path": "library/data-and-ai/llm-and-rag/llm-application-dev-langchain-agent",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "llm-application-dev-prompt-optimize": {
-      "runtime_name": "llm-application-dev-prompt-optimize",
-      "canonical_name": "llm-application-dev-prompt-optimize",
-      "canonical_path": "library/data-and-ai/llm-and-rag/llm-application-dev-prompt-optimize",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "llm-council": {
       "runtime_name": "llm-council",
       "canonical_name": "llm-council",
@@ -10748,16 +10258,6 @@
       "canonical_name": "llm-evaluation",
       "canonical_path": "library/quality-and-security/testing/llm-evaluation",
       "functional_parent": "library/quality-and-security/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "llm-ops": {
-      "runtime_name": "llm-ops",
-      "canonical_name": "llm-ops",
-      "canonical_path": "library/data-and-ai/llm-and-rag/llm-ops",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -10788,26 +10288,6 @@
       "canonical_name": "llm-structured-output",
       "canonical_path": "library/marketing-and-seo/technical-seo/llm-structured-output",
       "functional_parent": "library/marketing-and-seo/technical-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "llms-create": {
-      "runtime_name": "llms-create",
-      "canonical_name": "llms-create",
-      "canonical_path": "library/data-and-ai/llm-and-rag/llms-create",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "llms-update": {
-      "runtime_name": "llms-update",
-      "canonical_name": "llms-update",
-      "canonical_path": "library/data-and-ai/llm-and-rag/llms-update",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -11833,16 +11313,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "ml-pipeline-workflow": {
-      "runtime_name": "ml-pipeline-workflow",
-      "canonical_name": "ml-pipeline-workflow",
-      "canonical_path": "library/data-and-ai/data-engineering/ml-pipeline-workflow",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "mlops-engineer": {
       "runtime_name": "mlops-engineer",
       "canonical_name": "mlops-engineer",
@@ -11973,16 +11443,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "multi-agent-architect": {
-      "runtime_name": "multi-agent-architect",
-      "canonical_name": "multi-agent-architect",
-      "canonical_path": "library/data-and-ai/llm-and-rag/multi-agent-architect",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "multi-agent-brainstorming": {
       "runtime_name": "multi-agent-brainstorming",
       "canonical_name": "multi-agent-brainstorming",
@@ -12038,16 +11498,6 @@
       "canonical_name": "multilingual-score",
       "canonical_path": "library/development/fullstack/multilingual-score",
       "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "n8n-agents": {
-      "runtime_name": "n8n-agents",
-      "canonical_name": "n8n-agents",
-      "canonical_path": "library/data-and-ai/llm-and-rag/n8n-agents",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -13243,16 +12693,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "photopea-embedded-editor": {
-      "runtime_name": "photopea-embedded-editor",
-      "canonical_name": "photopea-embedded-editor",
-      "canonical_path": "library/data-and-ai/machine-learning/photopea-embedded-editor",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "php": {
       "runtime_name": "php",
       "canonical_name": "php",
@@ -13723,16 +13163,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "predictive-personalization": {
-      "runtime_name": "predictive-personalization",
-      "canonical_name": "predictive-personalization",
-      "canonical_path": "library/data-and-ai/machine-learning/predictive-personalization",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "premium-3d-website": {
       "runtime_name": "premium-3d-website",
       "canonical_name": "premium-3d-website",
@@ -14093,16 +13523,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "prompt-caching": {
-      "runtime_name": "prompt-caching",
-      "canonical_name": "prompt-caching",
-      "canonical_path": "library/data-and-ai/llm-and-rag/prompt-caching",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "prompt-engineer": {
       "runtime_name": "prompt-engineer",
       "canonical_name": "prompt-engineer",
@@ -14208,16 +13628,6 @@
       "canonical_name": "provider-scorecard",
       "canonical_path": "library/marketing-and-seo/on-page-seo/provider-scorecard",
       "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "public-relations": {
-      "runtime_name": "public-relations",
-      "canonical_name": "public-relations",
-      "canonical_path": "library/data-and-ai/llm-and-rag/public-relations",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -14593,16 +14003,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "rag-engineer": {
-      "runtime_name": "rag-engineer",
-      "canonical_name": "rag-engineer",
-      "canonical_path": "library/data-and-ai/llm-and-rag/rag-engineer",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "rag-implementation": {
       "runtime_name": "rag-implementation",
       "canonical_name": "rag-implementation",
@@ -14618,16 +14018,6 @@
       "canonical_name": "rank-monitor",
       "canonical_path": "library/development/fullstack/rank-monitor",
       "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "rclone-cli": {
-      "runtime_name": "rclone-cli",
-      "canonical_name": "rclone-cli",
-      "canonical_path": "library/data-and-ai/llm-and-rag/rclone-cli",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -15233,16 +14623,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "revenue-recognition-accounting": {
-      "runtime_name": "revenue-recognition-accounting",
-      "canonical_name": "revenue-recognition-accounting",
-      "canonical_path": "library/data-and-ai/analytics/revenue-recognition-accounting",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "reversible-decisions": {
       "runtime_name": "reversible-decisions",
       "canonical_name": "reversible-decisions",
@@ -15823,26 +15203,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "segment-audience": {
-      "runtime_name": "segment-audience",
-      "canonical_name": "segment-audience",
-      "canonical_path": "library/data-and-ai/analytics/segment-audience",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "segment-automation": {
-      "runtime_name": "segment-automation",
-      "canonical_name": "segment-automation",
-      "canonical_path": "library/data-and-ai/analytics/segment-automation",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "segment-cdp": {
       "runtime_name": "segment-cdp",
       "canonical_name": "segment-cdp",
@@ -15928,16 +15288,6 @@
       "canonical_name": "send-sms",
       "canonical_path": "library/quality-and-security/compliance/send-sms",
       "functional_parent": "library/quality-and-security/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "sendgrid-automation": {
-      "runtime_name": "sendgrid-automation",
-      "canonical_name": "sendgrid-automation",
-      "canonical_path": "library/data-and-ai/analytics/sendgrid-automation",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -16833,16 +16183,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "similarity-search-patterns": {
-      "runtime_name": "similarity-search-patterns",
-      "canonical_name": "similarity-search-patterns",
-      "canonical_path": "library/data-and-ai/vector-databases/similarity-search-patterns",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "simplify-code": {
       "runtime_name": "simplify-code",
       "canonical_name": "simplify-code",
@@ -17508,16 +16848,6 @@
       "canonical_name": "storytelling-storybrand",
       "canonical_path": "library/marketing-and-seo/on-page-seo/storytelling-storybrand",
       "functional_parent": "library/marketing-and-seo/on-page-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "stp-framework": {
-      "runtime_name": "stp-framework",
-      "canonical_name": "stp-framework",
-      "canonical_path": "library/data-and-ai/analytics/stp-framework",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -18723,26 +18053,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "unslop-commit": {
-      "runtime_name": "unslop-commit",
-      "canonical_name": "unslop-commit",
-      "canonical_path": "library/data-and-ai/llm-and-rag/unslop-commit",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "unslop-file": {
-      "runtime_name": "unslop-file",
-      "canonical_name": "unslop-file",
-      "canonical_path": "library/data-and-ai/llm-and-rag/unslop-file",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "unslop-review": {
       "runtime_name": "unslop-review",
       "canonical_name": "unslop-review",
@@ -19033,16 +18343,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "vector-database-engineer": {
-      "runtime_name": "vector-database-engineer",
-      "canonical_name": "vector-database-engineer",
-      "canonical_path": "library/data-and-ai/llm-and-rag/vector-database-engineer",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "vector-index-tuning": {
       "runtime_name": "vector-index-tuning",
       "canonical_name": "vector-index-tuning",
@@ -19168,26 +18468,6 @@
       "canonical_name": "vexor-cli",
       "canonical_path": "library/development/fullstack/vexor-cli",
       "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "vibe-code-auditor": {
-      "runtime_name": "vibe-code-auditor",
-      "canonical_name": "vibe-code-auditor",
-      "canonical_path": "library/data-and-ai/llm-and-rag/vibe-code-auditor",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "vibe-code-cleanup": {
-      "runtime_name": "vibe-code-cleanup",
-      "canonical_name": "vibe-code-cleanup",
-      "canonical_path": "library/data-and-ai/llm-and-rag/vibe-code-cleanup",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -20510,6 +19790,386 @@
       "managed": true,
       "installed_at": "2026-11-19T21:15:10Z",
       "last_validated": "2026-11-19T21:15:10Z"
+    },
+    "clean-code-guard": {
+      "runtime_name": "clean-code-guard",
+      "canonical_name": "clean-code-guard",
+      "canonical_path": "library/quality-and-security/debugging/clean-code-guard",
+      "functional_parent": "library/quality-and-security/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "cloudflare": {
+      "runtime_name": "cloudflare",
+      "canonical_name": "cloudflare",
+      "canonical_path": "library/infrastructure-and-ops/cloud-platforms/cloudflare",
+      "functional_parent": "library/infrastructure-and-ops/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "code-review-ai-ai-review": {
+      "runtime_name": "code-review-ai-ai-review",
+      "canonical_name": "code-review-ai-ai-review",
+      "canonical_path": "library/quality-and-security/debugging/code-review-ai-ai-review",
+      "functional_parent": "library/quality-and-security/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "community-marketing": {
+      "runtime_name": "community-marketing",
+      "canonical_name": "community-marketing",
+      "canonical_path": "library/marketing-and-seo/content-and-campaigns/community-marketing",
+      "functional_parent": "library/marketing-and-seo/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "comprehensive-review-pr-enhance": {
+      "runtime_name": "comprehensive-review-pr-enhance",
+      "canonical_name": "comprehensive-review-pr-enhance",
+      "canonical_path": "library/development/fullstack/comprehensive-review-pr-enhance",
+      "functional_parent": "library/development/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "computer-vision-expert": {
+      "runtime_name": "computer-vision-expert",
+      "canonical_name": "computer-vision-expert",
+      "canonical_path": "library/data-and-ai/machine-learning/computer-vision-expert",
+      "functional_parent": "library/data-and-ai/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "content-commerce_02": {
+      "runtime_name": "content-commerce_02",
+      "canonical_name": "content-commerce_02",
+      "canonical_path": "library/marketing-and-seo/content-and-campaigns/content-commerce",
+      "functional_parent": "library/marketing-and-seo/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "context-manager": {
+      "runtime_name": "context-manager",
+      "canonical_name": "context-manager",
+      "canonical_path": "library/development/fullstack/context-manager",
+      "functional_parent": "library/development/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "context-window-management": {
+      "runtime_name": "context-window-management",
+      "canonical_name": "context-window-management",
+      "canonical_path": "library/development/fullstack/context-window-management",
+      "functional_parent": "library/development/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "conversation-memory": {
+      "runtime_name": "conversation-memory",
+      "canonical_name": "conversation-memory",
+      "canonical_path": "library/development/fullstack/conversation-memory",
+      "functional_parent": "library/development/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "convex": {
+      "runtime_name": "convex",
+      "canonical_name": "convex",
+      "canonical_path": "library/development/backend/convex",
+      "functional_parent": "library/development/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "custom-code-management": {
+      "runtime_name": "custom-code-management",
+      "canonical_name": "custom-code-management",
+      "canonical_path": "library/marketing-and-seo/on-page-seo/custom-code-management",
+      "functional_parent": "library/marketing-and-seo/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "developer-sandbox": {
+      "runtime_name": "developer-sandbox",
+      "canonical_name": "developer-sandbox",
+      "canonical_path": "library/marketing-and-seo/cro/developer-sandbox",
+      "functional_parent": "library/marketing-and-seo/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "dispatch": {
+      "runtime_name": "dispatch",
+      "canonical_name": "dispatch",
+      "canonical_path": "library/development/fullstack/dispatch",
+      "functional_parent": "library/development/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "file-uploads": {
+      "runtime_name": "file-uploads",
+      "canonical_name": "file-uploads",
+      "canonical_path": "library/development/backend/file-uploads",
+      "functional_parent": "library/development/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "four-core-documents": {
+      "runtime_name": "four-core-documents",
+      "canonical_name": "four-core-documents",
+      "canonical_path": "library/business-and-operations/strategy/four-core-documents",
+      "functional_parent": "library/business-and-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "grand-slam-offers": {
+      "runtime_name": "grand-slam-offers",
+      "canonical_name": "grand-slam-offers",
+      "canonical_path": "library/marketing-and-seo/cro/grand-slam-offers",
+      "functional_parent": "library/marketing-and-seo/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "hugging-face-vision-trainer": {
+      "runtime_name": "hugging-face-vision-trainer",
+      "canonical_name": "hugging-face-vision-trainer",
+      "canonical_path": "library/data-and-ai/machine-learning/hugging-face-vision-trainer",
+      "functional_parent": "library/data-and-ai/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "influencer-tracking": {
+      "runtime_name": "influencer-tracking",
+      "canonical_name": "influencer-tracking",
+      "canonical_path": "library/marketing-and-seo/content-and-campaigns/influencer-tracking",
+      "functional_parent": "library/marketing-and-seo/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "instagram": {
+      "runtime_name": "instagram",
+      "canonical_name": "instagram",
+      "canonical_path": "library/marketing-and-seo/content-and-campaigns/instagram",
+      "functional_parent": "library/marketing-and-seo/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "n8n-agents": {
+      "runtime_name": "n8n-agents",
+      "canonical_name": "n8n-agents",
+      "canonical_path": "library/workflow-and-automation/tool-integration/n8n-agents",
+      "functional_parent": "library/workflow-and-automation/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "photopea-embedded-editor": {
+      "runtime_name": "photopea-embedded-editor",
+      "canonical_name": "photopea-embedded-editor",
+      "canonical_path": "library/development/frontend/photopea-embedded-editor",
+      "functional_parent": "library/development/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "predictive-personalization": {
+      "runtime_name": "predictive-personalization",
+      "canonical_name": "predictive-personalization",
+      "canonical_path": "library/marketing-and-seo/cro/predictive-personalization",
+      "functional_parent": "library/marketing-and-seo/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "prompt-caching": {
+      "runtime_name": "prompt-caching",
+      "canonical_name": "prompt-caching",
+      "canonical_path": "library/development/fullstack/prompt-caching",
+      "functional_parent": "library/development/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "public-relations": {
+      "runtime_name": "public-relations",
+      "canonical_name": "public-relations",
+      "canonical_path": "library/marketing-and-seo/content-and-campaigns/public-relations",
+      "functional_parent": "library/marketing-and-seo/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "rclone-cli": {
+      "runtime_name": "rclone-cli",
+      "canonical_name": "rclone-cli",
+      "canonical_path": "library/infrastructure-and-ops/server-management/rclone-cli",
+      "functional_parent": "library/infrastructure-and-ops/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "revenue-recognition-accounting": {
+      "runtime_name": "revenue-recognition-accounting",
+      "canonical_name": "revenue-recognition-accounting",
+      "canonical_path": "library/business-and-operations/startup-finance/revenue-recognition-accounting",
+      "functional_parent": "library/business-and-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "segment-audience": {
+      "runtime_name": "segment-audience",
+      "canonical_name": "segment-audience",
+      "canonical_path": "library/marketing-and-seo/cro/segment-audience",
+      "functional_parent": "library/marketing-and-seo/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "sendgrid-automation": {
+      "runtime_name": "sendgrid-automation",
+      "canonical_name": "sendgrid-automation",
+      "canonical_path": "library/marketing-and-seo/content-and-campaigns/sendgrid-automation",
+      "functional_parent": "library/marketing-and-seo/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "stp-framework": {
+      "runtime_name": "stp-framework",
+      "canonical_name": "stp-framework",
+      "canonical_path": "library/marketing-and-seo/cro/stp-framework",
+      "functional_parent": "library/marketing-and-seo/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "unslop-commit": {
+      "runtime_name": "unslop-commit",
+      "canonical_name": "unslop-commit",
+      "canonical_path": "library/development/fullstack/unslop-commit",
+      "functional_parent": "library/development/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "unslop-file": {
+      "runtime_name": "unslop-file",
+      "canonical_name": "unslop-file",
+      "canonical_path": "library/development/fullstack/unslop-file",
+      "functional_parent": "library/development/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "vibe-code-auditor": {
+      "runtime_name": "vibe-code-auditor",
+      "canonical_name": "vibe-code-auditor",
+      "canonical_path": "library/quality-and-security/security/vibe-code-auditor",
+      "functional_parent": "library/quality-and-security/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "vibe-code-cleanup": {
+      "runtime_name": "vibe-code-cleanup",
+      "canonical_name": "vibe-code-cleanup",
+      "canonical_path": "library/development/fullstack/vibe-code-cleanup",
+      "functional_parent": "library/development/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "positioning": {
+      "runtime_name": "positioning",
+      "canonical_name": "positioning",
+      "canonical_path": "library/marketing-and-seo/cro/positioning",
+      "functional_parent": "library/marketing-and-seo/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "pricing-strategy": {
+      "runtime_name": "pricing-strategy",
+      "canonical_name": "pricing-strategy",
+      "canonical_path": "library/business-and-operations/startup-finance/pricing-strategy",
+      "functional_parent": "library/business-and-operations/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "marketing-psychology": {
+      "runtime_name": "marketing-psychology",
+      "canonical_name": "marketing-psychology",
+      "canonical_path": "library/marketing-and-seo/cro/marketing-psychology",
+      "functional_parent": "library/marketing-and-seo/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "llms-txt": {
+      "runtime_name": "llms-txt",
+      "canonical_name": "llms-txt",
+      "canonical_path": "library/data-and-ai/llm-and-rag/llms-txt",
+      "functional_parent": "library/data-and-ai/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
     }
   }
 }

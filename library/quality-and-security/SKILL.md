@@ -202,3 +202,6 @@ Manage 50 skills for testing.
 
 ---
 *Part of the Canonical Agent Skills Hierarchy.*
+- [`clean-code-guard`](debugging/clean-code-guard/SKILL.md) — Code-quality guard for LLM-generated code.
+- [`code-review-ai-ai-review`](debugging/code-review-ai-ai-review/SKILL.md) — AI-assisted code review.
+- [`vibe-code-auditor`](security/vibe-code-auditor/SKILL.md) — Vibe-code security auditor.

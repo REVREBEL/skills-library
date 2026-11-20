@@ -408,3 +408,12 @@ Use this subcategory router when working on fullstack tasks.
 
 ---
 *Part of the Canonical Agent Skills Hierarchy.*
+- [`comprehensive-review-pr-enhance`](comprehensive-review-pr-enhance/SKILL.md) — Execute comprehensive-review-pr-enhance tasks, workflows, and automated procedur
+- [`context-manager`](context-manager/SKILL.md) — Elite AI context engineering specialist mastering dynamic context management, ve
+- [`context-window-management`](context-window-management/SKILL.md) — Strategies for managing LLM context windows including. Use when working with con
+- [`conversation-memory`](conversation-memory/SKILL.md) — Persistent memory systems for LLM conversations including. Use when working with
+- [`dispatch`](dispatch/SKILL.md) — Delegate tasks to OpenAI Codex CLI and Google Antigravity CLI from Claude Code w
+- [`prompt-caching`](prompt-caching/SKILL.md) — Caching strategies for LLM prompts including Anthropic prompt. Use when working 
+- [`unslop-commit`](unslop-commit/SKILL.md) — Rewrites commit messages so they sound like a careful human engineer wrote them.
+- [`unslop-file`](unslop-file/SKILL.md) — Humanize natural-language memory files (CLAUDE.md, todos, preferences, docs) by 
+- [`vibe-code-cleanup`](vibe-code-cleanup/SKILL.md) — Safe production cleanup and hardening for vibe-coded fullstack apps (Next.js, Re

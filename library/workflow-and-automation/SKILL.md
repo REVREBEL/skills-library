@@ -76,3 +76,4 @@ Manage 4 skills for web scraping.
 
 ---
 *Part of the Canonical Agent Skills Hierarchy.*
+- [`n8n-agents`](tool-integration/n8n-agents/SKILL.md) — Design n8n AI agents, chains, and workflows.
