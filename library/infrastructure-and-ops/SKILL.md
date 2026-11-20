@@ -116,3 +116,5 @@ Manage 6 skills for server management.
 
 ---
 *Part of the Canonical Agent Skills Hierarchy.*
+- [`cloudflare`](cloud-platforms/cloudflare/SKILL.md) — Cloudflare Workers, AI, and Vectorize platform.
+- [`rclone-cli`](server-management/rclone-cli/SKILL.md) — Rclone cloud-storage CLI.

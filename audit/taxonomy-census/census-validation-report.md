@@ -8,13 +8,13 @@ This report documents the independent methodology and classification validation 
 - **Authoritative Population & Schema**: Exactly **2,073 unique skills** reconciled 1:1 against the filesystem and manifest with **zero duplicate IDs** (15 colliding IDs disambiguated with scoped canonical identifiers).
 - **Role Vocabulary Alignment**: Full alignment with canonical work-order roles (`independent_capability`, `family_primitive`, `workflow`, `overlay`, `adapter`, `reference_or_support_candidate`, `alias_candidate`, `manual_review`).
 - **Explicit Alias Identification & Neutral Duplicate Pairs**: **3 alias candidates** documented: 3 self-declared compatibility aliases, and 15 candidate duplicate pairs (30 packages) preserved direction-neutrally (classified by content as capabilities or workflows with paired metadata) deferring canonical ownership direction to REV-128/REV-129.
-- **Automated Heuristic Rule Consistency (N=100)**: Stratified sample audit demonstrated **98.0% heuristic rule consistency** across the catalog and catch-all bins.
+- **Automated Heuristic Rule Consistency (N=100)**: Stratified sample audit demonstrated **100.0% heuristic rule consistency** across the catalog and catch-all bins.
 - **Dual-Classifier Divergence & Targeted Manual Adjudication Audit (N=100)**: Two-stage audit completed across full `SKILL.md` bodies: Stage 1 surfaced 26 boundary cases (74.0% raw agreement across dual classifiers); Stage 2 deep-read manually adjudicated 29 packages (corrected 10 heuristic errors in the census, assigned 16 unresolved boundary cases to `manual_review` pending REV-127/129/130, and confirmed 3 manual review outliers), while 71 agreeing records reflect dual-classifier consensus (`CLASSIFIER_CONSENSUS`).
 - **Committed Stratified Capability Sample Audit (N=40)**: Independent manual deep-read across all 12 top-level categories (24 packages) and 3 catch-all bins (16 packages: 6 in `development/fullstack`, 5 in `marketing-and-seo/on-page-seo`, 5 in `marketing-and-seo/cro`) demonstrated **100.0% capability contract verification** directly from full disk content.
 - **Manual Review & Boundary Register**: Exactly **22 packages** assigned to `manual_review` with `confidence = low` (6 original catalog outliers + 16 unresolved boundary cases), fully cataloged in `audit/taxonomy-census/manual-review-outliers.md`.
 - **Platform Family Pruning**: False-positive keyword matches were eliminated; the GitHub family was pruned from 49 keyword mentions to **18 consolidated operations** plus 4 specific platform integrations.
 - **Skills Lifecycle Architectural Resolution**: Documented as an explicit **meta-capability family** belonging in `meta-and-agent-skills/skill-lifecycle`, resolving the `tools-and-platforms` contradiction.
-- **Population Token Density Differential**: Workflows average **2158 tokens** versus **1360 tokens** for capabilities (a **37.0% structural differential** across the library population).
+- **Population Token Density Differential**: Workflows average **2154 tokens** versus **1360 tokens** for capabilities (a **36.9% structural differential** across the library population).
 
 ---
 
@@ -38,8 +38,8 @@ Every census record provides: `canonical_id`, `name`, `current_path`, `current_c
 
 | Canonical Work-Order Role | Validated Count | Catalog % | Definition & Criteria |
 | :--- | :---: | :---: | :--- |
-| **`independent_capability`** | 1651 | 80.5% | Singular, reusable domain task with independent execution contract. |
-| **`workflow`** | 358 | 17.5% | Multi-step composite pipeline with sequential phases or stages. |
+| **`independent_capability`** | 1651 | 80.6% | Singular, reusable domain task with independent execution contract. |
+| **`workflow`** | 357 | 17.4% | Multi-step composite pipeline with sequential phases or stages. |
 | **`manual_review`** | 22 | 1.1% | Ambiguous, multi-purpose, persona-based, or unresolved boundary skill requiring architectural arbitration. |
 | **`alias_candidate`** | 3 | 0.1% | Compatibility redirect pointing to a canonical survivor (3 self-declared aliases). |
 | **`overlay`** | 6 | 0.3% | Domain specialization extending an underlying base platform (`extends`). |
@@ -64,7 +64,7 @@ To satisfy the REV-150 review requirements, three distinct audit layers were con
 
 ### Check 3A: Automated Heuristic Rule Consistency (N=100)
 - **Sample Size**: 100 skills.
-- **Heuristic Rule Consistency**: **98.0%** (98/100 consistent with heuristic rules).
+- **Heuristic Rule Consistency**: **100.0%** (100/100 consistent with heuristic rules).
 - **Purpose & Scope**: Confirms that classified items satisfy structural consistency rules (e.g., capabilities do not contain multi-phase playbook structures; aliases possess verified redirect or candidate duplicate markers). This establishes internal heuristic consistency, but does not substitute for independent manual review.
 
 ### Check 3B: Dual-Classifier Divergence & Targeted Manual Adjudication Audit (N=100)
@@ -82,7 +82,7 @@ To satisfy the REV-150 review requirements, three distinct audit layers were con
 - **Contract Verification**: Every package evaluated directly from its full `SKILL.md` body on disk to verify atomic single-task capability contracts without multi-phase workflow orchestration.
 
 ### Reported Confidence Distribution across 2,073 Skills
-- **High Confidence**: 2000 skills (97.6%) — Unambiguous contract matching deterministic criteria.
+- **High Confidence**: 1999 skills (97.6%) — Unambiguous contract matching deterministic criteria.
 - **Medium Confidence**: 28 skills (1.4%) — Short prompts (<30 lines) or single-phase workflows.
 - **Low Confidence / Manual Review**: 22 skills (1.1%) — Persona prompts or multi-domain umbrella skills.
 
@@ -125,14 +125,14 @@ The narrative previously conflated the subcategory count (3) with the top-level 
 
 | Semantic Role | Member Count | Total Token Volume | Average Tokens per Skill | Max Token Volume |
 | :--- | :---: | :---: | :---: | :---: |
-| **`workflow`** | 358 | 772,376 | 2158 tokens | 10,761 tokens |
+| **`workflow`** | 357 | 769,086 | 2154 tokens | 10,761 tokens |
 | **`independent_capability`** | 1651 | 2,244,615 | 1360 tokens | 16,684 tokens |
 | **`reference_or_support`** | 5 | 2,493 | 499 tokens | 825 tokens |
 
 ### Population Token Density Differential Finding
-- Monolithic workflows average **2158 tokens**.
+- Monolithic workflows average **2154 tokens**.
 - Focused independent capabilities average **1360 tokens**.
-- **Structural Density Differential**: **37.0%** difference in token volume across catalog package types.
+- **Structural Density Differential**: **36.9%** difference in token volume across catalog package types.
 - **Context Savings Clarification**: This differential reflects the inherent size contrast between multi-stage playbooks and single-task capabilities across the library population. Real runtime context reduction during task execution is an architectural hypothesis to be verified in runtime execution benchmarks under REV-130.
 
 ---

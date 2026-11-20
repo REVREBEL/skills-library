@@ -63,7 +63,6 @@ Use this subcategory router when working on cro tasks.
 | [`community-sentiment-dashboard`](community-sentiment-dashboard/SKILL.md) | Reporting template for tracking sentiment, risks, and advocacy signals. Use when working with community sentiment dashboard. | Community Sentiment Dashboard: Reporting template for tracking sentiment, risks, and advocacy signals. Use when w... |
 | [`competitive-analysis`](competitive-analysis/SKILL.md) | Conduct a structured competitive analysis comparing UX patterns, features, strengths, and gaps across rival products. Use when working with competitive analy... | Competitive Analysis: Conduct a structured competitive analysis comparing UX patterns, features, strengt... |
 | [`competitor-analysis`](competitor-analysis/SKILL.md) | Conduct full competitor strategy breakdowns across SEO, ads, social, email, pricing, and positioning. Use when the user asks to analyze competitors, benchmar... | Competitor Analysis: Conduct full competitor strategy breakdowns across SEO, ads, social, email, pricin... |
-| [`content-commerce_02`](../../data-and-ai/machine-learning/content-commerce_02/SKILL.md) | Turn your blog into a sales channel by embedding shoppable product cards in editorial content and tracking content-influenced revenue. Use when working with ... | Content Commerce 02: Turn your blog into a sales channel by embedding shoppable product cards in editor... |
 | [`content-repurpose`](content-repurpose/SKILL.md) | Repurpose content across channels. Use when: blog-to-social, webinar-to-article, pillar derivatives, format adaptation. | Content Repurpose: Repurpose content across channels. Use when: blog-to-social, webinar-to-article, p... |
 | [`content-repurposing`](content-repurposing/SKILL.md) | Repurpose and atomize content across platforms and formats. Use when the user says \\\"repurpose this\\\", \\\"turn this into\\\", \\\"convert blog to\\\", \... | Content Repurposing: Repurpose and atomize content across platforms and formats. Use when the user says... |
 | [`conversion-diagnostic-kit`](conversion-diagnostic-kit/SKILL.md) | Structured approach for investigating funnel issues across e-commerce. Use when working with conversion diagnostic kit. | Conversion Diagnostic Kit: Structured approach for investigating funnel issues across e-commerce. Use when wo... |
@@ -197,3 +196,10 @@ Use this subcategory router when working on cro tasks.
 
 ---
 *Part of the Canonical Agent Skills Hierarchy.*
+- [`developer-sandbox`](developer-sandbox/SKILL.md) — Design and build interactive playgrounds that let developers experience your pro
+- [`grand-slam-offers`](grand-slam-offers/SKILL.md) — Master Alex Hormozi's offer creation framework from \\\\"$100M Offers\\\\" (2021
+- [`predictive-personalization`](predictive-personalization/SKILL.md) — Use machine learning models to predict customer preferences and deliver personal
+- [`segment-audience`](segment-audience/SKILL.md) — Create audience segments. Use when: building or updating CRM or email platform s
+- [`stp-framework`](stp-framework/SKILL.md) — Apply Segmentation, Targeting, and Positioning framework to identify market oppo
+- [`positioning`](positioning/SKILL.md) — Master product positioning using April Dunford's proven 5+1 framework from \\\\"
+- [`marketing-psychology`](marketing-psychology/SKILL.md) — Apply behavioral science and mental models to marketing decisions, prioritized u

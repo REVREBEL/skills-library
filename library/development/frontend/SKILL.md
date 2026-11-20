@@ -105,3 +105,4 @@ Use this subcategory router when working on frontend tasks.
 
 ---
 *Part of the Canonical Agent Skills Hierarchy.*
+- [`photopea-embedded-editor`](photopea-embedded-editor/SKILL.md) — Embed Photopea in web apps using photopea.js. Covers embedding, file I/O, script

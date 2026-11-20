@@ -174,3 +174,5 @@ Use this subcategory router when working on backend tasks.
 
 ---
 *Part of the Canonical Agent Skills Hierarchy.*
+- [`convex`](convex/SKILL.md) — Convex reactive backend expert: schema design, TypeScript functions, real-time s
+- [`file-uploads`](file-uploads/SKILL.md) — Expert at handling file uploads and cloud storage. Covers S3,. Use when working 

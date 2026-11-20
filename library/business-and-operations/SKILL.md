@@ -87,7 +87,7 @@ Manage 30 skills for strategy.
 | [`market-sizing-analysis`](strategy/market-sizing-analysis/SKILL.md) | Comprehensive market sizing methodologies for calculating Total Addressable Market (TAM), Serviceable Available Market (SAM), and Serviceable Obtainable Mark... | Market Sizing Analysis: Comprehensive market sizing methodologies for calculating Total Addressable Market... |
 | [`patterns`](strategy/patterns/SKILL.md) | Reference document for monopoly patterns. Use when working with patterns. | Patterns: Reference document for monopoly patterns. Use when working with patterns |
 | [`pitch-psychologist`](strategy/pitch-psychologist/SKILL.md) | One sentence - what this skill does and when to invoke it. Use when working with pitch psychologist. | Pitch Psychologist: One sentence - what this skill does and when to invoke it. Use when working with p... |
-| [`positioning`](../data-and-ai/analytics/positioning/SKILL.md) | Master product positioning using April Dunford's proven 5+1 framework from \\\\"Obviously Awesome\\\\". Transform how customers perceive your product by deli... | Positioning: Master product positioning using April Dunford's proven 5+1 framework from \\\\"Ob... |
+| [`positioning`](../marketing-and-seo/cro/positioning/SKILL.md) | Master product positioning using April Dunford's proven 5+1 framework from \\\\"Obviously Awesome\\\\". Transform how customers perceive your product by deli... | Positioning: Master product positioning using April Dunford's proven 5+1 framework from \\\\"Ob... |
 | [`positioning`](../marketing-and-seo/on-page-seo/positioning/SKILL.md) | Use when structuring positioning statements, message houses, and proof. | Positioning: structuring positioning statements, message houses, and proof |
 | [`product-inventor`](strategy/product-inventor/SKILL.md) | Product Inventor e Design Alchemist de nivel maximo — combina Product Thinking, Design Systems, UI Engineering, Psicologia Cognitiva, Storytelling e execucao impecavel nivel Jobs/Apple. Use when working with product inventor. | Product Inventor: Product Inventor e Design Alchemist de nivel maximo — combina Product Thinking, Design Systems, UI Engineering... |
 | [`regret-minimization`](strategy/regret-minimization/SKILL.md) | Make decisions that your 80-year-old self will thank you for. Master Jeff Bezos' mental model for bold choices that minimize long-term regret. Use when: **Ca... | Regret Minimization: Make decisions that your 80-year-old self will thank you for. Master Jeff Bezos' m... |
@@ -108,3 +108,5 @@ Manage 30 skills for strategy.
 
 ---
 *Part of the Canonical Agent Skills Hierarchy.*
+- [`revenue-recognition-accounting`](startup-finance/revenue-recognition-accounting/SKILL.md) — ASC 606 / IFRS 15 revenue recognition with physical-product timing.
+- [`four-core-documents`](strategy/four-core-documents/SKILL.md) — Four Core Documents: brand strategy, positioning, ICP, and messaging.

@@ -55,7 +55,7 @@ Use this subcategory router when working on content and campaigns tasks.
 | [`growth-engine`](growth-engine/SKILL.md) | Motor de crescimento para produtos digitais -- growth hacking, SEO, ASO, viral loops, email marketing, CRM, referral programs e aquisicao organica. Use when ... | Growth Engine: Motor de crescimento para produtos digitais -- growth hacking, SEO, ASO, viral loo... |
 | [`image-batch`](image-batch/SKILL.md) | Batch process images for marketing. Use when: resizing images for social media; compressing images for web; removing backgrounds; adding watermarks; converti... | Image Batch: Batch process images for marketing. Use when: resizing images for social media; co... |
 | [`image-enhancer`](image-enhancer/SKILL.md) | Improves the quality of images, especially screenshots, by enhancing resolution, sharpness, and clarity. Perfect for preparing images for presentations, docu... | Image Enhancer: Improves the quality of images, especially screenshots, by enhancing resolution, s... |
-| [`influencer-tracking`](../../data-and-ai/analytics/influencer-tracking/SKILL.md) | Measure influencer campaign ROI by generating unique UTM links per creator, attributing sales, and reporting revenue against campaign spend. Use when working... | Influencer Tracking: Measure influencer campaign ROI by generating unique UTM links per creator, attrib... |
+| [`influencer-tracking`](influencer-tracking/SKILL.md) | Measure influencer campaign ROI by generating unique UTM links per creator, attributing sales, and reporting revenue against campaign spend. Use when working... | Influencer Tracking: Measure influencer campaign ROI by generating unique UTM links per creator, attrib... |
 | [`launch`](../../development/backend/launch/SKILL.md) | When the user wants to plan a product launch, feature announcement, or release strategy. Also use when the user mentions 'launch,' 'Product Hunt,' 'feature r... | Launch: When the user wants to plan a product launch, feature announcement, or release str... |
 | [`launch-ad-campaign`](../../development/backend/launch-ad-campaign/SKILL.md) | Launch paid ad campaigns. Use when: deploying ads on Google, Meta, LinkedIn, or TikTok with targeting and safeguards. | Launch Ad Campaign: Launch paid ad campaigns. Use when: deploying ads on Google, Meta, LinkedIn, or Ti... |
 | [`launch-campaign`](../../development/fullstack/launch-campaign/SKILL.md) | Orchestrate the full multi-channel launch of an approved campaign plan — pre-launch checklist, asset readiness gate, channel-by-channel activation, CRM campa... | Launch Campaign: Orchestrate the full multi-channel launch of an approved campaign plan — pre-launc... |
@@ -98,3 +98,9 @@ Use this subcategory router when working on content and campaigns tasks.
 
 ---
 *Part of the Canonical Agent Skills Hierarchy.*
+- [`community-marketing`](community-marketing/SKILL.md) — Build and leverage online communities to drive product growth and brand loyalty.
+- [`content-commerce_02`](content-commerce/SKILL.md) — Turn your blog into a sales channel by embedding shoppable product cards in edit
+- [`influencer-tracking`](influencer-tracking/SKILL.md) — Measure influencer campaign ROI by generating unique UTM links per creator, attr
+- [`instagram`](instagram/SKILL.md) — Integracao completa com Instagram via Graph API. Publicacao, analytics, comentar
+- [`public-relations`](public-relations/SKILL.md) — When the user wants help with public relations, earned media, press coverage, jo
+- [`sendgrid-automation`](sendgrid-automation/SKILL.md) — Automate SendGrid email delivery workflows including marketing campaigns (Single
