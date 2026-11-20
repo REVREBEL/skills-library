@@ -1385,6 +1385,33 @@ def run_token_budget_profiling(skills: List[Dict[str, Any]]) -> Dict[str, Any]:
         "reference_avg_tokens": round(ref_avg, 1)
     }
 
+def assert_family_census_completeness(rows: List[Dict[str, Any]]) -> None:
+    """Every family-tagged census member must be claimed by a contract record.
+
+    The per-record check in write_family_register proves contract -> census.
+    This proves the other direction: a census row tagged with a candidate_family
+    that no contract record claims is a membership gap, not a cosmetic drift.
+    Families the census does not tag (supabase, curl, docker-basics) are
+    contract-only by design and are not an error.
+    """
+    from skill_library.family_contract import FamilyCandidateEvaluator
+
+    contract_paths = set()
+    for record in FamilyCandidateEvaluator.CENSUS_FAMILY_QUALIFICATION_LEDGER.values():
+        contract_paths.update(record.source_paths)
+
+    unclaimed = sorted(
+        r["current_path"]
+        for r in rows
+        if r.get("candidate_family", "None") != "None" and r["current_path"] not in contract_paths
+    )
+    if unclaimed:
+        raise AssertionError(
+            f"{len(unclaimed)} census family members are not claimed by any contract "
+            f"record: {unclaimed[:5]}"
+        )
+
+
 def write_family_register(path: Path, rows: List[Dict[str, Any]]):
     """Write validated family candidate register dynamically derived from audited_rows."""
     fam_skills = defaultdict(list)
@@ -1424,6 +1451,9 @@ def write_family_register(path: Path, rows: List[Dict[str, Any]]):
             raise AssertionError(
                 f"Family '{slug}' declares {declared} members but only {len(present)} are in the census"
             )
+
+    # Census -> contract completeness (the reverse of the per-record checks).
+    assert_family_census_completeness(rows)
 
     lines = [
         "# Catalog-Wide Platform & Tool Family Register (REV-126 / REV-150)",
@@ -1879,6 +1909,59 @@ def write_manual_outliers(path: Path, rows: List[Dict[str, Any]]):
         "- `n8n-expression-syntax` (`library/quality-and-security/debugging/n8n-expression-syntax`): Expression syntax primitive vs. syntax debugging capability.",
     ]
 
+    # The curated notes annotate the live manual-review population; they are not
+    # the population. A package that was reclassified or pruned must drop out of
+    # its section, and a newly surfaced case must not vanish for lack of a note.
+    boundary_paths = {r["current_path"] for r in boundary_list}
+
+    def _live(entries: List[str]) -> List[str]:
+        return [
+            line
+            for line in entries
+            if (m := re.search(r"`(library/[^`]+)`", line)) and m.group(1) in boundary_paths
+        ]
+
+    cap_live = _live(capability_vs_workflow)
+    overlay_live = _live(platform_overlay)
+    adapter_live = _live(adapter_vs_capability)
+    primitive_live = _live(primitive_vs_capability)
+
+    described_paths = {
+        m.group(1)
+        for entries in (cap_live, overlay_live, adapter_live, primitive_live)
+        for line in entries
+        if (m := re.search(r"`(library/[^`]+)`", line))
+    }
+    undescribed = sorted(
+        (r for r in boundary_list if r["current_path"] not in described_paths),
+        key=lambda r: r["canonical_id"],
+    )
+
+    # Original-outlier notes are keyed by canonical id and rendered in curated
+    # order; an outlier that was pruned drops out, and one without a note is
+    # still listed rather than silently omitted.
+    original_outlier_notes = {
+        "007": ("Persona/agent prompt without concrete technical tasks", "Move to agent personas or archive"),
+        "steve-jobs": ("Executive persona critique prompt", "Move to critique personas or archive"),
+        "nerdzao-elite-gemini-high": ("Non-standard model system prompt configuration", "Move to agent prompts or test configs"),
+        "geminiignore-finops": ("Tool-specific configuration file generator", "Consolidate under cloud FinOps capability"),
+        "emerging-channels": ("Vague multi-channel strategic prompt without concrete steps", "Refactor into specific social/ad capabilities"),
+        "integrations": ("Ambiguous umbrella name colliding with domain categories", "Rename to `third-party-integration-patterns`"),
+    }
+    orig_by_id = {r["canonical_id"]: r for r in orig_list}
+    original_rows = []
+    for cid, (nature, rec) in original_outlier_notes.items():
+        r = orig_by_id.get(cid)
+        if r is not None:
+            original_rows.append(
+                f"| `{r['canonical_id']}` | `{r['current_path']}` | {nature} | {rec} | `REV-127` |"
+            )
+    for r in orig_list:
+        if r["canonical_id"] not in original_outlier_notes:
+            original_rows.append(
+                f"| `{r['canonical_id']}` | `{r['current_path']}` | Structural or content outlier | Review manually | `REV-127` |"
+            )
+
     lines = [
         "# Manual Review & Architectural Boundary Register (REV-126 / REV-150)",
         "",
@@ -1915,12 +1998,7 @@ def write_manual_outliers(path: Path, rows: List[Dict[str, Any]]):
         "",
         "| Canonical ID | Current Path | Outlier Nature | Architectural Recommendation | Gated Milestone |",
         "| :--- | :--- | :--- | :--- | :---: |",
-        "| `007` | `library/quality-and-security/security/007` | Persona/agent prompt without concrete technical tasks | Move to agent personas or archive | `REV-127` |",
-        "| `steve-jobs` | `library/development/fullstack/steve-jobs` | Executive persona critique prompt | Move to critique personas or archive | `REV-127` |",
-        "| `nerdzao-elite-gemini-high` | `library/development/fullstack/nerdzao-elite-gemini-high` | Non-standard model system prompt configuration | Move to agent prompts or test configs | `REV-127` |",
-        "| `geminiignore-finops` | `library/development/fullstack/geminiignore-finops` | Tool-specific configuration file generator | Consolidate under cloud FinOps capability | `REV-127` |",
-        "| `emerging-channels` | `library/development/fullstack/emerging-channels` | Vague multi-channel strategic prompt without concrete steps | Refactor into specific social/ad capabilities | `REV-127` |",
-        "| `integrations` | `library/development/fullstack/integrations` | Ambiguous umbrella name colliding with domain categories | Rename to `third-party-integration-patterns` | `REV-127` |",
+        *original_rows,
         "",
         "---",
         "",
@@ -1928,17 +2006,30 @@ def write_manual_outliers(path: Path, rows: List[Dict[str, Any]]):
         "",
         "These packages represent active architectural boundary decisions deferred to upcoming milestones:",
         "",
-        f"### A. Capability vs. Multi-Phase Workflow ({len(capability_vs_workflow)} Packages, Gated under REV-127)",
-        *capability_vs_workflow,
+        f"### A. Capability vs. Multi-Phase Workflow ({len(cap_live)} Packages, Gated under REV-127)",
+        *cap_live,
         "",
-        f"### B. Platform Overlay vs. Domain Capability / Workflow ({len(platform_overlay)} Packages, Gated under REV-127 / REV-129)",
-        *platform_overlay,
+        f"### B. Platform Overlay vs. Domain Capability / Workflow ({len(overlay_live)} Packages, Gated under REV-127 / REV-129)",
+        *overlay_live,
         "",
-        f"### C. Tool Execution Adapter vs. Domain Capability ({len(adapter_vs_capability)} Packages, Gated under REV-127 / REV-130)",
-        *adapter_vs_capability,
+        f"### C. Tool Execution Adapter vs. Domain Capability ({len(adapter_live)} Packages, Gated under REV-127 / REV-130)",
+        *adapter_live,
         "",
-        f"### D. Platform Primitive vs. Domain Capability / Workflow ({len(primitive_vs_capability)} Packages, Gated under REV-127 / REV-129)",
-        *primitive_vs_capability,
+        f"### D. Platform Primitive vs. Domain Capability / Workflow ({len(primitive_live)} Packages, Gated under REV-127 / REV-129)",
+        *primitive_live,
+    ])
+    if undescribed:
+        lines.extend([
+            "",
+            f"### E. Newly Surfaced Boundary Cases ({len(undescribed)} Packages)",
+            "",
+            "These packages are in `manual_review` but have no curated boundary note yet:",
+            "",
+        ])
+        for r in undescribed:
+            rat = r.get("manual_review_reason", "") or r.get("evidence_rationale", "")
+            lines.append(f"- `{r['canonical_id']}` (`{r['current_path']}`): {rat}")
+    lines.extend([
         "",
         "---",
         f"All {n} packages are preserved in the catalog census with `confidence = low` and `semantic_role = manual_review` until authoritative arbitration in REV-127 through REV-130."

@@ -34,7 +34,9 @@ from validate_semantic_census import (
     ROLE_REFERENCE,
     ROLE_WORKFLOW,
     VALID_ROLES,
+    assert_family_census_completeness,
     assert_no_template_leaks,
+    write_manual_outliers,
 )
 
 CENSUS_DIR = REPO_ROOT / "audit" / "taxonomy-census"
@@ -213,6 +215,94 @@ class TestNegativeSemanticRegression(unittest.TestCase):
                 "untracked_scratch_artifact.tmp",
             ])
         self.assertIn("Unexpected untracked files", str(ctx.exception))
+
+
+class TestManualOutlierReconciliation(unittest.TestCase):
+    """The outlier report must track the live manual-review population.
+
+    Curated notes annotate the population; they are not the population. These
+    tests pin the reconciliation: a reclassified or pruned package drops out,
+    and a newly surfaced case is not silently omitted.
+    """
+
+    @staticmethod
+    def _mr_row(canonical_id, path, reason="boundary case"):
+        return {
+            "canonical_id": canonical_id,
+            "name": canonical_id,
+            "semantic_role": ROLE_MANUAL_REVIEW,
+            "current_path": path,
+            "current_category": path.split("/")[1],
+            "manual_review_reason": reason,
+        }
+
+    def _write(self, rows):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "manual-review-outliers.md"
+            write_manual_outliers(path, rows)
+            return path.read_text(encoding="utf-8")
+
+    def test_removed_boundary_case_drops_from_report(self):
+        """A curated boundary package that is no longer manual_review must not be described."""
+        rows = [
+            self._mr_row("007", "library/quality-and-security/security/007"),
+            self._mr_row("figma-swiftui", "library/design-and-experience/design-systems/figma-swiftui"),
+        ]
+        text = self._write(rows)
+        self.assertIn("`figma-swiftui`", text)
+        # `launch` is curated but absent from this population; its line must go.
+        self.assertNotIn("`launch` (`library/development/backend/launch`)", text)
+        self.assertNotIn("`launch`", text)
+
+    def test_new_boundary_case_is_surfaced(self):
+        """A manual_review package with no curated note must be surfaced, not dropped."""
+        rows = [
+            self._mr_row("007", "library/quality-and-security/security/007"),
+            self._mr_row(
+                "brand-new-boundary",
+                "library/development/fullstack/brand-new-boundary",
+                "newly disputed classification boundary",
+            ),
+        ]
+        text = self._write(rows)
+        self.assertIn("Newly Surfaced Boundary Cases", text)
+        self.assertIn("`brand-new-boundary`", text)
+        self.assertIn("newly disputed classification boundary", text)
+
+    def test_removed_original_outlier_drops_from_report(self):
+        """A curated original outlier that is no longer manual_review must not be listed."""
+        rows = [self._mr_row("steve-jobs", "library/development/fullstack/steve-jobs")]
+        text = self._write(rows)
+        self.assertIn("`steve-jobs`", text)
+        # `007` is curated but absent from this population; its row must go.
+        self.assertNotIn("`007`", text)
+
+
+class TestFamilyCensusCompleteness(unittest.TestCase):
+    """A census member tagged with a family no contract record claims is a gap."""
+
+    def test_unclaimed_census_family_member_is_rejected(self):
+        rows = [{
+            "candidate_family": "Webflow",
+            "current_path": "library/development/fullstack/ghost-webflow-skill",
+            "current_category": "development",
+            "current_subcategory": "fullstack",
+            "semantic_role": ROLE_INDEPENDENT_CAPABILITY,
+        }]
+        with self.assertRaises(AssertionError) as ctx:
+            assert_family_census_completeness(rows)
+        self.assertIn("not claimed by any contract", str(ctx.exception))
+
+    def test_untagged_census_rows_are_allowed(self):
+        """Families the census does not tag are contract-only by design."""
+        rows = [{
+            "candidate_family": "None",
+            "current_path": "library/development/fullstack/some-skill",
+            "current_category": "development",
+            "current_subcategory": "fullstack",
+            "semantic_role": ROLE_INDEPENDENT_CAPABILITY,
+        }]
+        assert_family_census_completeness(rows)  # must not raise
 
 
 if __name__ == "__main__":
