@@ -1,0 +1,128 @@
+path,name,subcategory,verdict,merge_group,move_target,reason
+library/data-and-ai/analytics/analytics-tracking,analytics-tracking,analytics,merge,,,Thinner duplicate of analytics. Fold its readiness index into analytics.
+library/data-and-ai/analytics/financial-analytics-dashboard,financial-analytics-dashboard,analytics,keep,,,Canonical financial dashboard skill.
+library/data-and-ai/analytics/lifecycle-marketing-automation,lifecycle-marketing-automation,analytics,merge,,marketing-and-seo/content-and-campaigns,Merge target for email-list-segmentation.
+library/data-and-ai/analytics/segment-automation,segment-automation,analytics,merge,segment-cdp,,Segment automation merges into segment-cdp.
+library/data-and-ai/analytics/unit-economics-tracking,unit-economics-tracking,analytics,merge,,,Merge with customer-analytics into one customer-economics skill.
+library/data-and-ai/analytics/computer-vision-expert,computer-vision-expert,analytics,move,,machine-learning,Misfiled: computer vision and model training
+library/data-and-ai/analytics/custom-code-management,custom-code-management,analytics,move,,marketing-and-seo,Misfiled: Webflow custom-code management
+library/data-and-ai/analytics/positioning,data-and-ai-positioning,analytics,move,,marketing-and-seo/cro,April Dunford positioning framework is marketing strategy.
+library/data-and-ai/analytics/pricing-strategy,data-and-ai-pricing-strategy,analytics,move,,business-and-operations,"Pricing strategy is business/finance, not data-and-ai."
+library/data-and-ai/analytics/four-core-documents,four-core-documents,analytics,move,,business-and-operations,Misfiled: business and SBU strategy deliverables. Belongs in business-and-operations/strategy.
+library/data-and-ai/analytics/hugging-face-vision-trainer,hugging-face-vision-trainer,analytics,move,hugging-face-model-trainer,machine-learning,Misfiled: vision model training. Belongs in machine-learning.
+library/data-and-ai/analytics/influencer-tracking,influencer-tracking,analytics,move,,marketing-and-seo/content-and-campaigns,Influencer UTM/attribution is marketing attribution.
+library/data-and-ai/analytics/instagram,instagram,analytics,move,,marketing-and-seo/content-and-campaigns,Misfiled and non-English (Portuguese description). Social media operations; quarantine pending translation.
+library/data-and-ai/analytics/revenue-recognition-accounting,revenue-recognition-accounting,analytics,move,,business-and-operations,ASC 606 revenue recognition is accounting/finance.
+library/data-and-ai/analytics/segment-audience,segment-audience,analytics,move,,marketing-and-seo/cro,Segment audience is CDP/CRM audience building.
+library/data-and-ai/analytics/sendgrid-automation,sendgrid-automation,analytics,move,,marketing-and-seo/content-and-campaigns,SendGrid email automation is marketing/email-ops.
+library/data-and-ai/analytics/stp-framework,stp-framework,analytics,move,,marketing-and-seo,Misfiled: segmentation-targeting-positioning marketing framework. Belongs in marketing.
+library/data-and-ai/analytics/data-storytelling,data-storytelling,analytics,review,,content-and-documentation,Data-storytelling is communication/documentation.
+library/data-and-ai/analytics/bigquery-analytics,bigquery-analytics,analytics,keep,,,Canonical BigQuery skill.
+library/data-and-ai/analytics/business-analyst,business-analyst,analytics,rewrite,business-analytics-reporter,,Generic 'AI-powered analytics' framing with no opinionated procedure. Rewrite around a specific decision.
+library/data-and-ai/analytics/data-scientist,data-scientist,analytics,rewrite,,,Aspirational generalist with no procedure. Either specialise or drop.
+library/data-and-ai/analytics/analytics-insights,analytics-insights,analytics,keep,,,Distinct analytics/measurement strategy skill.
+library/data-and-ai/analytics/business-analytics-reporter,business-analytics-reporter,analytics,keep,,,Canonical business-analysis skill; absorbs business-analyst.
+library/data-and-ai/analytics/cash-flow-forecasting,cash-flow-forecasting,analytics,keep,,,Distinct ecommerce cash-flow skill.
+library/data-and-ai/analytics/cc-skill-clickhouse-io,cc-skill-clickhouse-io,analytics,keep,,,ClickHouse OLAP patterns; rename to drop cc-skill- prefix.
+library/data-and-ai/analytics/churn-risk,churn-risk,analytics,keep,,,Customer churn scoring skill; distinct.
+library/data-and-ai/analytics/cohort-analysis,data-and-ai-cohort-analysis,analytics,keep,,,Cohort analysis skill; distinct.
+library/data-and-ai/analytics/ecommerce-budgeting-forecasting,ecommerce-budgeting-forecasting,analytics,keep,,,Distinct ecommerce budgeting skill.
+library/data-and-ai/analytics/ecommerce-data-warehouse,ecommerce-data-warehouse,analytics,keep,,,Distinct ecommerce warehouse skill.
+library/data-and-ai/analytics/marketplace-fee-reconciliation,marketplace-fee-reconciliation,analytics,keep,,,Distinct marketplace fee-reconciliation skill.
+library/data-and-ai/analytics/posthog-automation,posthog-automation,analytics,keep,,,PostHog automation is distinct product-analytics.
+library/data-and-ai/analytics/product-analytics,product-analytics,analytics,keep,,,Product sell-through/PDP analytics; distinct.
+library/data-and-ai/analytics/profit-margin-analysis,profit-margin-analysis,analytics,keep,,,Profit-margin analysis; distinct.
+library/data-and-ai/analytics/segment-cdp,segment-cdp,analytics,keep,,,Canonical Segment CDP skill.
+library/data-and-ai/analytics/xlsx,xlsx,analytics,keep,,,Spreadsheet creation/editing skill; broadly useful.
+library/data-and-ai/data-engineering/data-engineer,data-engineer,data-engineering,merge,data-engineering-data-pipeline,,Data-engineer merges into data-engineering-data-pipeline.
+library/data-and-ai/data-engineering/ml-pipeline-workflow,ml-pipeline-workflow,data-engineering,merge,mlops-engineer,,ML-pipeline merges into mlops-engineer.
+library/data-and-ai/data-engineering/data-engineering-data-pipeline,data-engineering-data-pipeline,data-engineering,keep,,,Canonical data-pipeline skill.
+library/data-and-ai/data-engineering/mlops-engineer,mlops-engineer,data-engineering,keep,,,Canonical MLOps skill.
+library/data-and-ai/data-engineering/recsys-pipeline-architect,recsys-pipeline-architect,data-engineering,keep,,,Distinct recommendation-pipeline framework skill.
+library/data-and-ai/data-engineering/scikit-learn,scikit-learn,data-engineering,keep,,,Scikit-learn ML library skill; distinct.
+library/data-and-ai/llm-and-rag/ai-agent-development,ai-agent-development,llm-and-rag,merge,ai-engineering-toolkit,,High-level agent-dev workflow duplicating ai-engineer/ai-ml scope.
+library/data-and-ai/llm-and-rag/ai-engineer,ai-engineer,llm-and-rag,merge,ai-engineering-toolkit,,Persona wrapper overlapping ai-ml/ai-engineering-toolkit.
+library/data-and-ai/llm-and-rag/ai-ml,ai-ml,llm-and-rag,merge,ai-engineering-toolkit,,Umbrella workflow bundle duplicating ai-engineer/ai-engineering-toolkit.
+library/data-and-ai/llm-and-rag/bigquery-basics,bigquery-basics,llm-and-rag,merge,bigquery-analytics,,BigQuery basics merges into bigquery-analytics.
+library/data-and-ai/llm-and-rag/context-window-management,context-window-management,llm-and-rag,move,,development/fullstack/context-engineering,Overlaps context-engineering in development/fullstack; move there.
+library/data-and-ai/llm-and-rag/conversation-memory,conversation-memory,llm-and-rag,move,,development/fullstack/context-engineering,Overlaps context-engineering in development/fullstack; move there.
+library/data-and-ai/llm-and-rag/hugging-face-community-evals,hugging-face-community-evals,llm-and-rag,merge,hugging-face-cli,,HF community evals merges into hugging-face-cli.
+library/data-and-ai/llm-and-rag/hugging-face-datasets,hugging-face-datasets,llm-and-rag,merge,hugging-face-cli,,HF datasets overlaps hugging-face-cli and dataset-viewer.
+library/data-and-ai/llm-and-rag/hugging-face-evaluation,hugging-face-evaluation,llm-and-rag,merge,hugging-face-cli,,HF evaluation merges into hugging-face-cli.
+library/data-and-ai/llm-and-rag/langchain-architecture,langchain-architecture,llm-and-rag,merge,langgraph,,LangChain architecture overlaps langgraph and llm-app-dev-langchain-agent.
+library/data-and-ai/llm-and-rag/llm-app-patterns,llm-app-patterns,llm-and-rag,merge,ai-engineering-toolkit,,LLM app patterns merges into ai-engineering-toolkit.
+library/data-and-ai/llm-and-rag/llm-application-dev-ai-assistant,llm-application-dev-ai-assistant,llm-and-rag,merge,ai-engineering-toolkit,,AI assistant dev merges into ai-engineering-toolkit.
+library/data-and-ai/llm-and-rag/llm-application-dev-langchain-agent,llm-application-dev-langchain-agent,llm-and-rag,merge,langgraph,,LangChain agent dev duplicates langchain-architecture/langgraph.
+library/data-and-ai/llm-and-rag/llm-application-dev-prompt-optimize,llm-application-dev-prompt-optimize,llm-and-rag,merge,prompt-engineering-patterns,,Prompt-optimize merges into prompt-engineering-patterns.
+library/data-and-ai/llm-and-rag/llm-ops,llm-ops,llm-and-rag,merge,ai-engineering-toolkit,,LLM-ops umbrella overlaps llm-app-patterns/rag-engineer/vector-database-engineer.
+library/data-and-ai/llm-and-rag/llms-create,llms-create,llm-and-rag,merge,llms-txt,,Consolidate llms-create + llms-update into a new llms-txt skill.
+library/data-and-ai/llm-and-rag/llms-update,llms-update,llm-and-rag,merge,llms-txt,,Consolidate llms-create + llms-update into a new llms-txt skill.
+library/data-and-ai/llm-and-rag/local-llm-expert,local-llm-expert,llm-and-rag,keep,,,Canonical local-LLM skill; absorbs huggingface-local-models.
+library/data-and-ai/llm-and-rag/multi-agent-architect,multi-agent-architect,llm-and-rag,merge,langgraph,,Multi-agent architect overlaps langgraph/autonomous-agent-patterns.
+library/data-and-ai/llm-and-rag/prompt-caching,prompt-caching,llm-and-rag,move,,development/fullstack/context-engineering,Overlaps context-engineering in development/fullstack; move there.
+library/data-and-ai/llm-and-rag/rag-engineer,rag-engineer,llm-and-rag,merge,rag-implementation,,RAG-engineer merges into rag-implementation.
+library/data-and-ai/llm-and-rag/vector-database-engineer,vector-database-engineer,llm-and-rag,merge,embedding-strategies,,Vector-DB engineer merges into embedding-strategies.
+library/data-and-ai/llm-and-rag/clean-code-guard,clean-code-guard,llm-and-rag,move,,quality-and-security,Code-quality guard for LLM-generated code; belongs in quality.
+library/data-and-ai/llm-and-rag/cloudflare,cloudflare,llm-and-rag,move,,infrastructure-and-ops,"Cloudflare Workers/AI/Vectorize is infrastructure, not LLM/RAG."
+library/data-and-ai/llm-and-rag/code-review-ai-ai-review,code-review-ai-ai-review,llm-and-rag,move,,quality-and-security,AI-assisted code review belongs with quality code-review skills.
+library/data-and-ai/llm-and-rag/community-marketing,community-marketing,llm-and-rag,move,,marketing-and-seo/content-and-campaigns,"Community-led-growth playbook is marketing, not data-and-ai."
+library/data-and-ai/llm-and-rag/comprehensive-review-pr-enhance,comprehensive-review-pr-enhance,llm-and-rag,move,,development/fullstack,PR enhancement duplicates pr-workflows-pr-enhance in development.
+library/data-and-ai/llm-and-rag/convex,convex,llm-and-rag,move,,development/backend,"Convex reactive-backend is application development, not data-and-ai."
+library/data-and-ai/llm-and-rag/marketing-psychology,data-and-ai-marketing-psychology,llm-and-rag,move,,marketing-and-seo/cro,"Marketing psychology/mental-models is marketing, not data-and-ai."
+library/data-and-ai/llm-and-rag/file-uploads,file-uploads,llm-and-rag,move,,development/backend,File-upload/S3/R2 storage guidance is backend development.
+library/data-and-ai/llm-and-rag/grand-slam-offers,grand-slam-offers,llm-and-rag,move,,marketing-and-seo/cro,Hormozi $100M Offers framework is marketing/offer-design.
+library/data-and-ai/llm-and-rag/n8n-agents,n8n-agents,llm-and-rag,move,,workflow-and-automation/tool-integration,n8n AI-agent design belongs with workflow-and-automation n8n skills.
+library/data-and-ai/llm-and-rag/public-relations,public-relations,llm-and-rag,move,,marketing-and-seo/content-and-campaigns,"PR/earned-media skill is marketing, not data-and-ai."
+library/data-and-ai/llm-and-rag/rclone-cli,rclone-cli,llm-and-rag,move,,infrastructure-and-ops,"rclone cloud-storage CLI is infrastructure/ops, not data-and-ai."
+library/data-and-ai/llm-and-rag/unslop-commit,unslop-commit,llm-and-rag,move,,development/fullstack,Commit-message humanizer overlaps development/fullstack unslop skills.
+library/data-and-ai/llm-and-rag/unslop-file,unslop-file,llm-and-rag,move,,development/fullstack,File-humanizer overlaps development/fullstack unslop skills.
+library/data-and-ai/llm-and-rag/vibe-code-auditor,vibe-code-auditor,llm-and-rag,move,,quality-and-security,Vibe-code auditor is code-quality/security review.
+library/data-and-ai/llm-and-rag/vibe-code-cleanup,vibe-code-cleanup,llm-and-rag,move,,development/fullstack,Vibe-code cleanup is codebase hygiene.
+library/data-and-ai/llm-and-rag/earllm-build,earllm-build,llm-and-rag,prune,,,One-off Android project skill with no generalizable value.
+library/data-and-ai/llm-and-rag/advanced-evaluation,advanced-evaluation,llm-and-rag,review,,,Generic AI-workflow wrapper; overlaps llm-app-patterns scope.
+library/data-and-ai/llm-and-rag/audio-transcriber,audio-transcriber,llm-and-rag,review,,marketing-and-seo/on-page-seo/whisper-transcription,Transcription with no LLM/RAG dependency; candidate to move.
+library/data-and-ai/llm-and-rag/clarity-gate,clarity-gate,llm-and-rag,review,,,RAG pre-ingestion quality gate; verify quality-and-security vs data-and-ai.
+library/data-and-ai/llm-and-rag/infinite-gratitude,infinite-gratitude,llm-and-rag,review,,,External pointer to sstklen/infinite-gratitude; decide keep vs prune.
+library/data-and-ai/llm-and-rag/llm-council,llm-council,llm-and-rag,review,,,Fireworks-hosted LLM council is niche; verify distinct from advanced-evaluation.
+library/data-and-ai/llm-and-rag/mcp-builder,mcp-builder,llm-and-rag,review,,workflow-and-automation/tool-integration,MCP builder overlaps mcp-builder-ms in workflow-and-automation.
+library/data-and-ai/llm-and-rag/project-development,project-development,llm-and-rag,review,,development/fullstack,LLM project methodology is generic software development.
+library/data-and-ai/llm-and-rag/quant-analyst,quant-analyst,llm-and-rag,review,,business-and-operations,Quant finance skill is tangential to data-and-ai.
+library/data-and-ai/llm-and-rag/ai-engineering-toolkit,ai-engineering-toolkit,llm-and-rag,keep,,,Canonical AI-engineering skill.
+library/data-and-ai/llm-and-rag/langgraph,langgraph,llm-and-rag,keep,,,Canonical LangGraph skill.
+library/data-and-ai/llm-and-rag/prompt-engineering-patterns,prompt-engineering-patterns,llm-and-rag,keep,,,Canonical prompt-engineering skill.
+library/data-and-ai/llm-and-rag/rag-implementation,rag-implementation,llm-and-rag,keep,,,Canonical RAG skill.
+library/data-and-ai/llm-and-rag/routerbase-model-gateway,routerbase-model-gateway,llm-and-rag,keep,,,Distinct model-gateway/routing skill with no clear duplicate.
+library/data-and-ai/machine-learning/autonomous-agent-patterns,autonomous-agent-patterns,machine-learning,merge,langgraph,,Autonomous-agent patterns overlaps multi-agent-architect/langgraph.
+library/data-and-ai/machine-learning/gemini-api-dev,gemini-api-dev,machine-learning,merge,gemini-api,,Gemini API dev overlaps gemini-api/integration.
+library/data-and-ai/machine-learning/gemini-api-integration,gemini-api-integration,machine-learning,merge,gemini-api,,Gemini API integration duplicates gemini-api-dev.
+library/data-and-ai/machine-learning/gemini-interactions-api,gemini-interactions-api,machine-learning,merge,gemini-api,,Gemini Interactions API overlaps gemini-api.
+library/data-and-ai/machine-learning/gemini-omni-flash-api,gemini-omni-flash-api,machine-learning,merge,gemini-api,,Gemini Omni Flash overlaps gemini-api.
+library/data-and-ai/machine-learning/hugging-face-dataset-viewer,hugging-face-dataset-viewer,machine-learning,merge,hugging-face-cli,,HF dataset-viewer overlaps hugging-face-cli/datasets.
+library/data-and-ai/machine-learning/hugging-face-jobs,hugging-face-jobs,machine-learning,merge,hugging-face-cli,,HF Jobs overlaps hugging-face-cli/model-trainer.
+library/data-and-ai/machine-learning/hugging-face-paper-publisher,hugging-face-paper-publisher,machine-learning,merge,hugging-face-papers,,HF paper-publisher merges into hugging-face-papers.
+library/data-and-ai/machine-learning/hugging-face-tool-builder,hugging-face-tool-builder,machine-learning,merge,huggingface-tool-builder,,HF tool-builder merges into huggingface-tool-builder.
+library/data-and-ai/machine-learning/huggingface-best,huggingface-best,machine-learning,merge,hugging-face-cli,,HF best-model finder overlaps hugging-face-cli/local-models.
+library/data-and-ai/machine-learning/huggingface-local-models,huggingface-local-models,machine-learning,merge,local-llm-expert,,HF local-models overlaps local-llm-expert.
+library/data-and-ai/machine-learning/huggingface-lora-space-builder,huggingface-lora-space-builder,machine-learning,merge,hugging-face-gradio,,LoRA space builder merges into hugging-face-gradio.
+library/data-and-ai/machine-learning/huggingface-zerogpu,huggingface-zerogpu,machine-learning,merge,hugging-face-gradio,,ZeroGPU merges into hugging-face-gradio.
+library/data-and-ai/machine-learning/content-commerce_02,content-commerce_02,machine-learning,move,,marketing-and-seo/content-and-campaigns,"Content commerce is ecommerce marketing, not ML."
+library/data-and-ai/machine-learning/developer-sandbox,developer-sandbox,machine-learning,move,,marketing-and-seo/cro,Developer sandbox/playground is developer marketing.
+library/data-and-ai/machine-learning/dispatch,dispatch,machine-learning,move,,development/fullstack,Claude Code dispatch to external CLIs is agent tooling.
+library/data-and-ai/machine-learning/photopea-embedded-editor,photopea-embedded-editor,machine-learning,move,,development/frontend,"Photopea embed editor is frontend integration, not ML."
+library/data-and-ai/machine-learning/predictive-personalization,predictive-personalization,machine-learning,move,,marketing-and-seo/cro,Predictive personalization is ecommerce marketing.
+library/data-and-ai/machine-learning/ai-wrapper-product,ai-wrapper-product,machine-learning,review,,development/fullstack,AI-wrapper product overlaps ai-product in development/fullstack.
+library/data-and-ai/machine-learning/computer-use-agents,computer-use-agents,machine-learning,review,,,Computer-use agents is distinct but narrow; verify placement.
+library/data-and-ai/machine-learning/exa-search,exa-search,machine-learning,review,,,Exa semantic-search API is adjacent to vector-databases.
+library/data-and-ai/machine-learning/gemini-api,gemini-api,machine-learning,keep,,,Canonical Gemini API skill.
+library/data-and-ai/machine-learning/hugging-face-cli,hugging-face-cli,machine-learning,keep,,,Canonical HF Hub CLI skill.
+library/data-and-ai/machine-learning/hugging-face-gradio,hugging-face-gradio,machine-learning,keep,,,Canonical HF Spaces skill.
+library/data-and-ai/machine-learning/hugging-face-model-trainer,hugging-face-model-trainer,machine-learning,keep,,,Canonical HF training skill.
+library/data-and-ai/machine-learning/hugging-face-papers,hugging-face-papers,machine-learning,keep,,,Canonical HF papers skill.
+library/data-and-ai/machine-learning/hugging-face-trackio,hugging-face-trackio,machine-learning,keep,,,Trackio experiment tracking is distinct.
+library/data-and-ai/machine-learning/huggingface-tool-builder,huggingface-tool-builder,machine-learning,keep,,,Canonical HF tool-builder.
+library/data-and-ai/machine-learning/transformers-js,transformers-js,machine-learning,keep,,,Transformers.js in-browser ML skill; distinct.
+library/data-and-ai/vector-databases/context-manager,context-manager,vector-databases,move,,development/fullstack/context-engineering,Overlaps context-engineering in development/fullstack; move there.
+library/data-and-ai/vector-databases/similarity-search-patterns,similarity-search-patterns,vector-databases,merge,embedding-strategies,,Similarity-search merges into embedding-strategies.
+library/data-and-ai/vector-databases/arrowspace,arrowspace,vector-databases,keep,,,ArrowSpace spectral vector search; distinct research skill.
+library/data-and-ai/vector-databases/embedding-strategies,embedding-strategies,vector-databases,keep,,,Canonical embedding skill.
+library/data-and-ai/vector-databases/weaviate,weaviate,vector-databases,keep,,,Weaviate DB operations skill; distinct vendor-specific.
