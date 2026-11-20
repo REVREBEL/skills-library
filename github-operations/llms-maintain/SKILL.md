@@ -64,19 +64,19 @@ Optional short context paragraph.
 
 ## Documentation
 
-- [Main README](README.md): Primary overview and quick start.
+- Main README: primary overview and quick start in the target repository (not bundled here).
 
 ## Specifications
 
-- [API specification](docs/api.md): Interfaces and data contracts.
+- API specification (`docs/api.md` in the target repository): interfaces and data contracts.
 
 ## Examples
 
-- [Examples](examples/): Representative usage patterns.
+- Examples (`examples/` in the target repository): representative usage patterns.
 
 ## Optional
 
-- [Architecture decisions](docs/decisions/): Historical design rationale.
+- Architecture decisions (`docs/decisions/` in the target repository): historical design rationale.
 ```
 
 Use relative repository links and concise descriptions. The `Optional` section should contain secondary material that can be skipped for shorter context.
