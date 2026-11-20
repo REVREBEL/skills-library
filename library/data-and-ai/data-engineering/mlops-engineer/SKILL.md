@@ -1,6 +1,6 @@
 ---
 name: "mlops-engineer"
-description: "Build comprehensive ML pipelines, experiment tracking, and model registries with MLflow, Kubeflow, and modern MLOps tools. Use when working with mlops engineer."
+description: "Build comprehensive ML pipelines, experiment tracking, and model registries with MLflow, Kubeflow, and modern MLOps tools. Covers the full MLOps lifecycle (orchestration, experiment tracking, model registry, cloud MLOps stacks, Kubernetes, IaC, feature stores, CI/CD, monitoring, security, scaling) plus an end-to-end ML pipeline workflow (data prep → training → validation → deployment → monitoring) with DAG patterns, deployment strategies, and troubleshooting. Use when working with mlops engineer."
 source: "community_canonical"
 risk: "unknown"
 license: "not_declared_upstream"
@@ -9,6 +9,10 @@ license: "not_declared_upstream"
 
 - Working on mlops engineer tasks or workflows
 - Needing guidance, best practices, or checklists for mlops engineer
+- Building new ML pipelines from scratch or designing workflow orchestration for ML systems
+- Implementing data → model → deployment automation
+- Setting up reproducible training workflows and DAG-based ML orchestration
+- Integrating ML components into production systems
 
 ## Do not use this skill when
 
@@ -171,6 +175,100 @@ Expert MLOps engineer specializing in building scalable ML infrastructure and au
 - Documentation automation and API documentation generation
 - Team collaboration tools and workflow optimization
 
+## End-to-End ML Pipeline Workflow
+
+Complete orchestration from data preparation through model deployment: data ingestion → preparation → training → validation → deployment → monitoring.
+
+### Pipeline stages
+
+```python
+stages = [
+    "data_ingestion",
+    "data_validation",
+    "feature_engineering",
+    "model_training",
+    "model_validation",
+    "model_deployment",
+]
+```
+
+Batch training DAG (see `assets/pipeline-dag.yaml.template`):
+
+```yaml
+stages:
+  - name: data_preparation
+    dependencies: []
+  - name: model_training
+    dependencies: [data_preparation]
+  - name: model_evaluation
+    dependencies: [model_training]
+  - name: model_deployment
+    dependencies: [model_evaluation]
+```
+
+### Production workflow
+
+1. **Data preparation** — ingest raw data; run quality checks; apply feature transformations; version processed datasets.
+2. **Training** — load versioned training data; execute training jobs; track experiments and metrics; save trained models.
+3. **Validation** — run the validation suite; compare against baseline; generate performance reports; approve for deployment.
+4. **Deployment** — package model artifacts; deploy to serving infrastructure; configure monitoring; validate production traffic.
+
+### Pipeline design best practices
+
+- **Modularity** — each stage independently testable.
+- **Idempotency** — re-running stages should be safe.
+- **Observability** — log metrics at every stage.
+- **Versioning** — track data, code, and model versions.
+- **Failure handling** — retry logic and alerting.
+
+### Data management
+
+- Validate with Great Expectations / TFX.
+- Version datasets with DVC or similar.
+- Document feature engineering transformations.
+- Maintain data lineage tracking.
+
+### Model operations
+
+- Separate training and serving infrastructure.
+- Use model registries (MLflow, Weights & Biases).
+- Implement gradual rollouts for new models.
+- Monitor model performance drift.
+- Maintain rollback capabilities.
+
+### Deployment strategies
+
+- Start with **shadow deployments**.
+- Use **canary releases** for validation.
+- Implement **A/B testing** infrastructure.
+- Set up **automated rollback triggers**.
+- Monitor latency and throughput.
+
+### Progressive disclosure
+
+Start simple, add complexity:
+
+1. **Level 1**: Simple linear pipeline (data → train → deploy)
+2. **Level 2**: Add validation and monitoring stages
+3. **Level 3**: Implement hyperparameter tuning
+4. **Level 4**: Add A/B testing and gradual rollouts
+5. **Level 5**: Multi-model pipelines with ensemble strategies
+
+### Common patterns
+
+- **Batch training pipeline** — `data_preparation → model_training → model_evaluation → model_deployment` (see the DAG template).
+- **Real-time feature pipeline** — stream processing for real-time features, combined with batch training.
+- **Continuous training** — automated retraining on a schedule, triggered by data drift detection.
+
+### Troubleshooting
+
+- **Pipeline failures** → check dependencies and data availability.
+- **Training instability** → review hyperparameters and data quality.
+- **Deployment issues** → validate model artifacts and serving config.
+- **Performance degradation** → monitor data drift and model metrics.
+
+Debugging steps: check pipeline logs per stage → validate input/output data at boundaries → test components in isolation → review experiment tracking metrics → inspect model artifacts and metadata.
+
 ## Behavioral Traits
 - Emphasizes automation and reproducibility in all ML workflows
 - Prioritizes system reliability and fault tolerance over complexity
@@ -219,3 +317,7 @@ Expert MLOps engineer specializing in building scalable ML infrastructure and au
 - Use this skill only when the task clearly matches the scope described above.
 - Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
 - Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+
+## Merged from
+
+- `ml-pipeline-workflow` — end-to-end ML pipeline workflow (stages, production phases, DAG templates, design best practices, deployment strategies, progressive disclosure, common patterns, troubleshooting)

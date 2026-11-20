@@ -1,6 +1,6 @@
 ---
 name: "segment-cdp"
-description: "Expert patterns for Segment Customer Data Platform including. Use when working with segment cdp."
+description: "Expert patterns for Segment Customer Data Platform including Analytics.js, server-side tracking, tracking plans with Protocols, identity resolution, destinations configuration, data governance best practices, the HTTP Tracking API, and automating Segment via Rube MCP (Composio) — track events, identify users, manage groups, page views, aliases, and batch operations. Use when working with segment cdp."
 source: "community_canonical"
 risk: "unknown"
 license: "not_declared_upstream"
@@ -9,7 +9,8 @@ license: "not_declared_upstream"
 
 Expert patterns for Segment Customer Data Platform including Analytics.js,
 server-side tracking, tracking plans with Protocols, identity resolution,
-destinations configuration, and data governance best practices.
+destinations configuration, and data governance best practices. Also covers
+automating Segment operations via Rube MCP (Composio) for agents.
 
 ## Patterns
 
@@ -717,6 +718,77 @@ export default {
 - serverless
 - http tracking
 
+## Segment Automation via Rube MCP (Composio)
+
+Automate Segment operations through Composio's Segment toolkit via Rube MCP — useful for agents that need to send events, identify users, manage groups, and run batch operations without writing SDK code.
+
+### Prerequisites
+
+- Rube MCP connected (`RUBE_SEARCH_TOOLS` available).
+- Active Segment connection via `RUBE_MANAGE_CONNECTIONS` with toolkit `segment`.
+- Always call `RUBE_SEARCH_TOOLS` first to get current tool schemas.
+
+### Setup
+
+Add `https://rube.app/mcp` as an MCP server in your client configuration — no API keys needed. Then:
+
+1. Verify Rube MCP responds to `RUBE_SEARCH_TOOLS`.
+2. Call `RUBE_MANAGE_CONNECTIONS` with toolkit `segment`.
+3. If the connection is not ACTIVE, follow the returned auth link.
+4. Confirm the connection status is ACTIVE before running workflows.
+
+### Core workflows
+
+**Track events** — `SEGMENT_TRACK`. Params: `userId` (required if no `anonymousId`), `anonymousId`, `event`, `properties`, `timestamp` (ISO 8601), `context`. At least one of `userId`/`anonymousId` is required; events are processed asynchronously (a successful response means accepted, not delivered).
+
+**Identify users** — `SEGMENT_IDENTIFY`. Params: `userId`/`anonymousId`, `traits`, `timestamp`, `context`. Traits are merged with existing traits, not replaced; set a trait to `null` to remove it. Identify before tracking for new users.
+
+**Batch operations** — `SEGMENT_BATCH`. Params: `batch` array of message objects, each with a `type` (`track`/`identify`/`group`/`page`/`alias`), `userId`/`anonymousId`, and type-specific fields. Each message must independently satisfy its type's requirements. Batch is the most efficient way to send multiple calls — prefer it over individual calls.
+
+**Group users** — `SEGMENT_GROUP`. Params: `userId`/`anonymousId`, `groupId` (required), `traits`, `timestamp`. A user can belong to multiple groups; group traits update the group profile, not the user profile.
+
+**Track page views** — `SEGMENT_PAGE`. Params: `userId`/`anonymousId`, `name`, `category`, `properties` (`url`, `title`, `referrer`, `path`, `search`).
+
+**Alias users & manage sources** — `SEGMENT_ALIAS` (`userId` = new identified ID, `previousId` = old anonymous ID), `SEGMENT_LIST_SCHEMA_SETTINGS_IN_SOURCE`, `SEGMENT_UPDATE_SOURCE`. ALIAS is one-way and cannot be undone; call it once when a user first identifies. Not all destinations support alias.
+
+### User lifecycle
+
+```
+1. Anonymous user visits -> PAGE call with anonymousId
+2. User interacts -> TRACK call with anonymousId
+3. User signs up -> ALIAS (anonymousId -> userId), then IDENTIFY with traits
+4. User takes action -> TRACK call with userId
+5. User joins org -> GROUP call linking userId to groupId
+```
+
+### Naming conventions
+
+- **Events**: "Object Action" format (e.g. `Order Completed`, `Article Viewed`).
+- **Properties**: snake_case (e.g. `order_total`, `product_name`).
+- **Traits**: snake_case (e.g. `first_name`, `plan_type`).
+
+### Quick reference
+
+| Task | Tool slug | Key params |
+|------|-----------|------------|
+| Track event | `SEGMENT_TRACK` | userId, event, properties |
+| Identify user | `SEGMENT_IDENTIFY` | userId, traits |
+| Batch calls | `SEGMENT_BATCH` | batch (array of messages) |
+| Group user | `SEGMENT_GROUP` | userId, groupId, traits |
+| Page view | `SEGMENT_PAGE` | userId, name, properties |
+| Alias identity | `SEGMENT_ALIAS` | userId, previousId |
+| Source schema | `SEGMENT_LIST_SCHEMA_SETTINGS_IN_SOURCE` | sourceId |
+| Update source | `SEGMENT_UPDATE_SOURCE` | sourceId |
+| Warehouses | `SEGMENT_LIST_CONNECTED_WAREHOUSES_FROM_SOURCE` | sourceId |
+
+### Automation pitfalls
+
+- **Identity resolution** — always include `userId` or `anonymousId` on every call; use ALIAS only once per identity merge; identify before tracking.
+- **Data quality** — consistent event names across sources; properties follow a defined schema; avoid sensitive PII unless destinations are configured for it.
+- **Rate limits** — use BATCH for bulk operations; individual calls are rate-limited per source.
+- **Response parsing** — successful responses indicate acceptance, not delivery; batch responses may have per-message errors.
+- **Timestamps** — must be ISO 8601 with timezone (e.g. `2024-01-15T10:30:00Z`); omitting uses server receive time; include explicit timestamps for historical imports.
+
 ## Sharp Edges
 
 ### Anonymous ID Persists Until Explicit Reset
@@ -844,8 +916,15 @@ Message: Tracking without consent check. Implement consent management for GDPR.
 - User mentions or implies: event tracking
 - User mentions or implies: identify track page
 - User mentions or implies: data routing
+- User mentions or implies: segment automation
+- User mentions or implies: rube mcp
+- User mentions or implies: composio segment
 
 ## Limitations
 - Use this skill only when the task clearly matches the scope described above.
 - Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
 - Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+
+## Merged from
+
+- `segment-automation` — Segment automation via Rube MCP (Composio): track/identify/group/page/alias/batch tool workflows, user lifecycle, naming conventions, quick reference

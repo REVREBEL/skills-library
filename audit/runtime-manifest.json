@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_at": "2026-11-20T00:00:00Z",
-  "total_managed_skills": 2051,
+  "total_managed_skills": 2017,
   "skills": {
     "007": {
       "runtime_name": "007",
@@ -553,16 +553,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "ai-agent-development": {
-      "runtime_name": "ai-agent-development",
-      "canonical_name": "ai-agent-development",
-      "canonical_path": "library/data-and-ai/llm-and-rag/ai-agent-development",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "ai-agents-architect": {
       "runtime_name": "ai-agents-architect",
       "canonical_name": "ai-agents-architect",
@@ -593,16 +583,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "ai-engineer": {
-      "runtime_name": "ai-engineer",
-      "canonical_name": "ai-engineer",
-      "canonical_path": "library/data-and-ai/llm-and-rag/ai-engineer",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "ai-engineering-toolkit": {
       "runtime_name": "ai-engineering-toolkit",
       "canonical_name": "ai-engineering-toolkit",
@@ -618,16 +598,6 @@
       "canonical_name": "ai-loop",
       "canonical_path": "library/development/fullstack/ai-loop",
       "functional_parent": "library/development/fullstack/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "ai-ml": {
-      "runtime_name": "ai-ml",
-      "canonical_name": "ai-ml",
-      "canonical_path": "library/data-and-ai/llm-and-rag/ai-ml",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -1423,16 +1393,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "autonomous-agent-patterns": {
-      "runtime_name": "autonomous-agent-patterns",
-      "canonical_name": "autonomous-agent-patterns",
-      "canonical_path": "library/data-and-ai/machine-learning/autonomous-agent-patterns",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "autonomous-agents": {
       "runtime_name": "autonomous-agents",
       "canonical_name": "autonomous-agents",
@@ -1687,16 +1647,6 @@
       "runtime_name": "bigquery-analytics",
       "canonical_name": "bigquery-analytics",
       "canonical_path": "library/data-and-ai/analytics/bigquery-analytics",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "bigquery-basics": {
-      "runtime_name": "bigquery-basics",
-      "canonical_name": "bigquery-basics",
-      "canonical_path": "library/data-and-ai/llm-and-rag/bigquery-basics",
       "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -4808,16 +4758,6 @@
       "canonical_name": "data-dense-design",
       "canonical_path": "library/design-and-experience/taste-and-critique/data-dense-design",
       "functional_parent": "library/design-and-experience/taste-and-critique/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "data-engineer": {
-      "runtime_name": "data-engineer",
-      "canonical_name": "data-engineer",
-      "canonical_path": "library/data-and-ai/data-engineering/data-engineer",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -8033,26 +7973,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "gemini-api-dev": {
-      "runtime_name": "gemini-api-dev",
-      "canonical_name": "gemini-api-dev",
-      "canonical_path": "library/data-and-ai/machine-learning/gemini-api-dev",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "gemini-api-integration": {
-      "runtime_name": "gemini-api-integration",
-      "canonical_name": "gemini-api-integration",
-      "canonical_path": "library/data-and-ai/machine-learning/gemini-api-integration",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "gemini-deep-research": {
       "runtime_name": "gemini-deep-research",
       "canonical_name": "gemini-deep-research",
@@ -8063,31 +7983,11 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "gemini-interactions-api": {
-      "runtime_name": "gemini-interactions-api",
-      "canonical_name": "gemini-interactions-api",
-      "canonical_path": "library/data-and-ai/machine-learning/gemini-interactions-api",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "gemini-live-api-dev": {
       "runtime_name": "gemini-live-api-dev",
       "canonical_name": "gemini-live-api-dev",
       "canonical_path": "library/development/backend/gemini-live-api-dev",
       "functional_parent": "library/development/backend/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "gemini-omni-flash-api": {
-      "runtime_name": "gemini-omni-flash-api",
-      "canonical_name": "gemini-omni-flash-api",
-      "canonical_path": "library/data-and-ai/machine-learning/gemini-omni-flash-api",
-      "functional_parent": "library/design-and-experience/motion-and-graphics/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -8703,60 +8603,10 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "hugging-face-community-evals": {
-      "runtime_name": "hugging-face-community-evals",
-      "canonical_name": "hugging-face-community-evals",
-      "canonical_path": "library/data-and-ai/llm-and-rag/hugging-face-community-evals",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "hugging-face-dataset-viewer": {
-      "runtime_name": "hugging-face-dataset-viewer",
-      "canonical_name": "hugging-face-dataset-viewer",
-      "canonical_path": "library/data-and-ai/machine-learning/hugging-face-dataset-viewer",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "hugging-face-datasets": {
-      "runtime_name": "hugging-face-datasets",
-      "canonical_name": "hugging-face-datasets",
-      "canonical_path": "library/data-and-ai/llm-and-rag/hugging-face-datasets",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "hugging-face-evaluation": {
-      "runtime_name": "hugging-face-evaluation",
-      "canonical_name": "hugging-face-evaluation",
-      "canonical_path": "library/data-and-ai/llm-and-rag/hugging-face-evaluation",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "hugging-face-gradio": {
       "runtime_name": "hugging-face-gradio",
       "canonical_name": "hugging-face-gradio",
       "canonical_path": "library/data-and-ai/machine-learning/hugging-face-gradio",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "hugging-face-jobs": {
-      "runtime_name": "hugging-face-jobs",
-      "canonical_name": "hugging-face-jobs",
-      "canonical_path": "library/data-and-ai/machine-learning/hugging-face-jobs",
       "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -8773,16 +8623,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "hugging-face-paper-publisher": {
-      "runtime_name": "hugging-face-paper-publisher",
-      "canonical_name": "hugging-face-paper-publisher",
-      "canonical_path": "library/data-and-ai/machine-learning/hugging-face-paper-publisher",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "hugging-face-papers": {
       "runtime_name": "hugging-face-papers",
       "canonical_name": "hugging-face-papers",
@@ -8793,50 +8633,10 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "hugging-face-tool-builder": {
-      "runtime_name": "hugging-face-tool-builder",
-      "canonical_name": "hugging-face-tool-builder",
-      "canonical_path": "library/data-and-ai/machine-learning/hugging-face-tool-builder",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "hugging-face-trackio": {
       "runtime_name": "hugging-face-trackio",
       "canonical_name": "hugging-face-trackio",
       "canonical_path": "library/data-and-ai/machine-learning/hugging-face-trackio",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "huggingface-best": {
-      "runtime_name": "huggingface-best",
-      "canonical_name": "huggingface-best",
-      "canonical_path": "library/data-and-ai/machine-learning/huggingface-best",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "huggingface-local-models": {
-      "runtime_name": "huggingface-local-models",
-      "canonical_name": "huggingface-local-models",
-      "canonical_path": "library/data-and-ai/machine-learning/huggingface-local-models",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "huggingface-lora-space-builder": {
-      "runtime_name": "huggingface-lora-space-builder",
-      "canonical_name": "huggingface-lora-space-builder",
-      "canonical_path": "library/data-and-ai/machine-learning/huggingface-lora-space-builder",
       "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -8857,16 +8657,6 @@
       "runtime_name": "huggingface-tool-builder",
       "canonical_name": "huggingface-tool-builder",
       "canonical_path": "library/data-and-ai/machine-learning/huggingface-tool-builder",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "huggingface-zerogpu": {
-      "runtime_name": "huggingface-zerogpu",
-      "canonical_name": "huggingface-zerogpu",
-      "canonical_path": "library/data-and-ai/machine-learning/huggingface-zerogpu",
       "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
@@ -9923,16 +9713,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "langchain-architecture": {
-      "runtime_name": "langchain-architecture",
-      "canonical_name": "langchain-architecture",
-      "canonical_path": "library/data-and-ai/llm-and-rag/langchain-architecture",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "langfuse": {
       "runtime_name": "langfuse",
       "canonical_name": "langfuse",
@@ -10463,46 +10243,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "llm-app-patterns": {
-      "runtime_name": "llm-app-patterns",
-      "canonical_name": "llm-app-patterns",
-      "canonical_path": "library/data-and-ai/llm-and-rag/llm-app-patterns",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "llm-application-dev-ai-assistant": {
-      "runtime_name": "llm-application-dev-ai-assistant",
-      "canonical_name": "llm-application-dev-ai-assistant",
-      "canonical_path": "library/data-and-ai/llm-and-rag/llm-application-dev-ai-assistant",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "llm-application-dev-langchain-agent": {
-      "runtime_name": "llm-application-dev-langchain-agent",
-      "canonical_name": "llm-application-dev-langchain-agent",
-      "canonical_path": "library/data-and-ai/llm-and-rag/llm-application-dev-langchain-agent",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "llm-application-dev-prompt-optimize": {
-      "runtime_name": "llm-application-dev-prompt-optimize",
-      "canonical_name": "llm-application-dev-prompt-optimize",
-      "canonical_path": "library/data-and-ai/llm-and-rag/llm-application-dev-prompt-optimize",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "llm-council": {
       "runtime_name": "llm-council",
       "canonical_name": "llm-council",
@@ -10518,16 +10258,6 @@
       "canonical_name": "llm-evaluation",
       "canonical_path": "library/quality-and-security/testing/llm-evaluation",
       "functional_parent": "library/quality-and-security/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "llm-ops": {
-      "runtime_name": "llm-ops",
-      "canonical_name": "llm-ops",
-      "canonical_path": "library/data-and-ai/llm-and-rag/llm-ops",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -10558,26 +10288,6 @@
       "canonical_name": "llm-structured-output",
       "canonical_path": "library/marketing-and-seo/technical-seo/llm-structured-output",
       "functional_parent": "library/marketing-and-seo/technical-seo/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "llms-create": {
-      "runtime_name": "llms-create",
-      "canonical_name": "llms-create",
-      "canonical_path": "library/data-and-ai/llm-and-rag/llms-create",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "llms-update": {
-      "runtime_name": "llms-update",
-      "canonical_name": "llms-update",
-      "canonical_path": "library/data-and-ai/llm-and-rag/llms-update",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -11603,16 +11313,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "ml-pipeline-workflow": {
-      "runtime_name": "ml-pipeline-workflow",
-      "canonical_name": "ml-pipeline-workflow",
-      "canonical_path": "library/data-and-ai/data-engineering/ml-pipeline-workflow",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "mlops-engineer": {
       "runtime_name": "mlops-engineer",
       "canonical_name": "mlops-engineer",
@@ -11738,16 +11438,6 @@
       "canonical_name": "multi-advisor",
       "canonical_path": "library/development/software-architecture/multi-advisor",
       "functional_parent": "library/development/software-architecture/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "multi-agent-architect": {
-      "runtime_name": "multi-agent-architect",
-      "canonical_name": "multi-agent-architect",
-      "canonical_path": "library/data-and-ai/llm-and-rag/multi-agent-architect",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -14313,16 +14003,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "rag-engineer": {
-      "runtime_name": "rag-engineer",
-      "canonical_name": "rag-engineer",
-      "canonical_path": "library/data-and-ai/llm-and-rag/rag-engineer",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "rag-implementation": {
       "runtime_name": "rag-implementation",
       "canonical_name": "rag-implementation",
@@ -15523,16 +15203,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "segment-automation": {
-      "runtime_name": "segment-automation",
-      "canonical_name": "segment-automation",
-      "canonical_path": "library/data-and-ai/analytics/segment-automation",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "segment-cdp": {
       "runtime_name": "segment-cdp",
       "canonical_name": "segment-cdp",
@@ -16508,16 +16178,6 @@
       "canonical_name": "signup-flow-cro",
       "canonical_path": "library/marketing-and-seo/cro/signup-flow-cro",
       "functional_parent": "library/marketing-and-seo/cro/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
-    "similarity-search-patterns": {
-      "runtime_name": "similarity-search-patterns",
-      "canonical_name": "similarity-search-patterns",
-      "canonical_path": "library/data-and-ai/vector-databases/similarity-search-patterns",
-      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-10-07T09:16:13Z",
@@ -18683,16 +18343,6 @@
       "installed_at": "2026-10-07T09:16:13Z",
       "last_validated": "2026-10-07T09:16:13Z"
     },
-    "vector-database-engineer": {
-      "runtime_name": "vector-database-engineer",
-      "canonical_name": "vector-database-engineer",
-      "canonical_path": "library/data-and-ai/llm-and-rag/vector-database-engineer",
-      "functional_parent": "library/data-and-ai/SKILL.md",
-      "source": "canonical_rebuild",
-      "managed": true,
-      "installed_at": "2026-10-07T09:16:13Z",
-      "last_validated": "2026-10-07T09:16:13Z"
-    },
     "vector-index-tuning": {
       "runtime_name": "vector-index-tuning",
       "canonical_name": "vector-index-tuning",
@@ -20506,6 +20156,16 @@
       "canonical_name": "marketing-psychology",
       "canonical_path": "library/marketing-and-seo/cro/marketing-psychology",
       "functional_parent": "library/marketing-and-seo/SKILL.md",
+      "source": "canonical_rebuild",
+      "managed": true,
+      "installed_at": "2026-11-20T00:00:00Z",
+      "last_validated": "2026-11-20T00:00:00Z"
+    },
+    "llms-txt": {
+      "runtime_name": "llms-txt",
+      "canonical_name": "llms-txt",
+      "canonical_path": "library/data-and-ai/llm-and-rag/llms-txt",
+      "functional_parent": "library/data-and-ai/SKILL.md",
       "source": "canonical_rebuild",
       "managed": true,
       "installed_at": "2026-11-20T00:00:00Z",

@@ -27,9 +27,9 @@ The Semantic Plane governs stable identity, canonical naming, taxonomy classific
 The Composition Plane governs how packages assemble: primitives providing low-level operations, overlays specializing base platforms, and workflows orchestrating multi-step pipelines.
 - **Role Distribution**:
   - **`family_primitive`**: 1 low-level primitives (auth, tokens, parsers).
-  - **`independent_capability`**: 1651 singular reusable building blocks.
+  - **`independent_capability`**: 1621 singular reusable building blocks.
   - **`overlay`**: 6 domain specializations extending base platform families via `extends` metadata without polluting core vendor tools.
-  - **`workflow`**: 357 composite outcome pipelines orchestrating sequential stages.
+  - **`workflow`**: 353 composite outcome pipelines orchestrating sequential stages.
 - **Dependency Modeling**: The `dependencies_or_extends` schema field captures upstream/downstream relationships cleanly.
 - **Census Evidence Finding**: Initial composition roles (`workflow`, `overlay`, `family_primitive`, `independent_capability`) reflect catalog package types. The formal acyclic dependency graph, precedence ordering, and `extends` composition contracts remain to be defined and closed under **REV-127** and **REV-130**.
 
@@ -37,11 +37,11 @@ The Composition Plane governs how packages assemble: primitives providing low-le
 The Execution Plane governs runtime projections, tool adapters, invocation boundaries, and active context overhead.
 - **Tool Adapters**: Provider coupling (CLI, MCP, browser runner) is encapsulated within adapter packages rather than polluting general capabilities.
 - **Population Token Density Differential**:
-  - Workflows average: **2154 tokens**.
-  - Independent capabilities average: **1360 tokens**.
-  - Population Density Differential: **36.9%**.
+  - Workflows average: **2200 tokens**.
+  - Independent capabilities average: **1357 tokens**.
+  - Population Density Differential: **38.3%**.
 - **Runtime Context Overhead Clarification**: This token density differential demonstrates a structural size difference across package populations. It is not an active execution benchmark. Real runtime context savings constitute an architectural hypothesis to be tested during runtime execution benchmarking under REV-130.
-- **Census Evidence Finding**: Structural token density differential (36.9%) is observed between workflows and capabilities. Tool adapters isolate runtime couplings. Formal execution contracts, runtime projection targets, and active execution context savings remain to be benchmarked and closed under **REV-130**.
+- **Census Evidence Finding**: Structural token density differential (38.3%) is observed between workflows and capabilities. Tool adapters isolate runtime couplings. Formal execution contracts, runtime projection targets, and active execution context savings remain to be benchmarked and closed under **REV-130**.
 
 ### 4. Lifecycle Plane
 The Lifecycle Plane governs intake validation, continuous drift detection, runtime publication, deprecation, and alias management.

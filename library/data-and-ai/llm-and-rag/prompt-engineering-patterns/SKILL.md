@@ -1,13 +1,13 @@
 ---
 name: "prompt-engineering-patterns"
-description: "Master advanced prompt engineering techniques to maximize LLM performance, reliability, and controllability. Use when working with prompt engineering patterns."
+description: "Master advanced prompt engineering techniques to maximize LLM performance, reliability, and controllability. Covers few-shot learning, chain-of-thought, tree-of-thought, prompt optimization and A/B testing, template systems, system prompt design, constitutional AI and self-critique, and model-specific optimization. Use when working with prompt engineering patterns."
 source: "community_canonical"
 risk: "unknown"
 license: "not_declared_upstream"
 ---
 # Prompt Engineering Patterns
 
-Master advanced prompt engineering techniques to maximize LLM performance, reliability, and controllability.
+Master advanced prompt engineering techniques to maximize LLM performance, reliability, and controllability. Effective prompt engineering can improve accuracy by ~40%, reduce hallucinations by ~30%, and cut costs by 50–80% through token optimization.
 
 ## Do not use this skill when
 
@@ -142,6 +142,46 @@ Build prompts that gracefully handle failures:
 - **Ambiguous instructions**: Leaving room for multiple interpretations
 - **Ignoring edge cases**: Not testing on unusual or boundary inputs
 
+## Constitutional AI & Model-Specific Optimization
+
+### Constitutional AI / self-critique
+
+Have the model critique and revise its own output against a set of principles before returning it. This reduces harmful or low-quality outputs without external reward models:
+
+```python
+CONSTITUTION = """
+1. Be helpful, harmless, and honest.
+2. Do not produce content that is misleading or unsafe.
+3. Acknowledge uncertainty rather than fabricating.
+"""
+
+def constitutional_generate(prompt: str) -> str:
+    draft = llm.generate(prompt)
+    critique = llm.generate(
+        f"Principles:\n{CONSTITUTION}\n\n"
+        f"Draft response:\n{draft}\n\n"
+        "Critique the draft against each principle. List violations."
+    )
+    if "no violations" in critique.lower():
+        return draft
+    return llm.generate(
+        f"Principles:\n{CONSTITUTION}\n\n"
+        f"Draft:\n{draft}\n\nCritique:\n{critique}\n\n"
+        "Write a revised response that fixes every violation."
+    )
+```
+
+### Model-specific optimization
+
+Prompts are not portable across models. Adapt per family:
+
+- **Anthropic Claude** — prefers XML-style tags (`<document>`, `<instructions>`) for structure; long-context prompts benefit from explicit "respond only to the content between tags" framing.
+- **OpenAI GPT** — function calling and structured outputs (`response_format` / JSON schema) are more reliable than parsing prose; system vs developer message roles matter.
+- **Google Gemini** — system instructions are interaction-scoped in the Interactions API; re-specify them each turn.
+- **Open models (Llama, Qwen, Mistral)** — chat-template formatting is mandatory; few-shot examples must follow the model's exact template.
+
+General rule: benchmark the same prompt across the models you actually deploy, and keep a per-model variant rather than assuming one prompt fits all.
+
 ## Integration Patterns
 
 ### With RAG Systems
@@ -218,3 +258,7 @@ Track these KPIs for your prompts:
 - Use this skill only when the task clearly matches the scope described above.
 - Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
 - Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
+
+## Merged from
+
+- `llm-application-dev-prompt-optimize` — expert prompt engineer persona, constitutional AI / self-critique, model-specific optimization, impact framing

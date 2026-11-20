@@ -1,25 +1,23 @@
 ---
 name: "embedding-strategies"
-description: "Guide to selecting and optimizing embedding models for vector search applications. Use when working with embedding strategies."
+description: "Guide to selecting and optimizing embedding models for vector search applications. Covers embedding model comparison, embedding pipelines (OpenAI, local sentence-transformers, code), chunking strategies (token, sentence, semantic, recursive), domain-specific pipelines, embedding quality evaluation (precision@k, recall@k, MRR, nDCG), vector database selection and index configuration (HNSW, IVF, PQ), hybrid search, metadata filtering, and similarity search at scale. Use when working with embedding strategies."
 source: "community_canonical"
 risk: "unknown"
 license: "not_declared_upstream"
 ---
-# Embedding Strategies
+# Embedding Strategies & Vector Search
 
-Guide to selecting and optimizing embedding models for vector search applications.
+Guide to selecting and optimizing embedding models for vector search applications. Use for choosing embedding models for RAG, optimizing chunking, fine-tuning embeddings for domains, comparing model performance, reducing embedding dimensions, handling multilingual content, building semantic search, implementing nearest-neighbor queries, optimizing retrieval latency, scaling to millions of vectors, and combining semantic with keyword search.
 
-## Do not use this skill when
+## Capabilities
 
-- The task is unrelated to embedding strategies
-- You need a different domain or tool outside this scope
-
-## Instructions
-
-- Clarify goals, constraints, and required inputs.
-- Apply relevant best practices and validate outcomes.
-- Provide actionable steps and verification.
-- If detailed examples are required, open `resources/implementation-playbook.md`.
+- Vector database selection and architecture (Pinecone, Weaviate, Qdrant, Milvus, pgvector)
+- Embedding model selection and optimization
+- Index configuration (HNSW, IVF, PQ)
+- Hybrid search (vector + keyword) implementation
+- Chunking strategies for documents
+- Metadata filtering and pre/post-filtering
+- Performance tuning and scaling
 
 ## Use this skill when
 
@@ -29,6 +27,13 @@ Guide to selecting and optimizing embedding models for vector search application
 - Comparing embedding model performance
 - Reducing embedding dimensions
 - Handling multilingual content
+- Building RAG (Retrieval Augmented Generation) systems
+- Implementing semantic search over documents
+- Creating recommendation engines
+- Building image/audio similarity search
+- Optimizing vector search latency and recall
+- Scaling vector operations to millions of vectors
+- Combining semantic and keyword search
 
 ## Core Concepts
 
@@ -38,7 +43,7 @@ Guide to selecting and optimizing embedding models for vector search application
 |-------|------------|------------|----------|
 | **text-embedding-3-large** | 3072 | 8191 | High accuracy |
 | **text-embedding-3-small** | 1536 | 8191 | Cost-effective |
-| **voyage-2** | 1024 | 4000 | Code, legal |
+| **voyage-2 / voyage-3-large** | 1024 | 4000 | Code, legal; recommended for Claude |
 | **bge-large-en-v1.5** | 1024 | 512 | Open source |
 | **all-MiniLM-L6-v2** | 384 | 256 | Fast, lightweight |
 | **multilingual-e5-large** | 1024 | 512 | Multi-language |
@@ -91,14 +96,9 @@ def get_embedding(text: str, **kwargs) -> List[float]:
     return get_embeddings([text], **kwargs)[0]
 
 
-# Dimension reduction with OpenAI
+# Dimension reduction with OpenAI (Matryoshka)
 def get_reduced_embedding(text: str, dimensions: int = 512) -> List[float]:
-    """Get embedding with reduced dimensions (Matryoshka)."""
-    return get_embedding(
-        text,
-        model="text-embedding-3-small",
-        dimensions=dimensions
-    )
+    return get_embedding(text, model="text-embedding-3-small", dimensions=dimensions)
 ```
 
 ### Template 2: Local Embeddings with Sentence Transformers
@@ -125,23 +125,20 @@ class LocalEmbedder:
         show_progress: bool = False
     ) -> np.ndarray:
         """Embed texts with optional normalization."""
-        embeddings = self.model.encode(
+        return self.model.encode(
             texts,
             normalize_embeddings=normalize,
             show_progress_bar=show_progress,
             convert_to_numpy=True
         )
-        return embeddings
 
     def embed_query(self, query: str) -> np.ndarray:
         """Embed a query with BGE-style prefix."""
         # BGE models benefit from query prefix
-        if "bge" in self.model.get_sentence_embedding_dimension():
-            query = f"Represent this sentence for searching relevant passages: {query}"
+        query = f"Represent this sentence for searching relevant passages: {query}"
         return self.embed([query])[0]
 
     def embed_documents(self, documents: List[str]) -> np.ndarray:
-        """Embed documents for indexing."""
         return self.embed(documents)
 
 
@@ -179,8 +176,7 @@ def chunk_by_tokens(
     start = 0
     while start < len(tokens):
         end = start + chunk_size
-        chunk_tokens = tokens[start:end]
-        chunk_text = tokenizer.decode(chunk_tokens)
+        chunk_text = tokenizer.decode(tokens[start:end])
         chunks.append(chunk_text)
         start = end - chunk_overlap
 
@@ -202,12 +198,10 @@ def chunk_by_sentences(
 
     for sentence in sentences:
         sentence_size = len(sentence)
-
         if current_size + sentence_size > max_chunk_size and current_chunk:
             chunks.append(" ".join(current_chunk))
             current_chunk = []
             current_size = 0
-
         current_chunk.append(sentence)
         current_size += sentence_size
 
@@ -254,13 +248,13 @@ def recursive_character_splitter(
     def split_text(text: str, separators: List[str]) -> List[str]:
         if not text:
             return []
-
         separator = separators[0]
         remaining_separators = separators[1:]
 
         if separator == "":
             # Character-level split
-            return [text[i:i+chunk_size] for i in range(0, len(text), chunk_size - chunk_overlap)]
+            return [text[i:i+chunk_size]
+                    for i in range(0, len(text), chunk_size - chunk_overlap)]
 
         splits = text.split(separator)
         chunks = []
@@ -269,16 +263,13 @@ def recursive_character_splitter(
 
         for split in splits:
             split_length = len(split) + len(separator)
-
             if current_length + split_length > chunk_size and current_chunk:
                 chunk_text = separator.join(current_chunk)
-
                 # Recursively split if still too large
                 if len(chunk_text) > chunk_size and remaining_separators:
                     chunks.extend(split_text(chunk_text, remaining_separators))
                 else:
                     chunks.append(chunk_text)
-
                 # Start new chunk with overlap
                 overlap_splits = []
                 overlap_length = 0
@@ -290,7 +281,6 @@ def recursive_character_splitter(
                         break
                 current_chunk = overlap_splits
                 current_length = overlap_length
-
             current_chunk.append(split)
             current_length += split_length
 
@@ -322,9 +312,7 @@ class DomainEmbeddingPipeline:
 
     def _default_preprocess(self, text: str) -> str:
         """Default preprocessing."""
-        # Remove excessive whitespace
         text = re.sub(r'\s+', ' ', text)
-        # Remove special characters
         text = re.sub(r'[^\w\s.,!?-]', '', text)
         return text.strip()
 
@@ -342,20 +330,10 @@ class DomainEmbeddingPipeline:
             content = doc[content_field]
             doc_id = doc[id_field]
 
-            # Preprocess
             cleaned = self.preprocess(content)
-
-            # Chunk
-            chunks = chunk_by_tokens(
-                cleaned,
-                self.chunk_size,
-                self.chunk_overlap
-            )
-
-            # Create embeddings
+            chunks = chunk_by_tokens(cleaned, self.chunk_size, self.chunk_overlap)
             embeddings = get_embeddings(chunks, self.embedding_model)
 
-            # Create records
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
                 record = {
                     "id": f"{doc_id}_chunk_{i}",
@@ -364,13 +342,10 @@ class DomainEmbeddingPipeline:
                     "text": chunk,
                     "embedding": embedding
                 }
-
-                # Add metadata
                 if metadata_fields:
                     for field in metadata_fields:
                         if field in doc:
                             record[field] = doc[field]
-
                 processed.append(record)
 
         return processed
@@ -386,9 +361,7 @@ class CodeEmbeddingPipeline:
     def chunk_code(self, code: str, language: str) -> List[dict]:
         """Chunk code by functions/classes."""
         import tree_sitter
-
-        # Parse with tree-sitter
-        # Extract functions, classes, methods
+        # Parse with tree-sitter; extract functions, classes, methods
         # Return chunks with context
         pass
 
@@ -406,21 +379,19 @@ from typing import List, Tuple
 
 def evaluate_retrieval_quality(
     queries: List[str],
-    relevant_docs: List[List[str]],  # List of relevant doc IDs per query
-    retrieved_docs: List[List[str]],  # List of retrieved doc IDs per query
+    relevant_docs: List[List[str]],  # relevant doc IDs per query
+    retrieved_docs: List[List[str]],  # retrieved doc IDs per query
     k: int = 10
 ) -> dict:
     """Evaluate embedding quality for retrieval."""
 
     def precision_at_k(relevant: set, retrieved: List[str], k: int) -> float:
         retrieved_k = retrieved[:k]
-        relevant_retrieved = len(set(retrieved_k) & relevant)
-        return relevant_retrieved / k
+        return len(set(retrieved_k) & relevant) / k
 
     def recall_at_k(relevant: set, retrieved: List[str], k: int) -> float:
         retrieved_k = retrieved[:k]
-        relevant_retrieved = len(set(retrieved_k) & relevant)
-        return relevant_retrieved / len(relevant) if relevant else 0
+        return len(set(retrieved_k) & relevant) / len(relevant) if relevant else 0
 
     def mrr(relevant: set, retrieved: List[str]) -> float:
         for i, doc in enumerate(retrieved):
@@ -429,19 +400,13 @@ def evaluate_retrieval_quality(
         return 0
 
     def ndcg_at_k(relevant: set, retrieved: List[str], k: int) -> float:
-        dcg = sum(
-            1 / np.log2(i + 2) if doc in relevant else 0
-            for i, doc in enumerate(retrieved[:k])
-        )
+        dcg = sum(1 / np.log2(i + 2) if doc in relevant else 0
+                  for i, doc in enumerate(retrieved[:k]))
         ideal_dcg = sum(1 / np.log2(i + 2) for i in range(min(len(relevant), k)))
         return dcg / ideal_dcg if ideal_dcg > 0 else 0
 
-    metrics = {
-        f"precision@{k}": [],
-        f"recall@{k}": [],
-        "mrr": [],
-        f"ndcg@{k}": []
-    }
+    metrics = {f"precision@{k}": [], f"recall@{k}": [],
+               "mrr": [], f"ndcg@{k}": []}
 
     for relevant, retrieved in zip(relevant_docs, retrieved_docs):
         relevant_set = set(relevant)
@@ -460,7 +425,6 @@ def compute_embedding_similarity(
 ) -> np.ndarray:
     """Compute similarity matrix between embedding sets."""
     if metric == "cosine":
-        # Normalize
         norm1 = embeddings1 / np.linalg.norm(embeddings1, axis=1, keepdims=True)
         norm2 = embeddings2 / np.linalg.norm(embeddings2, axis=1, keepdims=True)
         return norm1 @ norm2.T
@@ -471,26 +435,102 @@ def compute_embedding_similarity(
         return embeddings1 @ embeddings2.T
 ```
 
+## Vector Databases & Similarity Search
+
+### Choosing a vector database
+
+| DB | Scale | Features |
+|---|---|---|
+| Pinecone | Billions | Managed, hybrid search, metadata filtering |
+| Weaviate | Millions | Self-hosted, GraphQL API, modules |
+| Qdrant | Millions | High performance, payload filtering |
+| Milvus | Billions | Distributed, GPU acceleration |
+| pgvector | Millions | SQL integration, ACID, already in Postgres |
+
+### Index configuration
+
+- **HNSW** (Hierarchical Navigable Small World) — best recall/latency tradeoff; parameters `M` (graph degree), `efConstruction` (build), `ef`/`efSearch` (query). Higher `ef` = better recall, slower query.
+- **IVF** (Inverted File) — clusters vectors, searches `nprobe` nearest clusters; good for very large datasets with acceptable recall tradeoff.
+- **PQ** (Product Quantization) — compresses vectors to save memory; combine with IVF (IVF-PQ) for billion-scale.
+
+### Hybrid search (vector + keyword)
+
+Combine semantic similarity with BM25/keyword matching via Reciprocal Rank Fusion (RRF):
+
+```python
+def hybrid_search(query: str, top_k: int = 5, alpha: float = 0.5):
+    """
+    alpha=1.0: Pure semantic
+    alpha=0.0: Pure keyword (BM25)
+    alpha=0.5: Balanced
+    """
+    semantic_results = vector_db.similarity_search(query)
+    keyword_results = bm25_search(query)
+    return rrf_merge(semantic_results, keyword_results, alpha)
+```
+
+### Metadata filtering
+
+- **Pre-filtering**: restrict the candidate set before the ANN search (smaller search space, may miss neighbors if filter is too narrow).
+- **Post-filtering**: retrieve top-k then filter (simple, but may return fewer than k results).
+- Store filterable fields (source, date, language, doc type) in the vector DB payload and combine with the query.
+
+### Similarity metrics
+
+- **Cosine** — most common for normalized embeddings; insensitive to magnitude.
+- **Dot product** — equivalent to cosine on normalized vectors; faster.
+- **Euclidean** — sensitive to magnitude; good when distance matters absolutely.
+
+### Scaling to millions of vectors
+
+- Shard by namespace/tenant; replicate for read throughput.
+- Batch embedding generation; cache frequent queries.
+- Monitor recall vs latency tradeoffs; plan index rebuilds when the corpus grows.
+- Watch for embedding drift as models and data evolve.
+
+## Workflow
+
+1. Analyze data characteristics and query patterns
+2. Select appropriate embedding model
+3. Design chunking and preprocessing pipeline
+4. Choose vector database and index type
+5. Configure metadata schema for filtering
+6. Implement hybrid search if needed
+7. Optimize for latency/recall tradeoffs
+8. Set up monitoring and reindexing strategies
+
 ## Best Practices
 
 ### Do's
-- **Match model to use case** - Code vs prose vs multilingual
-- **Chunk thoughtfully** - Preserve semantic boundaries
-- **Normalize embeddings** - For cosine similarity
-- **Batch requests** - More efficient than one-by-one
-- **Cache embeddings** - Avoid recomputing
+- **Match model to use case** — code vs prose vs multilingual
+- **Chunk thoughtfully** — preserve semantic boundaries
+- **Normalize embeddings** — for cosine similarity
+- **Batch requests** — more efficient than one-by-one
+- **Cache embeddings** — avoid recomputing
+- **Choose embedding dimensions based on use case** (384–1536)
+- **Implement proper chunking with overlap**
+- **Use metadata filtering** to reduce search space
+- **Monitor embedding drift** over time
+- **Plan for index rebuilding**
+- **Cache frequent queries**
+- **Test recall vs latency tradeoffs**
 
 ### Don'ts
-- **Don't ignore token limits** - Truncation loses info
-- **Don't mix embedding models** - Incompatible spaces
-- **Don't skip preprocessing** - Garbage in, garbage out
-- **Don't over-chunk** - Lose context
+- **Don't ignore token limits** — truncation loses info
+- **Don't mix embedding models** — incompatible spaces
+- **Don't skip preprocessing** — garbage in, garbage out
+- **Don't over-chunk** — lose context
 
 ## Resources
 
 - [OpenAI Embeddings](https://platform.openai.com/docs/guides/embeddings)
 - [Sentence Transformers](https://www.sbert.net/)
 - [MTEB Benchmark](https://huggingface.co/spaces/mteb/leaderboard)
+
+## Merged from
+
+- `similarity-search-patterns` — semantic search, nearest-neighbor queries, retrieval optimization, hybrid search scope
+- `vector-database-engineer` — vector database selection, index configuration, metadata filtering, scaling, workflow
 
 ## Limitations
 - Use this skill only when the task clearly matches the scope described above.
