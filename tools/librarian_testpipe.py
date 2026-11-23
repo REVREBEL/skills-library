@@ -141,6 +141,30 @@ def write_skill_to_test_library(skill_name, body, description, category, subcate
     return dest_dir
 
 
+def merge_claims_into_skill(target_name, include_claims):
+    """Append included claims to the target skill's body in the test library.
+
+    For SUPPLEMENT verdicts, the included claims are appended as a new
+    section in the target skill's SKILL.md. This is the merge execution.
+    """
+    # Find the target skill in the test library
+    target_md = None
+    for p in TEST_LIBRARY.glob(f"**/{target_name}/SKILL.md"):
+        target_md = p
+        break
+    if not target_md or not target_md.exists():
+        return None
+
+    content = target_md.read_text(encoding="utf-8")
+
+    # Build the merge section
+    claims_text = "\n".join(f"- {c.text}" for c in include_claims)
+    merge_section = f"\n\n## Merged Capabilities\n\n{claims_text}\n"
+
+    target_md.write_text(content + merge_section, encoding="utf-8")
+    return target_md
+
+
 def generate_routers():
     """Generate router SKILL.md files for the test library."""
     from skill_library.config import CATEGORIES, DEEP_CATEGORIES
@@ -299,25 +323,62 @@ def main():
     print(f"Test intake: {len(candidates)} candidates")
     print(f"Test library: {TEST_LIBRARY}")
 
+    # Build the category taxonomy for placement
+    from skill_library.config import CATEGORIES, DEEP_CATEGORIES, OPERATIONAL_SYSTEM_PACKAGES
+    taxonomy = {}
+    for cat in CATEGORIES:
+        taxonomy[cat] = DEEP_CATEGORIES.get(cat, [])
+    for root in OPERATIONAL_SYSTEM_PACKAGES:
+        taxonomy[root] = []
+
     results = []
     for candidate in candidates:
         result = process_candidate(candidate, catalog, dry_run=args.dry_run)
         results.append({"candidate": candidate.name, **result})
 
-        if not args.dry_run and result["verdict"] in ("NEW", "SUPPLEMENT"):
+        if args.dry_run:
+            continue
+
+        verdict = result["verdict"]
+        proposals = result.get("proposals", [])
+
+        # Place the skill (NEW, SUPPLEMENT, EXTEND, ALIAS all need placement)
+        if verdict in ("NEW", "SUPPLEMENT", "EXTEND"):
+            from skill_library.librarian_ai import propose_placement_opencode
+            print(f"  Placing: {candidate.name}")
+            try:
+                placement = propose_placement_opencode(
+                    candidate.name,
+                    candidate.description,
+                    taxonomy,
+                )
+                print(f"    -> {placement['category']}/{placement['subcategory'] or '(root)'} — {placement['reasoning'][:80]}")
+            except Exception as e:
+                print(f"    Placement failed: {e}, defaulting to uncategorized")
+                placement = {"category": "uncategorized", "subcategory": "", "reasoning": str(e)}
+
             # Write the skill to the test library
-            # For NEW: write as-is
-            # For SUPPLEMENT: write the merged version (candidate body for now)
             dest = write_skill_to_test_library(
                 skill_name=candidate.name,
                 body=candidate.body_sample,
                 description=candidate.description,
-                category="data-and-ai",  # Default, would come from placement step
-                subcategory="",
+                category=placement["category"],
+                subcategory=placement["subcategory"],
                 role="independent_capability",
                 source_path=str(candidate.source_dir),
             )
             print(f"  -> Written to test library: {dest}")
+
+            # For SUPPLEMENT/EXTEND, merge the claims into the target
+            if verdict in ("SUPPLEMENT", "EXTEND") and proposals:
+                target = proposals[0].target
+                include = proposals[0].include_claims
+                if include:
+                    merged = merge_claims_into_skill(target, include)
+                    if merged:
+                        print(f"  -> Merged {len(include)} claims into {target}")
+                    else:
+                        print(f"  -> Target {target} not in test library; skipping merge")
 
     # Generate routers
     if not args.dry_run:

@@ -127,7 +127,11 @@ def build_claim_extraction_prompt(skill_name: str, body: str) -> str:
 
 
 def parse_claim_extraction_response(response: str) -> List[Dict[str, Any]]:
-    """Parse the model's response into a list of claims."""
+    """Parse the model's response into a list of claims.
+
+    Filters out template boilerplate — meta-instructions that appear in
+    template-format skills but aren't real operational claims.
+    """
     # Strip markdown code fences if present
     response = response.strip()
     if response.startswith("```"):
@@ -143,14 +147,42 @@ def parse_claim_extraction_response(response: str) -> List[Dict[str, Any]]:
         for i, c in enumerate(claims):
             if not isinstance(c, dict):
                 continue
+            text = c.get("text", "")
+            if _is_boilerplate(text):
+                continue
             result.append({
                 "id": c.get("id", f"C{i+1}"),
-                "text": c.get("text", ""),
+                "text": text,
                 "type": c.get("type", "operational"),
             })
         return result
     except json.JSONDecodeError:
         return []
+
+
+# Template boilerplate phrases — meta-instructions from template-format
+# skills that aren't real operational claims.
+_BOILERPLATE_PATTERNS = [
+    r"clarify goals?,? constraints?,? and required inputs",
+    r"provide actionable steps and verification",
+    r"apply relevant best practices and validate outcomes",
+    r"do not treat the output as a substitute",
+    r"use this skill only when the task clearly matches",
+    r"stop and ask for clarification if required inputs",
+    r"if detailed examples are required, open",
+    r"provide actionable steps and verification",
+    r"apply relevant best practices",
+    r"validate outcomes",
+]
+
+
+def _is_boilerplate(text: str) -> bool:
+    """Return True if the claim is template boilerplate, not a real instruction."""
+    lower = text.lower().strip()
+    for pattern in _BOILERPLATE_PATTERNS:
+        if re.search(pattern, lower):
+            return True
+    return False
 
 
 # --- Merge decision ---
@@ -466,3 +498,70 @@ def decide_merge_opencode(
     )
     response = opencode_run(prompt, model=DECISION_MODEL)
     return parse_merge_decision_response(response)
+
+
+# --- Placement proposal ---
+
+PLACEMENT_PROMPT = """You are placing a new skill into a library taxonomy.
+
+Skill: {skill_name}
+Description: {description}
+
+Available categories and subcategories:
+{categories}
+
+Choose the best destination for this skill. Consider:
+- What the skill actually does (from the description)
+- Which category's scope best matches
+- If no category fits, say "uncategorized"
+
+Return JSON:
+{{"category": "...", "subcategory": "...", "reasoning": "..."}}"""
+
+
+def propose_placement_opencode(
+    skill_name: str,
+    description: str,
+    categories: Dict[str, List[str]],
+) -> Dict[str, Any]:
+    """Propose a destination category/subcategory for a skill.
+
+    Uses the OpenCode CLI to classify the skill into the taxonomy.
+    Returns {"category": ..., "subcategory": ..., "reasoning": ...}.
+    """
+    import json as _json
+
+    # Format the categories for the prompt
+    cat_lines = []
+    for cat, subs in sorted(categories.items()):
+        if subs:
+            cat_lines.append(f"- {cat}/{{{', '.join(subs)}}}")
+        else:
+            cat_lines.append(f"- {cat}/")
+    categories_str = "\n".join(cat_lines)
+
+    prompt = PLACEMENT_PROMPT.format(
+        skill_name=skill_name,
+        description=description[:300],
+        categories=categories_str,
+    )
+
+    response = opencode_run(prompt, model=CLAIM_MODEL)
+
+    # Parse the response
+    response = response.strip()
+    if response.startswith("```"):
+        response = re.sub(r"^```(?:json)?\s*", "", response)
+        response = re.sub(r"\s*```$", "", response)
+
+    try:
+        result = _json.loads(response)
+        if not isinstance(result, dict):
+            return {"category": "uncategorized", "subcategory": "", "reasoning": "Invalid response"}
+        return {
+            "category": result.get("category", "uncategorized"),
+            "subcategory": result.get("subcategory", ""),
+            "reasoning": result.get("reasoning", ""),
+        }
+    except _json.JSONDecodeError:
+        return {"category": "uncategorized", "subcategory": "", "reasoning": "Failed to parse response"}
