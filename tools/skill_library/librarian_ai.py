@@ -292,6 +292,148 @@ def rerank_with_opencode(
         return [(i, 0.0) for i in range(len(passages))]
 
 
+def rerank_with_openrouter(
+    query: str,
+    passages: List[str],
+) -> List[Tuple[int, float]]:
+    """Rerank passages using the OpenRouter rerank endpoint.
+
+    Uses nvidia/nemotron-3.5-rerank-8b:free via the /api/v1/rerank
+    endpoint. This is a dedicated rerank model with well-calibrated
+    relevance scores — unlike a chat model, it's trained specifically
+    for passage ranking.
+
+    The OpenRouter API key is read from OpenCode's credential store
+    (~/.local/share/opencode/opencode.db), so no separate key management
+    is needed.
+    """
+    if not passages:
+        return []
+
+    import sqlite3
+
+    # Read the OpenRouter API key from OpenCode's credential store
+    db_path = os.path.expanduser("~/.local/share/opencode/opencode.db")
+    try:
+        conn = sqlite3.connect(db_path)
+        row = conn.execute(
+            "SELECT value FROM credential WHERE integration_id='openrouter' AND active=1"
+        ).fetchone()
+        conn.close()
+        if not row:
+            raise RuntimeError("No OpenRouter credential found in OpenCode's credential store")
+        cred = json.loads(row[0])
+        api_key = cred.get("key", "")
+        if not api_key:
+            raise RuntimeError("OpenRouter credential has no key")
+    except sqlite3.Error as e:
+        raise RuntimeError(f"Could not read OpenCode credential store: {e}")
+
+    # Call the rerank endpoint
+    import urllib.request
+    import urllib.error
+
+    payload = json.dumps({
+        "model": "nvidia/nemotron-3.5-rerank-8b:free",
+        "query": query[:500],
+        "documents": [p[:500] for p in passages],
+        "top_n": len(passages),
+    }).encode()
+
+    req = urllib.request.Request(
+        "https://openrouter.ai/api/v1/rerank",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read())
+            results = data.get("results", [])
+            # results are sorted by relevance_score descending
+            return [(r["index"], r["relevance_score"]) for r in results]
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()
+        raise RuntimeError(f"OpenRouter rerank failed (HTTP {e.code}): {body[:200]}")
+    except Exception as e:
+        raise RuntimeError(f"OpenRouter rerank failed: {e}")
+
+
+def rerank_with_openrouter(
+    query: str,
+    passages: List[str],
+) -> List[Tuple[int, float]]:
+    """Rerank passages using the dedicated OpenRouter rerank endpoint.
+
+    Uses nvidia/nemotron-3.5-rerank-8b:free via the /api/v1/rerank
+    endpoint. This is a purpose-built rerank model — it scores query-passage
+    relevance directly, not through chat completion.
+
+    The OpenRouter API key is read from OpenCode's credential store.
+    """
+    if not passages:
+        return []
+
+    import sqlite3
+    from pathlib import Path
+
+    # Read the OpenRouter API key from OpenCode's credential store
+    db_path = Path.home() / ".local" / "share" / "opencode" / "opencode.db"
+    if not db_path.exists():
+        raise RuntimeError(f"OpenCode credential store not found: {db_path}")
+
+    conn = sqlite3.connect(str(db_path))
+    row = conn.execute(
+        "SELECT value FROM credential WHERE integration_id='openrouter' AND active=1"
+    ).fetchone()
+    conn.close()
+
+    if not row:
+        raise RuntimeError("No active OpenRouter credential found in OpenCode's credential store")
+
+    cred = json.loads(row[0])
+    api_key = cred.get("key", "")
+    if not api_key:
+        raise RuntimeError("OpenRouter credential has no key")
+
+    # Call the rerank endpoint
+    import urllib.request
+    import urllib.error
+
+    payload = json.dumps({
+        "model": "nvidia/nemotron-3.5-rerank-8b:free",
+        "query": query,
+        "documents": passages,
+        "top_n": len(passages),
+    }).encode()
+
+    req = urllib.request.Request(
+        "https://openrouter.ai/api/v1/rerank",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read())
+            results = data.get("results", [])
+            # results are sorted by relevance_score descending
+            return [(r["index"], r["relevance_score"]) for r in results]
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()
+        raise RuntimeError(f"OpenRouter rerank failed (HTTP {e.code}): {body[:200]}")
+    except Exception as e:
+        raise RuntimeError(f"OpenRouter rerank failed: {e}")
+
+
 # --- Concrete AI step implementations (OpenCode CLI) ---
 
 def extract_claims_opencode(skill_name: str, skill_body: str) -> List[Dict[str, Any]]:

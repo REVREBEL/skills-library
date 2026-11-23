@@ -257,7 +257,7 @@ def cmd_librarian(args):
     from skill_library.librarian_ai import (
         extract_claims_opencode,
         decide_merge_opencode,
-        rerank_with_opencode,
+        rerank_with_openrouter,
         CLAIM_MODEL,
         DECISION_MODEL,
     )
@@ -272,7 +272,7 @@ def cmd_librarian(args):
     reranked = rerank_candidates(
         query=candidate.description,
         candidates=retrieved,
-        rerank_fn=rerank_with_opencode,
+        rerank_fn=rerank_with_openrouter,
     )
     for i, rc in enumerate(reranked[:5]):
         print(f"  [{i+1}] {rc.name} (rerank={rc.rerank_score:.3f}, dice={rc.dice_similarity:.3f})")
