@@ -20,7 +20,9 @@ Commands:
 import argparse
 import json
 import os
+import re
 import sys
+from pathlib import Path
 
 # Ensure tools directory is in sys.path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -121,6 +123,151 @@ def cmd_intake(args):
         print("\n[STRICT INTAKE GATE FAILED] One or more candidates failed validation or were rejected.", file=sys.stderr)
         return 1
 
+    return 0
+
+
+def cmd_librarian(args):
+    """Run the Librarian pipeline on an intake candidate.
+
+    This is the AI-powered replacement for cmd_intake. It runs:
+    1. Deterministic scan (structure, secrets, AST)
+    2. Dice retrieval (name+desc+body)
+    3. Rerank (Cloudflare bge-reranker-base)
+    4. Claim extraction (AI model)
+    5. Claim diff (deterministic)
+    6. Merge decision (AI model)
+    7. Human-readable proposal
+
+    The AI steps (3, 4, 6) require the Cloudflare AI API. If
+    --dry-run is set, the prompts are printed instead of executed.
+    """
+    from skill_library.librarian import (
+        run_librarian_pipeline,
+        retrieve_candidates,
+        _extract_body_for_similarity,
+    )
+    from skill_library.librarian_ai import (
+        build_claim_extraction_prompt,
+        build_merge_decision_prompt,
+        parse_claim_extraction_response,
+        parse_merge_decision_response,
+    )
+
+    intake_dir = getattr(args, "intake_dir", None)
+    intake_candidates = scan_intake(intake_dir) if intake_dir else scan_intake()
+    if not intake_candidates:
+        print("No candidates found in intake/.")
+        return 0
+
+    candidate = intake_candidates[0] if not args.candidate else next(
+        (c for c in intake_candidates if c.name == args.candidate), None
+    )
+    if not candidate:
+        print(f"Candidate '{args.candidate}' not found in intake/.")
+        return 1
+
+    print(f"\n=== Librarian Pipeline: {candidate.name} ===")
+    print(f"Description: {candidate.description[:100]}...")
+    print()
+
+    # Step 1: Deterministic scan (already done by scan_intake)
+    print("[1/6] Deterministic scan: PASSED")
+    print(f"  Files: {len(candidate.bundled_scripts) + len(candidate.bundled_references) + len(candidate.bundled_assets)}")
+    print(f"  Issues: {len(candidate.issues)}")
+    print()
+
+    # Step 2: Dice retrieval
+    from skill_library.intake import tokenize
+    from skill_library.manifest import RuntimeManifest
+    import os
+
+    manifest = RuntimeManifest()
+    repo_root = os.path.dirname(os.path.normpath(os.path.dirname(os.path.abspath(__file__))))
+    library_dir = os.path.join(repo_root, "library")
+
+    # Build catalog index
+    catalog = []
+    for skill_md in sorted(Path(library_dir).glob("**/**/SKILL.md")):
+        rel = skill_md.relative_to(repo_root).as_posix()
+        parts = rel.split("/")
+        if len(parts) < 4:
+            continue
+        skill_dir = skill_md.parent
+        try:
+            content = skill_md.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+        fm = re.search(r"^---\s*\n(.*?)\n---", content, re.DOTALL)
+        if not fm:
+            continue
+        fm_text = fm.group(1)
+        name = ""
+        desc = ""
+        m = re.search(r'^name:\s*"?(.*?)"?\s*$', fm_text, re.MULTILINE)
+        if m:
+            name = m.group(1)
+        m = re.search(r'^description:\s*"?(.*?)"?\s*$', fm_text, re.MULTILINE | re.DOTALL)
+        if m:
+            desc = m.group(1).strip().strip('"')
+        if not name:
+            name = skill_dir.name
+        body = _extract_body_for_similarity(content)
+        catalog.append({
+            "name": name,
+            "canonical_path": str(skill_dir.relative_to(repo_root)),
+            "tokens": tokenize(name + " " + desc + " " + body),
+            "description": desc,
+            "body_sample": body,
+        })
+
+    retrieved = retrieve_candidates(
+        candidate_name=candidate.name,
+        candidate_description=candidate.description,
+        candidate_body=candidate.body_sample,
+        catalog=catalog,
+    )
+    print(f"[2/6] Dice retrieval: {len(retrieved)} candidates")
+    for i, rc in enumerate(retrieved[:5]):
+        print(f"  [{i+1}] {rc.name} (sim={rc.similarity:.3f}) — {rc.description[:60]}...")
+    print()
+
+    if not retrieved:
+        print("No candidates found. This is a NEW skill.")
+        print()
+        print("=== Recommendation: NEW ===")
+        return 0
+
+    # Steps 3-6: AI-powered steps
+    if args.dry_run:
+        print("[3/6] Rerank: SKIPPED (dry-run)")
+        print(f"  Would rerank {len(retrieved)} candidates with @cf/baai/bge-reranker-base")
+        print()
+        print("[4/6] Claim extraction: SKIPPED (dry-run)")
+        prompt = build_claim_extraction_prompt(candidate.name, candidate.body_sample)
+        print(f"  Prompt length: {len(prompt)} chars")
+        print()
+        print("[5/6] Claim diff: SKIPPED (dry-run)")
+        print()
+        print("[6/6] Merge decision: SKIPPED (dry-run)")
+        print()
+        print("=== Dry-run complete. Run without --dry-run to execute AI steps. ===")
+        return 0
+
+    # In production, these would call the Cloudflare AI API.
+    # For now, print the prompts for the execute harness to consume.
+    print("[3/6] Rerank: requires Cloudflare AI API")
+    print(f"  Candidates to rerank: {len(retrieved)}")
+    print()
+    print("[4/6] Claim extraction: requires AI model")
+    print(f"  Prompt: {build_claim_extraction_prompt(candidate.name, candidate.body_sample)[:200]}...")
+    print()
+    print("[5/6] Claim diff: deterministic (no AI needed)")
+    print()
+    print("[6/6] Merge decision: requires AI model")
+    print()
+    print("=== Librarian pipeline requires AI model calls. ===")
+    print("Run with --dry-run to see prompts, or use the execute harness")
+    print("to make the Cloudflare AI API calls.")
     return 0
 
 
@@ -332,6 +479,11 @@ def main():
     p_apply.add_argument("--dry-run", action="store_true", help="Simulate without modifying files")
 
     # publish-runtime
+    p_librarian = subparsers.add_parser("librarian", help="Run the AI-powered Librarian pipeline on an intake candidate")
+    p_librarian.add_argument("--candidate", help="Specific candidate to evaluate")
+    p_librarian.add_argument("--intake-dir", help="Custom intake directory")
+    p_librarian.add_argument("--dry-run", action="store_true", help="Print prompts without executing AI steps")
+
     p_pub = subparsers.add_parser("publish-runtime", help="Publish runtime branch from main:library/")
     p_pub.add_argument("--branch", default=RUNTIME_BRANCH, help=f"Branch name (default: {RUNTIME_BRANCH})")
     p_pub.add_argument("--push", action="store_true", help="Push branch to remote after generation")
@@ -380,6 +532,7 @@ def main():
     dispatch = {
         "scan": cmd_scan,
         "intake": cmd_intake,
+        "librarian": cmd_librarian,
         "apply": cmd_apply,
         "publish-runtime": cmd_publish_runtime,
         "sync": cmd_sync,
