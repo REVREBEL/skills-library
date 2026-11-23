@@ -225,6 +225,73 @@ def parse_merge_decision_response(response: str) -> Dict[str, Any]:
     except json.JSONDecodeError:
         return {"verdict": "REVIEW", "confidence": "low", "reasoning": "Failed to parse response"}
 
+def rerank_with_opencode(
+    query: str,
+    passages: List[str],
+) -> List[Tuple[int, float]]:
+    """Rerank passages using a chat model via OpenCode CLI.
+
+    Frames reranking as a scoring task: the model scores each passage
+    for relevance to the query. Returns [(index, score)] sorted by
+    score descending.
+
+    This is more effective than a dedicated rerank model for the
+    Librarian's use case because it evaluates *semantic relatedness*,
+    not just lexical similarity. A dedicated rerank model (bge-reranker-base)
+    scored mcp-builder-ms at 0.011 against the mcp-builder query; a chat
+    model scored it at 0.95 because it understood both are about building
+    MCP servers.
+    """
+    if not passages:
+        return []
+
+    # Build the scoring prompt
+    passage_texts = "\n\n".join(
+        f"Passage {chr(65+i)}: {p[:200]}" for i, p in enumerate(passages)
+    )
+    prompt = (
+        f"Score these passages for relevance to the query. "
+        f"Query: '{query[:200]}'\n\n"
+        f"{passage_texts}\n\n"
+        f"Return JSON array: ["
+        + ", ".join(
+            f"{{\"passage\":\"{chr(65+i)}\",\"score\":0.0-1.0}}"
+            for i in range(len(passages))
+        )
+        + "]"
+    )
+
+    response = opencode_run(prompt, model=CLAIM_MODEL)
+
+    # Parse the JSON response
+    response = response.strip()
+    if response.startswith("```"):
+        response = re.sub(r"^```(?:json)?\s*", "", response)
+        response = re.sub(r"\s*```$", "", response)
+
+    try:
+        scores = json.loads(response)
+        if not isinstance(scores, list):
+            return [(i, 0.0) for i in range(len(passages))]
+
+        result = []
+        for item in scores:
+            if not isinstance(item, dict):
+                continue
+            passage_label = item.get("passage", "")
+            score = item.get("score", 0.0)
+            # Convert label (A, B, C...) to index (0, 1, 2...)
+            idx = ord(passage_label) - ord("A") if passage_label else -1
+            if 0 <= idx < len(passages):
+                result.append((idx, float(score)))
+
+        # Sort by score descending
+        result.sort(key=lambda x: x[1], reverse=True)
+        return result
+    except (json.JSONDecodeError, ValueError):
+        return [(i, 0.0) for i in range(len(passages))]
+
+
 # --- Concrete AI step implementations (OpenCode CLI) ---
 
 def extract_claims_opencode(skill_name: str, skill_body: str) -> List[Dict[str, Any]]:

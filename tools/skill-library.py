@@ -257,6 +257,7 @@ def cmd_librarian(args):
     from skill_library.librarian_ai import (
         extract_claims_opencode,
         decide_merge_opencode,
+        rerank_with_opencode,
         CLAIM_MODEL,
         DECISION_MODEL,
     )
@@ -264,24 +265,18 @@ def cmd_librarian(args):
         extract_claims,
         diff_claims,
         decide_merge,
+        rerank_candidates,
     )
 
-    print(f"[3/6] Rerank: {len(retrieved)} candidates (using Dice order)")
-    print(f"  (rerank model: @cf/baai/bge-reranker-base via Cloudflare)")
+    print(f"[3/6] Rerank: {len(retrieved)} candidates")
+    reranked = rerank_candidates(
+        query=candidate.description,
+        candidates=retrieved,
+        rerank_fn=rerank_with_opencode,
+    )
+    for i, rc in enumerate(reranked[:5]):
+        print(f"  [{i+1}] {rc.name} (rerank={rc.rerank_score:.3f}, dice={rc.dice_similarity:.3f})")
     print()
-
-    # Use Dice order for now (rerank requires Cloudflare API)
-    from skill_library.librarian import RerankedCandidate
-    reranked = [
-        RerankedCandidate(
-            name=c.name,
-            canonical_path=c.canonical_path,
-            rerank_score=c.similarity,
-            dice_similarity=c.similarity,
-            description=c.description,
-        )
-        for c in retrieved
-    ]
 
     print(f"[4/6] Claim extraction: {CLAIM_MODEL}")
     candidate_claims = extract_claims(
