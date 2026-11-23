@@ -43,6 +43,24 @@ def _safe_relpath(target: str, start: str) -> str:
         return os.path.abspath(target)
 
 
+def _extract_body_for_similarity(content: str, max_lines: int = 80) -> str:
+    """Return the first ``max_lines`` of a SKILL.md body (after frontmatter).
+
+    Used to enrich similarity tokenization with body vocabulary that
+    name+description misses. The full body is too noisy; the first 80
+    lines capture headings, prerequisites, and opening instructions.
+    """
+    if not content:
+        return ""
+    lines = content.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return "\n".join(lines[:max_lines])
+    for index in range(1, len(lines)):
+        if lines[index].strip() == "---":
+            return "\n".join(lines[index + 1:index + 1 + max_lines])
+    return ""
+
+
 def tokenize(text: str) -> Set[str]:
     """Tokenize lowercase words for similarity calculation."""
     words = re.findall(r"\b[a-zA-Z0-9_\-]{3,}\b", text.lower())
@@ -286,7 +304,11 @@ def evaluate_candidate(
         eval_result.target_canonical_path = f"library/{pkg.suggested_category}/{pkg.suggested_subcategory}/{candidate_name}"
 
     # 4. Compare against Canonical Library (Semantic Overlap & Name Collisions)
-    candidate_tokens = tokenize(candidate_name + " " + pkg.description)
+    # Tokenize name + description + body sample. The body sample carries the
+    # vocabulary that name+description misses — "hugging-face-datasets" and
+    # "hugging-face-cli" share "model", "upload", "hub" in their bodies but
+    # not their names.
+    candidate_tokens = tokenize(candidate_name + " " + pkg.description + " " + pkg.body_sample)
     base_candidate_name = re.sub(r"[_vV\-](\d+|v\d+)$", "", candidate_name)
     has_counter_suffix = (base_candidate_name != candidate_name)
 
@@ -315,7 +337,8 @@ def evaluate_candidate(
                     ccontent = f.read()
                 fm = parse_frontmatter(ccontent)
                 cdesc = fm.get("description", "") if fm else ""
-                ctokens = tokenize(s_name + " " + cdesc)
+                cbody = _extract_body_for_similarity(ccontent)
+                ctokens = tokenize(s_name + " " + cdesc + " " + cbody)
                 sim = compute_dice_similarity(candidate_tokens, ctokens)
                 if sim >= 0.25:
                     competitor_scores.append({

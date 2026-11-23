@@ -34,6 +34,7 @@ class CandidatePackage:
     frontmatter_valid: bool = False
     frontmatter_name: str = ""
     description: str = ""
+    body_sample: str = ""
     trigger_valid: bool = False
     bundled_scripts: List[str] = field(default_factory=list)
     bundled_references: List[str] = field(default_factory=list)
@@ -75,6 +76,19 @@ class ScanResult:
             "intake_candidates": [c.to_dict() for c in self.intake_candidates],
             "runtime_entries": [r.to_dict() for r in self.runtime_entries],
         }
+
+
+def _extract_body(content: str) -> str:
+    """Return the body of a SKILL.md file (everything after the frontmatter block)."""
+    if not content:
+        return ""
+    lines = content.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return content
+    for index in range(1, len(lines)):
+        if lines[index].strip() == "---":
+            return "\n".join(lines[index + 1:])
+    return ""
 
 
 def scan_candidate_directory(pkg_dir: str, name: Optional[str] = None) -> CandidatePackage:
@@ -120,6 +134,15 @@ def scan_candidate_directory(pkg_dir: str, name: Optional[str] = None) -> Candid
             pkg.issues.append("Description fails trigger contract: must start with capital letter and include '. Use when'")
     else:
         pkg.issues.append("Invalid or missing frontmatter in SKILL.md (requires name and description)")
+
+    # Extract a body sample for semantic similarity. The frontmatter
+    # name+description is too shallow — "hugging-face-datasets" and
+    # "hugging-face-cli" share body vocabulary ("model", "upload", "hub")
+    # that never appears in their names. The first 80 lines capture
+    # headings, prerequisites, and opening instructions without the
+    # full body's noise.
+    body = _extract_body(content)
+    pkg.body_sample = "\n".join(body.split("\n")[:80])
 
     # Scan for bundled scripts and resources
     for root, _, files in os.walk(pkg_dir):
