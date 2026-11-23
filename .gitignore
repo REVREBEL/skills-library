@@ -138,3 +138,5 @@ dist
 
 # Repo-local generated agents runtime (production runtime is ~/.agents/skills/)
 .agents/skills/
+test-library/
+test-intake/
