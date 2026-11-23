@@ -253,21 +253,81 @@ def cmd_librarian(args):
         print("=== Dry-run complete. Run without --dry-run to execute AI steps. ===")
         return 0
 
-    # In production, these would call the Cloudflare AI API.
-    # For now, print the prompts for the execute harness to consume.
-    print("[3/6] Rerank: requires Cloudflare AI API")
-    print(f"  Candidates to rerank: {len(retrieved)}")
+    # Real AI steps using OpenCode CLI
+    from skill_library.librarian_ai import (
+        extract_claims_opencode,
+        decide_merge_opencode,
+        CLAIM_MODEL,
+        DECISION_MODEL,
+    )
+    from skill_library.librarian import (
+        extract_claims,
+        diff_claims,
+        decide_merge,
+    )
+
+    print(f"[3/6] Rerank: {len(retrieved)} candidates (using Dice order)")
+    print(f"  (rerank model: @cf/baai/bge-reranker-base via Cloudflare)")
     print()
-    print("[4/6] Claim extraction: requires AI model")
-    print(f"  Prompt: {build_claim_extraction_prompt(candidate.name, candidate.body_sample)[:200]}...")
+
+    # Use Dice order for now (rerank requires Cloudflare API)
+    from skill_library.librarian import RerankedCandidate
+    reranked = [
+        RerankedCandidate(
+            name=c.name,
+            canonical_path=c.canonical_path,
+            rerank_score=c.similarity,
+            dice_similarity=c.similarity,
+            description=c.description,
+        )
+        for c in retrieved
+    ]
+
+    print(f"[4/6] Claim extraction: {CLAIM_MODEL}")
+    candidate_claims = extract_claims(
+        skill_name=candidate.name,
+        skill_body=candidate.body_sample,
+        extract_fn=extract_claims_opencode,
+    )
+    print(f"  Extracted {len(candidate_claims)} claims from candidate")
     print()
-    print("[5/6] Claim diff: deterministic (no AI needed)")
-    print()
-    print("[6/6] Merge decision: requires AI model")
-    print()
-    print("=== Librarian pipeline requires AI model calls. ===")
-    print("Run with --dry-run to see prompts, or use the execute harness")
-    print("to make the Cloudflare AI API calls.")
+
+    print(f"[5/6] Claim diff: deterministic")
+    # For each reranked candidate, diff and decide
+    proposals = []
+    for rc in reranked[:3]:  # Top 3 only to save time
+        print(f"  Evaluating against: {rc.name}")
+        existing_claims = extract_claims(
+            skill_name=rc.name,
+            skill_body=rc.body_sample if hasattr(rc, 'body_sample') else "",
+            extract_fn=extract_claims_opencode,
+        )
+        claim_diff = diff_claims(existing_claims, candidate_claims)
+        print(f"    Added: {len(claim_diff.added)}, Restatement: {len(claim_diff.restatement)}, Unchanged: {claim_diff.unchanged}")
+
+        print(f"[6/6] Merge decision: {DECISION_MODEL}")
+        proposal = decide_merge(
+            skill1_name=rc.name,
+            skill2_name=candidate.name,
+            claim_diff=claim_diff,
+            decide_fn=decide_merge_opencode,
+        )
+        proposals.append(proposal)
+        print()
+        print(proposal.summary())
+        print()
+
+    # Print final recommendation
+    if proposals:
+        top = proposals[0]
+        print(f"=== Recommendation: {top.verdict} ({top.confidence} confidence) ===")
+        if top.escalate_claims:
+            print("  Some claims need human review (escalated).")
+        if top.include_claims:
+            print(f"  {len(top.include_claims)} claims would be added to {top.target}.")
+    else:
+        print("=== Recommendation: NEW ===")
+
     return 0
 
 

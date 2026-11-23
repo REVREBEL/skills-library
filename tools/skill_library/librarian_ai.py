@@ -11,7 +11,52 @@ is available. In production, they'd be HTTP calls to the Workers AI API.
 import json
 import os
 import re
+import subprocess
 from typing import Any, Dict, List, Optional, Tuple
+
+# --- Configuration ---
+
+# Model for claim extraction (reading comprehension over skill bodies).
+CLAIM_MODEL = "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+
+# Model for merge decisions (bounded classification with confidence).
+DECISION_MODEL = "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+
+
+# --- OpenCode CLI bridge ---
+
+def opencode_run(prompt: str, model: str = CLAIM_MODEL, timeout: int = 120) -> str:
+    """Run a prompt through the OpenCode CLI and return the response text.
+
+    Uses `opencode run --model <model> <prompt>`. The CLI handles session
+    management, model routing, and API calls. The response is the last
+    assistant message.
+
+    This is the concrete implementation of the AI steps. It shells out to
+    the `opencode` CLI, which must be installed and on PATH.
+    """
+    try:
+        result = subprocess.run(
+            ["opencode", "run", "--model", model, prompt],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"opencode run failed (exit {result.returncode}): {result.stderr[:200]}"
+            )
+        # The CLI prints the session header followed by the response.
+        # Strip the header line (starts with ">") and return the rest.
+        lines = result.stdout.strip().split("\n")
+        response_lines = [l for l in lines if not l.startswith(">") and not l.startswith("[0m")]
+        return "\n".join(response_lines).strip()
+    except FileNotFoundError:
+        raise RuntimeError(
+            "opencode CLI not found. Install OpenCode or add it to PATH."
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"opencode run timed out after {timeout}s")
 
 # --- Rerank ---
 
@@ -179,3 +224,36 @@ def parse_merge_decision_response(response: str) -> Dict[str, Any]:
         }
     except json.JSONDecodeError:
         return {"verdict": "REVIEW", "confidence": "low", "reasoning": "Failed to parse response"}
+
+# --- Concrete AI step implementations (OpenCode CLI) ---
+
+def extract_claims_opencode(skill_name: str, skill_body: str) -> List[Dict[str, Any]]:
+    """Extract claims using OpenCode CLI.
+
+    This is the concrete implementation of the extract_fn interface
+    expected by librarian.extract_claims.
+    """
+    prompt = build_claim_extraction_prompt(skill_name, skill_body)
+    response = opencode_run(prompt, model=CLAIM_MODEL)
+    return parse_claim_extraction_response(response)
+
+
+def decide_merge_opencode(
+    skill1_name: str,
+    skill2_name: str,
+    claim_diff: Any,
+) -> Dict[str, Any]:
+    """Decide merge using OpenCode CLI.
+
+    This is the concrete implementation of the decide_fn interface
+    expected by librarian.decide_merge.
+    """
+    added = [{"id": c.id, "text": c.text, "type": c.claim_type} for c in claim_diff.added]
+    restatement = [{"id": c.id, "text": c.text} for c in claim_diff.restatement]
+    conflict = [{"id": c.id, "text": c.text} for c in claim_diff.conflict]
+
+    prompt = build_merge_decision_prompt(
+        skill1_name, skill2_name, added, restatement, conflict
+    )
+    response = opencode_run(prompt, model=DECISION_MODEL)
+    return parse_merge_decision_response(response)
