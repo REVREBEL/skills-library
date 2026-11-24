@@ -181,38 +181,65 @@ def merge_claims_into_skill(target_name, include_claims):
 
 
 def generate_routers():
-    """Generate router SKILL.md files for the test library."""
-    from skill_library.config import CATEGORIES, DEEP_CATEGORIES
+    """Generate a root -> category -> subcategory -> skill router tree.
 
-    # Category routers
-    for cat in CATEGORIES:
-        cat_dir = TEST_LIBRARY / cat
-        if not cat_dir.exists():
+    Walks up from each real skill (a SKILL.md with a `name:` field), so
+    category routers are discovered even when their subcategory routers
+    do not exist yet. Generates deepest routers first so category routers
+    can then link to them. All paths are relative to the router.
+    """
+    from skill_library.config import CATEGORIES
+
+    test_lib = TEST_LIBRARY.resolve()
+
+    def _has_name_frontmatter(skill_md: Path) -> bool:
+        try:
+            head = skill_md.read_text(encoding="utf-8")[:500]
+        except Exception:
+            return False
+        if not head.startswith("---"):
+            return False
+        parts = head.split("---", 2)
+        return len(parts) >= 2 and "name:" in parts[1]
+
+    # Collect every ancestor of a skill as a router directory.
+    router_dirs = set()
+    for skill_md in test_lib.rglob("SKILL.md"):
+        if not _has_name_frontmatter(skill_md):
             continue
-        router = cat_dir / "SKILL.md"
-        skills = sorted(
-            d.name for d in cat_dir.iterdir()
-            if d.is_dir() and (d / "SKILL.md").exists()
-        )
-        # Also check subcategories
-        for sub_dir in sorted(d for d in cat_dir.iterdir() if d.is_dir() and d.name != "SKILL.md"):
-            sub_skills = sorted(
-                d.name for d in sub_dir.iterdir()
-                if d.is_dir() and (d / "SKILL.md").exists()
+        parent = skill_md.parent.parent.resolve()
+        while parent != test_lib and parent != parent.parent:
+            router_dirs.add(parent)
+            parent = parent.parent
+
+    # Deepest first: subcategory routers appear before category routers.
+    for router_dir in sorted(router_dirs, key=lambda p: len(p.parts), reverse=True):
+        entries = []
+        for child in sorted(router_dir.iterdir()):
+            if not child.is_dir():
+                continue
+            child_md = child / "SKILL.md"
+            if not child_md.exists():
+                continue
+            if _has_name_frontmatter(child_md):
+                entries.append(f"- [`{child.name}`]({child.name}/SKILL.md)")
+            else:
+                entries.append(f"- [{child.name}]({child.name}/SKILL.md)")
+        if entries:
+            (router_dir / "SKILL.md").write_text(
+                f"# {router_dir.name} Router\n\n" + "\n".join(entries) + "\n",
+                encoding="utf-8",
             )
-            if sub_skills:
-                skills.extend(sub_skills)
+            print(f"  router: {router_dir.relative_to(test_lib)} ({len(entries)} entries)")
 
-        links = "\n".join(f"- [`{s}`]({s}/SKILL.md)" for s in skills)
-        router.write_text(f"# {cat} Router\n\n{links}\n", encoding="utf-8")
-
-    # Root router
+    # Root router lists top-level categories.
     root_links = []
     for cat in CATEGORIES:
-        if (TEST_LIBRARY / cat / "SKILL.md").exists():
+        if (test_lib / cat).exists():
             root_links.append(f"- [{cat}]({cat}/SKILL.md)")
-    (TEST_LIBRARY / "SKILL.md").write_text(
-        "# Test Library Root\n\n" + "\n".join(root_links) + "\n", encoding="utf-8"
+    (test_lib / "SKILL.md").write_text(
+        "# Test Library Root\n\n" + "\n".join(root_links) + "\n",
+        encoding="utf-8",
     )
 
 
@@ -391,13 +418,26 @@ def main():
                 print(f"    role={metadata['role']}  applications={metadata['applications']}")
             except Exception as e:
                 print(f"    Metadata generation failed: {e}, using defaults")
-                metadata = {"role": "capability", "applications": [], "keywords": [], "tags": [], "depends_on": [], "extends": None, "risk": "low", "side_effects": "read-only"}
+                metadata = {
+                    "role": "capability", "applications": [], "keywords": [], "tags": [],
+                    "depends_on": [], "composed_of": [], "extends": None, "adapts": None,
+                    "aliased_to": None,
+                    "execution_provider": {"default": "prompt_template", "supported": []},
+                    "risk": "low", "side_effects": "read-only",
+                }
 
-            # Build the body with generated frontmatter replacing the original
-            from skill_library.intake import _extract_body_for_similarity
+            # Build the body with generated frontmatter replacing the original.
+            # Preserve the candidate's license when available.
             body_only = re.sub(r"^---\s*\n.*?\n---\s*\n", "", full_body, count=1, flags=re.DOTALL)
+            license_id = "MIT"
+            lic_match = re.search(r'^license:\s*"?([^"\n]+)"?', full_body, re.MULTILINE)
+            if lic_match:
+                license_id = lic_match.group(1).strip()
             canonical_id = f"{placement['category']}:{candidate.name}"
-            new_fm = render_frontmatter(candidate.name, candidate.description, metadata, canonical_id)
+            new_fm = render_frontmatter(
+                candidate.name, candidate.description, metadata, canonical_id,
+                license_id=license_id,
+            )
             new_body = f"{new_fm}\n{body_only.strip()}\n"
 
             dest = write_skill_to_test_library(

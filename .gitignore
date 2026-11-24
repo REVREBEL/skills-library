@@ -140,3 +140,9 @@ dist
 .agents/skills/
 test-library/
 test-intake/
+
+# Librarian debug output
+claims*.json
+*-categorization.json
+*-category.json
+merge-decision.json

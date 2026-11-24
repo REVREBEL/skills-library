@@ -554,7 +554,11 @@ Produce the metadata block for this skill. Determine:
 - keywords: atomic discovery phrases (lowercase, hyphenated)
 - tags: broad classifiers (e.g. design, frontend, testing)
 - depends_on: canonical ids of skills this requires (use "scope:slug", empty if none)
+- composed_of: canonical ids of skills this workflow orchestrates (empty for primitives)
 - extends: canonical id of the base capability this specializes, or null
+- adapts: canonical id of the capability this protocol adapter binds, or null
+- aliased_to: canonical id if this is an alias, or null
+- execution_provider: an object with "default" and "supported". Each supported provider has name, provider_type (cli|mcp|rest_api|sdk|prompt_template), transport (node|python|mcp|http|prompt), and optional server_name/tool_name. Infer from the body; use prompt_template when no external tool is required.
 - risk: low, medium, high, or critical
 - side_effects: read-only, write, destructive, or privileged
 
@@ -565,7 +569,16 @@ Return ONLY a JSON object, no prose:
   "keywords": ["..."],
   "tags": ["..."],
   "depends_on": [],
+  "composed_of": [],
   "extends": null,
+  "adapts": null,
+  "aliased_to": null,
+  "execution_provider": {{
+    "default": "...",
+    "supported": [
+      {{"name": "...", "provider_type": "...", "transport": "..."}}
+    ]
+  }},
   "risk": "...",
   "side_effects": "..."
 }}"""
@@ -592,7 +605,11 @@ def generate_metadata_opencode(
         "keywords": [],
         "tags": [],
         "depends_on": [],
+        "composed_of": [],
         "extends": None,
+        "adapts": None,
+        "aliased_to": None,
+        "execution_provider": {"default": "prompt_template", "supported": []},
         "risk": "low",
         "side_effects": "read-only",
     }
@@ -632,16 +649,19 @@ def render_frontmatter(
     description: str,
     metadata: Dict[str, Any],
     canonical_id: str,
+    license_id: str = "MIT",
 ) -> str:
     """Render the two-tier YAML frontmatter from generated metadata.
 
-    Outer shell: name, description (portable).
-    Inner metadata: role, applications, keywords, tags, relationships, security.
+    Outer shell: name, description, license (portable).
+    Inner metadata: role, applications, keywords, tags, execution_provider,
+    relationships, security.
     """
     lines = [
         "---",
         f'name: "{skill_name}"',
         f'description: "{description}"',
+        f'license: "{license_id}"',
     ]
 
     def _fmt_list(key, items, indent="  "):
@@ -661,21 +681,46 @@ def render_frontmatter(
     _fmt_list("tags", metadata.get("tags", []))
     lines.append(f'  applications_compatibility: "universal"')
 
+    # Execution provider(s)
+    provider = metadata.get("execution_provider") or {}
+    if not isinstance(provider, dict):
+        provider = {"default": "prompt_template", "supported": []}
+    default_provider = provider.get("default") or "prompt_template"
+    supported = provider.get("supported") or []
+    lines.append("  execution_provider:")
+    lines.append(f'    default: "{default_provider}"')
+    if supported:
+        lines.append("    supported:")
+        for item in supported:
+            if not isinstance(item, dict):
+                continue
+            lines.append(f'      - name: "{item.get("name", default_provider)}"')
+            lines.append(f'        provider_type: "{item.get("provider_type", "prompt_template")}"')
+            lines.append(f'        transport: "{item.get("transport", "prompt")}"')
+            if item.get("server_name"):
+                lines.append(f'        server_name: "{item["server_name"]}"')
+            if item.get("tool_name"):
+                lines.append(f'        tool_name: "{item["tool_name"]}"')
+    else:
+        lines.append("    supported: []")
+
     # Relationships
-    depends_on = metadata.get("depends_on", [])
-    extends = metadata.get("extends")
     lines.append("  relationships:")
-    _fmt_list("depends_on", depends_on, indent="    ")
-    lines.append(f'    extends: {json.dumps(extends) if extends else "null"}')
-    lines.append('    composed_of: []')
-    lines.append('    adapts: null')
-    lines.append('    aliased_to: null')
+    _fmt_list("depends_on", metadata.get("depends_on", []), indent="    ")
+    _fmt_list("composed_of", metadata.get("composed_of", []), indent="    ")
+    lines.append(f'    extends: {json.dumps(metadata.get("extends")) if metadata.get("extends") else "null"}')
+    lines.append(f'    adapts: {json.dumps(metadata.get("adapts")) if metadata.get("adapts") else "null"}')
+    lines.append(f'    aliased_to: {json.dumps(metadata.get("aliased_to")) if metadata.get("aliased_to") else "null"}')
 
     # Security
     lines.append("  security:")
     lines.append(f'    risk: "{metadata.get("risk", "low")}"')
     lines.append(f'    side_effects: "{metadata.get("side_effects", "read-only")}"')
-    lines.append(f'    requires_approval: {"true" if metadata.get("risk") in ("high", "critical") else "false"}')
+    needs_approval = (
+        metadata.get("risk") in ("high", "critical")
+        or metadata.get("side_effects") in ("write", "destructive", "privileged")
+    )
+    lines.append(f'    requires_approval: {"true" if needs_approval else "false"}')
 
     lines.append("---")
     return "\n".join(lines)
