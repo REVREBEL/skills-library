@@ -1,0 +1,16 @@
+[
+  {"id": "C1", "text": "Use harsh, high-contrast borders (1px solid black) around everything", "type": "operational"},
+  {"id": "C2", "text": "DON'T: Use border-radius, drop shadows, or smooth transitions. If it animates, it should pop instantly (0s transition)", "type": "operational"},
+  {"id": "C3", "text": "Avoid all native `ButtonStyle` components", "type": "operational"},
+  {"id": "C4", "text": "Use `Text` with `.underline()` mapped to system blue", "type": "operational"},
+  {"id": "C5", "text": "Use `.border(Color.black, width: 1)` instead of backgrounds or shadows", "type": "operational"},
+  {"id": "C6", "text": "Force monospace fonts like Courier New or Menlo", "type": "operational"},
+  {"id": "C7", "text": "Avoid `ElevatedButton`, `Card`, or `AppBar`", "type": "operational"},
+  {"id": "C8", "text": "Set `activeOpacity={1}` on `TouchableOpacity` so there is no smooth fade", "type": "operational"},
+  {"id": "C9", "text": "Use pure hex colors: `#FFFFFF`, `#000000`, `#0000FF`", "type": "operational"},
+  {"id": "C10", "text": "Use `BasicText` instead of `Text` to bypass Material theme defaults", "type": "operational"},
+  {"id": "C11", "text": "Build structural lines using `Box` with `.background(Color.Black)`", "type": "operational"},
+  {"id": "C12", "text": "Do not use `Button` or `Card` or any Material composables", "type": "operational"},
+  {"id": "C13", "text": "Ensure appropriate contrast ratios and responsive behaviors are verified separately", "type": "operational"},
+  {"id": "C14", "text": "This is a styling reference and does not replace environment-specific validation, accessibility testing, or expert review", "type": "explanatory"}
+]

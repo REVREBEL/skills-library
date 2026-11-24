@@ -243,7 +243,7 @@ def generate_routers():
     )
 
 
-def process_candidate(candidate, catalog, dry_run=False):
+def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
     """Run the Librarian pipeline on a single candidate. Returns the proposal."""
     print(f"\n{'='*60}")
     print(f"Processing: {candidate.name}")
@@ -293,6 +293,7 @@ def process_candidate(candidate, catalog, dry_run=False):
 
     # Step 4: Claim extraction
     print(f"[4/6] Claim extraction: {CLAIM_MODEL}")
+    print(f"  Extracting claims from {candidate.name} (candidate)...", flush=True)
     try:
         candidate_claims = extract_claims(
             skill_name=candidate.name,
@@ -304,20 +305,40 @@ def process_candidate(candidate, catalog, dry_run=False):
         print(f"  Claim extraction failed: {e}")
         candidate_claims = []
 
+    # Dedupe by name (the catalog contains nested copies of some skills,
+    # e.g. two `brutalism` entries). Keep the highest-ranked copy.
+    seen_names = set()
+    unique_reranked = []
+    for rc in reranked:
+        if rc.name in seen_names:
+            continue
+        seen_names.add(rc.name)
+        unique_reranked.append(rc)
+    reranked = unique_reranked
+
     # Step 5: Claim diff + Step 6: Merge decision
     proposals = []
-    for rc in reranked[:3]:
+    for rc in reranked[:max_matches]:
         print(f"[5/6] Claim diff vs {rc.name}")
+        print(f"  Extracting claims from {rc.name} (existing)...", flush=True)
         print(f"[6/6] Merge decision: {DECISION_MODEL}")
         try:
-            existing_claims = extract_claims(
-                skill_name=rc.name,
-                skill_body=rc.body_sample if hasattr(rc, 'body_sample') else "",
-                extract_fn=extract_claims_opencode,
-            )
+            # Self-match optimization: if the top catalog hit is the same
+            # skill at (nearly) identical similarity, reuse the candidate's
+            # claims instead of paying for another extraction call.
+            if rc.name == candidate.name and rc.dice_similarity >= 0.99:
+                print(f"  Self-match detected; reusing candidate claims")
+                existing_claims = candidate_claims
+            else:
+                existing_claims = extract_claims(
+                    skill_name=rc.name,
+                    skill_body=rc.body_sample if hasattr(rc, 'body_sample') else "",
+                    extract_fn=extract_claims_opencode,
+                )
             claim_diff = diff_claims(existing_claims, candidate_claims)
             print(f"  Added: {len(claim_diff.added)}, Restatement: {len(claim_diff.restatement)}, Unchanged: {claim_diff.unchanged}")
 
+            print(f"  Deciding merge against {rc.name}...", flush=True)
             proposal = decide_merge(
                 skill1_name=rc.name,
                 skill2_name=candidate.name,
@@ -337,6 +358,8 @@ def main():
     parser.add_argument("--candidate", help="Process a single candidate by name")
     parser.add_argument("--dry-run", action="store_true", help="Evaluate only, no writes")
     parser.add_argument("--reset", action="store_true", help="Wipe test library first")
+    parser.add_argument("--max-matches", type=int, default=1,
+                        help="How many deduplicated catalog matches to evaluate (default: 1)")
     args = parser.parse_args()
 
     if args.reset:
@@ -375,7 +398,10 @@ def main():
 
     results = []
     for candidate in candidates:
-        result = process_candidate(candidate, catalog, dry_run=args.dry_run)
+        result = process_candidate(
+            candidate, catalog, dry_run=args.dry_run,
+            max_matches=args.max_matches,
+        )
         results.append({"candidate": candidate.name, **result})
 
         if args.dry_run:

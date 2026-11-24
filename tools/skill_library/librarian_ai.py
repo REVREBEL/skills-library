@@ -31,12 +31,20 @@ DECISION_MODEL = "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
 # the test pipe when rate-limited.
 MODEL_FALLBACKS = [
     CLAIM_MODEL,
-    "opencode/nemotron-3.5-super-vl-free",
     "opencode/nemotron-3.5-lightning-free",
-    "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b",
+    "opencode/nemotron-3.5-super-vl-free",
     "nvidia/nvidia/nemotron-3.5-lightning-30b-a3b",
+    "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b",
     "nvidia/nvidia/nemotron-3-ultra-550b-a55b",
 ]
+
+# Session-level cooldown: once a model fails (rate limit/provider error),
+# don't retry it on every subsequent call. Reset when the process restarts.
+_MODEL_COOLDOWNS = set()
+
+# Claim extraction cache: the same skill is often compared against multiple
+# candidates. Cache by content hash so each body is extracted only once.
+_CLAIM_CACHE: Dict[str, List[Dict[str, Any]]] = {}
 
 
 # --- OpenCode CLI bridge ---
@@ -96,6 +104,9 @@ def opencode_run(
     if models is None:
         models = [model] + [m for m in MODEL_FALLBACKS if m != model]
 
+    # Skip models that already failed this session.
+    models = [m for m in models if m not in _MODEL_COOLDOWNS]
+
     errors = []
     for candidate_model in models:
         try:
@@ -109,6 +120,7 @@ def opencode_run(
                 errors.append(
                     f"{candidate_model}: exit {result.returncode} {result.stderr[:120]}"
                 )
+                _MODEL_COOLDOWNS.add(candidate_model)
                 continue
 
             # The CLI prints the session header followed by the response.
@@ -121,11 +133,12 @@ def opencode_run(
             response = "\n".join(response_lines).strip()
             if not response:
                 errors.append(f"{candidate_model}: empty response")
+                _MODEL_COOLDOWNS.add(candidate_model)
                 continue
 
-            if candidate_model != models[0]:
+            if candidate_model != MODEL_FALLBACKS[0]:
                 print(
-                    f"  [librarian] {models[0]} unavailable; used {candidate_model}",
+                    f"  [librarian] using {candidate_model}",
                     file=sys.stderr,
                 )
             return response
@@ -135,10 +148,11 @@ def opencode_run(
             )
         except subprocess.TimeoutExpired:
             errors.append(f"{candidate_model}: timeout after {timeout}s")
+            _MODEL_COOLDOWNS.add(candidate_model)
             continue
 
     raise RuntimeError(
-        "All OpenCode models failed: " + " | ".join(errors)
+        "All OpenCode models failed or are cooling down: " + " | ".join(errors)
     )
 
 # --- Rerank ---
@@ -552,14 +566,24 @@ def rerank_with_openrouter(
 # --- Concrete AI step implementations (OpenCode CLI) ---
 
 def extract_claims_opencode(skill_name: str, skill_body: str) -> List[Dict[str, Any]]:
-    """Extract claims using OpenCode CLI.
+    """Extract claims using OpenCode CLI, with content-hash caching.
 
     This is the concrete implementation of the extract_fn interface
     expected by librarian.extract_claims.
     """
+    import hashlib
+
+    cache_key = hashlib.sha256(
+        (skill_name + "\n" + skill_body).encode("utf-8")
+    ).hexdigest()
+    if cache_key in _CLAIM_CACHE:
+        return _CLAIM_CACHE[cache_key]
+
     prompt = build_claim_extraction_prompt(skill_name, skill_body)
     response = opencode_run(prompt, model=CLAIM_MODEL)
-    return parse_claim_extraction_response(response)
+    claims = parse_claim_extraction_response(response)
+    _CLAIM_CACHE[cache_key] = claims
+    return claims
 
 
 def decide_merge_opencode(
