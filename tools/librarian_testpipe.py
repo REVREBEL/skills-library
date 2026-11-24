@@ -251,7 +251,7 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
     print(f"{'='*60}")
 
     # Step 1: Deterministic scan (already done by scan_intake)
-    print(f"[1/6] Deterministic scan: PASSED")
+    print(f"[1/7] Deterministic scan: PASSED")
 
     # Step 2: Dice retrieval
     retrieved = retrieve_candidates(
@@ -260,7 +260,7 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
         candidate_body=candidate.body_sample,
         catalog=catalog,
     )
-    print(f"[2/6] Dice retrieval: {len(retrieved)} candidates")
+    print(f"[2/7] Dice retrieval: {len(retrieved)} candidates")
     for i, rc in enumerate(retrieved[:5]):
         print(f"  [{i+1}] {rc.name} (sim={rc.similarity:.3f})")
 
@@ -269,7 +269,7 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
         return {"verdict": "NEW", "proposals": []}
 
     # Step 3: Rerank
-    print(f"[3/6] Rerank: {len(retrieved)} candidates")
+    print(f"[3/7] Rerank: {len(retrieved)} candidates")
     try:
         reranked = rerank_candidates(
             query=candidate.description,
@@ -291,8 +291,73 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
             for c in retrieved
         ]
 
-    # Step 4: Claim extraction
-    print(f"[4/6] Claim extraction: {CLAIM_MODEL}")
+    # Dedupe by name (the catalog contains nested copies of some skills,
+    # e.g. two `brutalism` entries). Keep the highest-ranked copy.
+    seen_names = set()
+    unique_reranked = []
+    for rc in reranked:
+        if rc.name in seen_names:
+            continue
+        seen_names.add(rc.name)
+        unique_reranked.append(rc)
+    reranked = unique_reranked
+
+    if not reranked:
+        print("\n=== Recommendation: NEW (no catalog matches) ===")
+        return {"verdict": "NEW", "proposals": [], "relationship": "unrelated"}
+
+    # Relationship gate: decide whether comparison is even warranted.
+    # Obvious self-matches and strong duplicates stay deterministic; only
+    # ambiguous matches pay for an AI classification call.
+    top = reranked[0]
+    if top.name == candidate.name and top.dice_similarity >= 0.95:
+        relationship = {
+            "relationship": "self",
+            "match": top.name,
+            "reasoning": "Same skill name and near-identical content",
+        }
+    elif top.dice_similarity >= 0.65:
+        relationship = {
+            "relationship": "duplicate",
+            "match": top.name,
+            "reasoning": "Strong content overlap",
+        }
+    else:
+        from skill_library.librarian_ai import classify_relationship_opencode
+        print("[4/7] Relationship gate: duplicate, overlap, or unrelated?")
+        print(f"  Checking {candidate.name} against top {min(3, len(reranked))} matches...", flush=True)
+        relationship = classify_relationship_opencode(
+            candidate.name,
+            candidate.description,
+            candidate.body_sample,
+            [
+                {
+                    "name": rc.name,
+                    "description": rc.description,
+                    "dice_similarity": rc.dice_similarity,
+                    "rerank_score": rc.rerank_score,
+                }
+                for rc in reranked[:3]
+            ],
+        )
+        print(f"  -> {relationship['relationship']}: {relationship['reasoning'][:100]}")
+
+    if relationship["relationship"] == "unrelated":
+        print("\n=== Recommendation: NEW (no meaningful overlap) ===")
+        return {"verdict": "NEW", "proposals": [], "relationship": "unrelated"}
+
+    if relationship["relationship"] == "self":
+        print("\n=== Recommendation: ALIAS (same skill already in catalog) ===")
+        return {"verdict": "ALIAS", "proposals": [], "relationship": "self"}
+
+    # Select the match named by the gate; fall back to the top hit.
+    selected = [
+        rc for rc in reranked
+        if rc.name == relationship.get("match")
+    ] or [top]
+
+    # Step 5: Claim extraction (only for real duplicates/overlaps)
+    print(f"[5/7] Claim extraction: {CLAIM_MODEL}")
     print(f"  Extracting claims from {candidate.name} (candidate)...", flush=True)
     try:
         candidate_claims = extract_claims(
@@ -305,36 +370,17 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
         print(f"  Claim extraction failed: {e}")
         candidate_claims = []
 
-    # Dedupe by name (the catalog contains nested copies of some skills,
-    # e.g. two `brutalism` entries). Keep the highest-ranked copy.
-    seen_names = set()
-    unique_reranked = []
-    for rc in reranked:
-        if rc.name in seen_names:
-            continue
-        seen_names.add(rc.name)
-        unique_reranked.append(rc)
-    reranked = unique_reranked
-
-    # Step 5: Claim diff + Step 6: Merge decision
+    # Step 6: Claim diff + Step 7: Merge decision
     proposals = []
-    for rc in reranked[:max_matches]:
-        print(f"[5/6] Claim diff vs {rc.name}")
-        print(f"  Extracting claims from {rc.name} (existing)...", flush=True)
-        print(f"[6/6] Merge decision: {DECISION_MODEL}")
+    for rc in selected[:max_matches]:
+        print(f"[6/7] Claim diff vs {rc.name}")
+        print(f"[7/7] Merge decision: {DECISION_MODEL}")
         try:
-            # Self-match optimization: if the top catalog hit is the same
-            # skill at (nearly) identical similarity, reuse the candidate's
-            # claims instead of paying for another extraction call.
-            if rc.name == candidate.name and rc.dice_similarity >= 0.99:
-                print(f"  Self-match detected; reusing candidate claims")
-                existing_claims = candidate_claims
-            else:
-                existing_claims = extract_claims(
-                    skill_name=rc.name,
-                    skill_body=rc.body_sample if hasattr(rc, 'body_sample') else "",
-                    extract_fn=extract_claims_opencode,
-                )
+            existing_claims = extract_claims(
+                skill_name=rc.name,
+                skill_body=rc.body_sample if hasattr(rc, 'body_sample') else "",
+                extract_fn=extract_claims_opencode,
+            )
             claim_diff = diff_claims(existing_claims, candidate_claims)
             print(f"  Added: {len(claim_diff.added)}, Restatement: {len(claim_diff.restatement)}, Unchanged: {claim_diff.unchanged}")
 
@@ -350,7 +396,7 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
         except Exception as e:
             print(f"  Merge decision failed: {e}")
 
-    return {"verdict": proposals[0].verdict if proposals else "REVIEW", "proposals": proposals}
+    return {"verdict": proposals[0].verdict if proposals else "REVIEW", "proposals": proposals, "relationship": relationship["relationship"]}
 
 
 def main():

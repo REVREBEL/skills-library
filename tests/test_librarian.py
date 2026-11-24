@@ -299,5 +299,69 @@ class TestOpenCodeFallback(unittest.TestCase):
         self.assertIn("All OpenCode models failed", str(ctx.exception))
 
 
+class TestRelationshipGate(unittest.TestCase):
+    """The pipeline must classify before attempting a merge."""
+
+    def _candidate(self, name="new-skill"):
+        return CandidatePackage(
+            name=name,
+            source_dir="/tmp/test",
+            description="A new capability",
+            body_sample="Do the thing",
+        )
+
+    def test_no_matches_is_new_without_claim_extraction(self):
+        from unittest.mock import patch
+        import librarian_testpipe as pipe
+
+        with patch.object(pipe, "retrieve_candidates", return_value=[]), \
+             patch.object(pipe, "extract_claims") as extract:
+            result = pipe.process_candidate(self._candidate(), catalog=[])
+        self.assertEqual(result["verdict"], "NEW")
+        extract.assert_not_called()
+
+    def test_self_match_is_alias_without_claim_extraction(self):
+        from unittest.mock import patch
+        import librarian_testpipe as pipe
+        from skill_library.librarian import RerankedCandidate, RetrievedCandidate
+
+        retrieved = RetrievedCandidate(
+            name="new-skill", canonical_path="library/x/new-skill",
+            similarity=1.0, description="Same skill", body_sample="",
+        )
+        match = RerankedCandidate(
+            name="new-skill", canonical_path="library/x/new-skill",
+            rerank_score=0.3, dice_similarity=1.0, description="Same skill",
+        )
+        with patch.object(pipe, "retrieve_candidates", return_value=[retrieved]), \
+             patch.object(pipe, "rerank_candidates", return_value=[match]), \
+             patch.object(pipe, "extract_claims") as extract:
+            result = pipe.process_candidate(self._candidate(), catalog=[])
+        self.assertEqual(result["verdict"], "ALIAS")
+        extract.assert_not_called()
+
+    def test_unrelated_gate_is_new_without_claim_extraction(self):
+        from unittest.mock import patch
+        import librarian_testpipe as pipe
+        from skill_library.librarian import RerankedCandidate, RetrievedCandidate
+
+        retrieved = RetrievedCandidate(
+            name="other-skill", canonical_path="library/x/other-skill",
+            similarity=0.3, description="Different skill", body_sample="",
+        )
+        match = RerankedCandidate(
+            name="other-skill", canonical_path="library/x/other-skill",
+            rerank_score=0.05, dice_similarity=0.3, description="Different skill",
+        )
+        with patch.object(pipe, "retrieve_candidates", return_value=[retrieved]), \
+             patch.object(pipe, "rerank_candidates", return_value=[match]), \
+             patch("skill_library.librarian_ai.classify_relationship_opencode",
+                   return_value={"relationship": "unrelated", "match": None, "reasoning": "Different scope"}), \
+             patch.object(pipe, "extract_claims") as extract:
+            result = pipe.process_candidate(self._candidate(), catalog=[])
+        self.assertEqual(result["verdict"], "NEW")
+        extract.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

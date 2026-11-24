@@ -796,6 +796,82 @@ def render_frontmatter(
     return "\n".join(lines)
 
 
+# --- Relationship gate ---
+
+RELATIONSHIP_PROMPT = """You are checking whether a new skill is actually related to existing skills.
+
+Candidate:
+  name: {candidate_name}
+  description: {candidate_description}
+  body sample: {candidate_body}
+
+Top catalog matches:
+{matches}
+
+Classify the relationship. This is NOT a "which is better" decision.
+- self: the candidate is the same skill already in the catalog (same purpose and scope)
+- duplicate: a different skill covers the same capability and could be merged
+- overlap: a different skill shares some scope but also has distinct value
+- unrelated: none of the matches are the same capability or a meaningful overlap
+
+Return ONLY JSON:
+{{"relationship": "self|duplicate|overlap|unrelated", "match": "exact catalog name or null", "reasoning": "one sentence"}}"""
+
+
+def classify_relationship_opencode(
+    candidate_name: str,
+    candidate_description: str,
+    candidate_body: str,
+    matches: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Classify candidate vs catalog before doing expensive claim extraction.
+
+    Returns {"relationship": ..., "match": ..., "reasoning": ...}.
+    Falls back to "unrelated" on failure (fail closed to NEW, not MERGE).
+    """
+    import json as _json
+
+    if not matches:
+        return {"relationship": "unrelated", "match": None, "reasoning": "No catalog matches"}
+
+    match_lines = []
+    for m in matches[:5]:
+        match_lines.append(
+            f"  - {m['name']}: {m.get('description', '')[:200]} "
+            f"(dice={m.get('dice_similarity', 0):.3f}, rerank={m.get('rerank_score', 0):.3f})"
+        )
+
+    prompt = RELATIONSHIP_PROMPT.format(
+        candidate_name=candidate_name,
+        candidate_description=candidate_description[:300],
+        candidate_body=candidate_body[:800],
+        matches="\n".join(match_lines),
+    )
+
+    try:
+        response = opencode_run(prompt, model=DECISION_MODEL)
+    except Exception:
+        return {"relationship": "unrelated", "match": None, "reasoning": "Relationship model unavailable"}
+
+    response = response.strip()
+    if response.startswith("```"):
+        response = re.sub(r"^```(?:json)?\s*", "", response)
+        response = re.sub(r"\s*```$", "", response)
+
+    try:
+        result = _json.loads(response)
+        rel = result.get("relationship", "unrelated")
+        if rel not in ("self", "duplicate", "overlap", "unrelated"):
+            rel = "unrelated"
+        return {
+            "relationship": rel,
+            "match": result.get("match"),
+            "reasoning": result.get("reasoning", ""),
+        }
+    except _json.JSONDecodeError:
+        return {"relationship": "unrelated", "match": None, "reasoning": "Failed to parse relationship response"}
+
+
 # --- Placement proposal ---
 
 PLACEMENT_PROMPT = """You are placing a new skill into a library taxonomy.
