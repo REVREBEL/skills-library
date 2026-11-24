@@ -264,5 +264,38 @@ class TestPipeline(unittest.TestCase):
         self.assertIn(result["recommended_action"], ("SUPPLEMENT", "REVIEW"))
 
 
+class TestOpenCodeFallback(unittest.TestCase):
+    """Test the model fallback chain without making real AI calls."""
+
+    def test_falls_back_after_rate_limit(self):
+        from unittest.mock import patch, MagicMock
+        from skill_library.librarian_ai import opencode_run
+
+        failed = MagicMock(returncode=1, stdout="", stderr="429 rate limit")
+        succeeded = MagicMock(returncode=0, stdout="> model\nOK\n", stderr="")
+
+        with patch("skill_library.librarian_ai._find_opencode", return_value="/fake/opencode"), \
+             patch("skill_library.librarian_ai.subprocess.run", side_effect=[failed, succeeded]) as run:
+            result = opencode_run("test prompt", models=["model-a", "model-b"])
+
+        self.assertEqual(result, "OK")
+        self.assertEqual(run.call_count, 2)
+        first_args = run.call_args_list[0].args[0]
+        second_args = run.call_args_list[1].args[0]
+        self.assertIn("model-a", first_args)
+        self.assertIn("model-b", second_args)
+
+    def test_raises_when_all_models_fail(self):
+        from unittest.mock import patch, MagicMock
+        from skill_library.librarian_ai import opencode_run
+
+        failed = MagicMock(returncode=1, stdout="", stderr="provider error")
+        with patch("skill_library.librarian_ai._find_opencode", return_value="/fake/opencode"), \
+             patch("skill_library.librarian_ai.subprocess.run", return_value=failed):
+            with self.assertRaises(RuntimeError) as ctx:
+                opencode_run("test prompt", models=["model-a", "model-b"])
+        self.assertIn("All OpenCode models failed", str(ctx.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

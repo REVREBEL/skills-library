@@ -13,6 +13,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -23,6 +24,19 @@ CLAIM_MODEL = "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
 
 # Model for merge decisions (bounded classification with confidence).
 DECISION_MODEL = "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+
+# Fallback chain: the OpenRouter free tier has a shared daily quota. When
+# it's exhausted (HTTP 429), try OpenCode's free providers, then NVIDIA
+# direct. Rerank remains OpenRouter-only and falls back to Dice order in
+# the test pipe when rate-limited.
+MODEL_FALLBACKS = [
+    CLAIM_MODEL,
+    "opencode/nemotron-3.5-super-vl-free",
+    "opencode/nemotron-3.5-lightning-free",
+    "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b",
+    "nvidia/nvidia/nemotron-3.5-lightning-30b-a3b",
+    "nvidia/nvidia/nemotron-3-ultra-550b-a55b",
+]
 
 
 # --- OpenCode CLI bridge ---
@@ -61,39 +75,71 @@ def _find_opencode() -> str:
     )
 
 
-def opencode_run(prompt: str, model: str = CLAIM_MODEL, timeout: int = 120) -> str:
-    """Run a prompt through the OpenCode CLI and return the response text.
+def opencode_run(
+    prompt: str,
+    model: str = CLAIM_MODEL,
+    timeout: int = 120,
+    models: Optional[List[str]] = None,
+) -> str:
+    """Run a prompt through the OpenCode CLI, trying models in order.
 
     Uses `opencode run --model <model> <prompt>`. The CLI handles session
-    management, model routing, and API calls. The response is the last
-    assistant message.
+    management, model routing, and API calls. If a model fails (rate
+    limit, provider error, timeout), the next model in the fallback chain
+    is tried. Returns the first non-empty successful response.
 
-    This is the concrete implementation of the AI steps. It shells out to
-    the `opencode` CLI, which must be installed.
+    The fallback chain is used automatically when ``models`` is omitted:
+      OpenRouter free -> OpenCode free -> NVIDIA direct.
     """
-    try:
-        opencode_bin = _find_opencode()
-        result = subprocess.run(
-            [opencode_bin, "run", "--model", model, prompt],
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"opencode run failed (exit {result.returncode}): {result.stderr[:200]}"
+    opencode_bin = _find_opencode()
+
+    if models is None:
+        models = [model] + [m for m in MODEL_FALLBACKS if m != model]
+
+    errors = []
+    for candidate_model in models:
+        try:
+            result = subprocess.run(
+                [opencode_bin, "run", "--model", candidate_model, prompt],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
             )
-        # The CLI prints the session header followed by the response.
-        # Strip the header line (starts with ">") and return the rest.
-        lines = result.stdout.strip().split("\n")
-        response_lines = [l for l in lines if not l.startswith(">") and not l.startswith("[0m")]
-        return "\n".join(response_lines).strip()
-    except FileNotFoundError:
-        raise RuntimeError(
-            "opencode CLI not found. Install OpenCode or add it to PATH."
-        )
-    except subprocess.TimeoutExpired:
-        raise RuntimeError(f"opencode run timed out after {timeout}s")
+            if result.returncode != 0:
+                errors.append(
+                    f"{candidate_model}: exit {result.returncode} {result.stderr[:120]}"
+                )
+                continue
+
+            # The CLI prints the session header followed by the response.
+            # Strip the header line (starts with ">") and return the rest.
+            lines = result.stdout.strip().split("\n")
+            response_lines = [
+                l for l in lines
+                if not l.startswith(">") and not l.startswith("[0m") and l.strip()
+            ]
+            response = "\n".join(response_lines).strip()
+            if not response:
+                errors.append(f"{candidate_model}: empty response")
+                continue
+
+            if candidate_model != models[0]:
+                print(
+                    f"  [librarian] {models[0]} unavailable; used {candidate_model}",
+                    file=sys.stderr,
+                )
+            return response
+        except FileNotFoundError:
+            raise RuntimeError(
+                "opencode CLI not found. Install OpenCode or add it to PATH."
+            )
+        except subprocess.TimeoutExpired:
+            errors.append(f"{candidate_model}: timeout after {timeout}s")
+            continue
+
+    raise RuntimeError(
+        "All OpenCode models failed: " + " | ".join(errors)
+    )
 
 # --- Rerank ---
 
