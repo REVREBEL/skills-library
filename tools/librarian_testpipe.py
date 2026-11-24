@@ -145,7 +145,9 @@ def merge_claims_into_skill(target_name, include_claims):
     """Append included claims to the target skill's body in the test library.
 
     For SUPPLEMENT verdicts, the included claims are appended as a new
-    section in the target skill's SKILL.md. This is the merge execution.
+    section in the target skill's SKILL.md. Claims that are already
+    covered by the existing body are skipped — the diff already identified
+    restatements, so we only add genuinely new claims.
     """
     # Find the target skill in the test library
     target_md = None
@@ -157,8 +159,21 @@ def merge_claims_into_skill(target_name, include_claims):
 
     content = target_md.read_text(encoding="utf-8")
 
+    # Filter out claims already covered by the existing body
+    from skill_library.intake import tokenize, compute_dice_similarity
+    body_tokens = tokenize(content)
+    new_claims = []
+    for c in include_claims:
+        claim_tokens = tokenize(c.text)
+        sim = compute_dice_similarity(body_tokens, claim_tokens)
+        if sim < 0.5:  # Only add claims that aren't already covered
+            new_claims.append(c)
+
+    if not new_claims:
+        return None  # Nothing new to add
+
     # Build the merge section
-    claims_text = "\n".join(f"- {c.text}" for c in include_claims)
+    claims_text = "\n".join(f"- {c.text}" for c in new_claims)
     merge_section = f"\n\n## Merged Capabilities\n\n{claims_text}\n"
 
     target_md.write_text(content + merge_section, encoding="utf-8")
@@ -358,9 +373,17 @@ def main():
                 placement = {"category": "uncategorized", "subcategory": "", "reasoning": str(e)}
 
             # Write the skill to the test library
+            # Read the FULL body from the candidate's SKILL.md, not the
+            # truncated body_sample used for similarity scoring.
+            skill_md_path = Path(candidate.source_dir) / "SKILL.md"
+            full_body = skill_md_path.read_text(encoding="utf-8") if skill_md_path.exists() else candidate.body_sample
+            # Write the skill to the test library
+            # Read the FULL body from disk, not the truncated body_sample
+            skill_md_path = Path(candidate.source_dir) / "SKILL.md"
+            full_body = skill_md_path.read_text(encoding="utf-8") if skill_md_path.exists() else candidate.body_sample
             dest = write_skill_to_test_library(
                 skill_name=candidate.name,
-                body=candidate.body_sample,
+                body=full_body,
                 description=candidate.description,
                 category=placement["category"],
                 subcategory=placement["subcategory"],

@@ -11,7 +11,9 @@ is available. In production, they'd be HTTP calls to the Workers AI API.
 import json
 import os
 import re
+import shutil
 import subprocess
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 # --- Configuration ---
@@ -25,6 +27,40 @@ DECISION_MODEL = "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
 
 # --- OpenCode CLI bridge ---
 
+def _find_opencode() -> str:
+    """Locate the opencode binary.
+
+    Checks PATH first, then known install locations (nvm, Homebrew, the
+    OpenChamber app bundle). The CLI is not a Python package — it's a
+    standalone binary, so we search common install roots rather than
+    relying on the parent process PATH being set up.
+    """
+    found = shutil.which("opencode")
+    if found:
+        return found
+
+    candidates = [
+        Path.home() / ".nvm" / "current" / "bin" / "opencode",
+        Path("/usr/local/bin/opencode"),
+        Path("/opt/homebrew/bin/opencode"),
+        Path("/Applications/OpenChamber.app/Contents/Resources/opencode-cli/opencode"),
+    ]
+    # nvm keeps versioned installs; check the newest.
+    nvm_bin = Path.home() / ".nvm" / "versions" / "node"
+    if nvm_bin.exists():
+        for version_dir in sorted(nvm_bin.iterdir(), reverse=True):
+            candidates.append(version_dir / "bin" / "opencode")
+
+    for candidate in candidates:
+        if candidate.exists() and os.access(candidate, os.X_OK):
+            return str(candidate)
+
+    raise RuntimeError(
+        "opencode CLI not found. Install it or add it to PATH. "
+        "Checked: PATH, ~/.nvm, /usr/local/bin, /opt/homebrew/bin, OpenChamber.app"
+    )
+
+
 def opencode_run(prompt: str, model: str = CLAIM_MODEL, timeout: int = 120) -> str:
     """Run a prompt through the OpenCode CLI and return the response text.
 
@@ -33,11 +69,12 @@ def opencode_run(prompt: str, model: str = CLAIM_MODEL, timeout: int = 120) -> s
     assistant message.
 
     This is the concrete implementation of the AI steps. It shells out to
-    the `opencode` CLI, which must be installed and on PATH.
+    the `opencode` CLI, which must be installed.
     """
     try:
+        opencode_bin = _find_opencode()
         result = subprocess.run(
-            ["opencode", "run", "--model", model, prompt],
+            [opencode_bin, "run", "--model", model, prompt],
             capture_output=True,
             text=True,
             timeout=timeout,
