@@ -372,22 +372,41 @@ def main():
                 print(f"    Placement failed: {e}, defaulting to uncategorized")
                 placement = {"category": "uncategorized", "subcategory": "", "reasoning": str(e)}
 
-            # Write the skill to the test library
             # Read the FULL body from the candidate's SKILL.md, not the
             # truncated body_sample used for similarity scoring.
             skill_md_path = Path(candidate.source_dir) / "SKILL.md"
             full_body = skill_md_path.read_text(encoding="utf-8") if skill_md_path.exists() else candidate.body_sample
-            # Write the skill to the test library
-            # Read the FULL body from disk, not the truncated body_sample
-            skill_md_path = Path(candidate.source_dir) / "SKILL.md"
-            full_body = skill_md_path.read_text(encoding="utf-8") if skill_md_path.exists() else candidate.body_sample
+
+            # Generate the rich metadata block (role, applications, keywords, ...)
+            from skill_library.librarian_ai import generate_metadata_opencode, render_frontmatter
+            print(f"  Generating metadata: {candidate.name}")
+            try:
+                metadata = generate_metadata_opencode(
+                    candidate.name,
+                    candidate.description,
+                    placement["category"],
+                    placement["subcategory"],
+                    candidate.body_sample,
+                )
+                print(f"    role={metadata['role']}  applications={metadata['applications']}")
+            except Exception as e:
+                print(f"    Metadata generation failed: {e}, using defaults")
+                metadata = {"role": "capability", "applications": [], "keywords": [], "tags": [], "depends_on": [], "extends": None, "risk": "low", "side_effects": "read-only"}
+
+            # Build the body with generated frontmatter replacing the original
+            from skill_library.intake import _extract_body_for_similarity
+            body_only = re.sub(r"^---\s*\n.*?\n---\s*\n", "", full_body, count=1, flags=re.DOTALL)
+            canonical_id = f"{placement['category']}:{candidate.name}"
+            new_fm = render_frontmatter(candidate.name, candidate.description, metadata, canonical_id)
+            new_body = f"{new_fm}\n{body_only.strip()}\n"
+
             dest = write_skill_to_test_library(
                 skill_name=candidate.name,
-                body=full_body,
+                body=new_body,
                 description=candidate.description,
                 category=placement["category"],
                 subcategory=placement["subcategory"],
-                role="independent_capability",
+                role=metadata.get("role", "capability"),
                 source_path=str(candidate.source_dir),
             )
             print(f"  -> Written to test library: {dest}")

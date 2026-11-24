@@ -537,6 +537,150 @@ def decide_merge_opencode(
     return parse_merge_decision_response(response)
 
 
+# --- Metadata generation ---
+
+METADATA_PROMPT = """You are generating the discovery metadata for a skill.
+
+Skill: {skill_name}
+Description: {description}
+Assigned category: {category}/{subcategory}
+
+Body (first 1500 chars):
+{body}
+
+Produce the metadata block for this skill. Determine:
+- role: one of capability, workflow, primitive, overlay, adapter, reference, alias
+- applications: every platform/tool/framework the skill operates (e.g. figma, react, swiftui, flutter, postgres). List ALL that apply, not just the primary one.
+- keywords: atomic discovery phrases (lowercase, hyphenated)
+- tags: broad classifiers (e.g. design, frontend, testing)
+- depends_on: canonical ids of skills this requires (use "scope:slug", empty if none)
+- extends: canonical id of the base capability this specializes, or null
+- risk: low, medium, high, or critical
+- side_effects: read-only, write, destructive, or privileged
+
+Return ONLY a JSON object, no prose:
+{{
+  "role": "...",
+  "applications": ["..."],
+  "keywords": ["..."],
+  "tags": ["..."],
+  "depends_on": [],
+  "extends": null,
+  "risk": "...",
+  "side_effects": "..."
+}}"""
+
+
+def generate_metadata_opencode(
+    skill_name: str,
+    description: str,
+    category: str,
+    subcategory: str,
+    body: str,
+) -> Dict[str, Any]:
+    """Generate the discovery metadata block for a skill.
+
+    Uses the OpenCode CLI. Returns a dict with role, applications,
+    keywords, tags, depends_on, extends, risk, side_effects.
+    Falls back to safe defaults on failure.
+    """
+    import json as _json
+
+    defaults = {
+        "role": "capability",
+        "applications": [],
+        "keywords": [],
+        "tags": [],
+        "depends_on": [],
+        "extends": None,
+        "risk": "low",
+        "side_effects": "read-only",
+    }
+
+    prompt = METADATA_PROMPT.format(
+        skill_name=skill_name,
+        description=description[:300],
+        category=category,
+        subcategory=subcategory or "(root)",
+        body=body[:1500],
+    )
+
+    try:
+        response = opencode_run(prompt, model=CLAIM_MODEL)
+    except Exception:
+        return defaults
+
+    response = response.strip()
+    if response.startswith("```"):
+        response = re.sub(r"^```(?:json)?\s*", "", response)
+        response = re.sub(r"\s*```$", "", response)
+
+    try:
+        result = _json.loads(response)
+        if not isinstance(result, dict):
+            return defaults
+        # Merge with defaults so missing keys don't crash the writer
+        merged = dict(defaults)
+        merged.update({k: v for k, v in result.items() if v is not None})
+        return merged
+    except _json.JSONDecodeError:
+        return defaults
+
+
+def render_frontmatter(
+    skill_name: str,
+    description: str,
+    metadata: Dict[str, Any],
+    canonical_id: str,
+) -> str:
+    """Render the two-tier YAML frontmatter from generated metadata.
+
+    Outer shell: name, description (portable).
+    Inner metadata: role, applications, keywords, tags, relationships, security.
+    """
+    lines = [
+        "---",
+        f'name: "{skill_name}"',
+        f'description: "{description}"',
+    ]
+
+    def _fmt_list(key, items, indent="  "):
+        if not items:
+            lines.append(f"{indent}{key}: []")
+        else:
+            lines.append(f"{indent}{key}:")
+            for item in items:
+                lines.append(f"{indent}  - {item}")
+
+    lines.append("metadata:")
+    lines.append(f'  canonical_id: "{canonical_id}"')
+    lines.append(f'  urn: "urn:skill:{canonical_id}"')
+    lines.append(f'  role: "{metadata.get("role", "capability")}"')
+    _fmt_list("applications", metadata.get("applications", []))
+    _fmt_list("keywords", metadata.get("keywords", []))
+    _fmt_list("tags", metadata.get("tags", []))
+    lines.append(f'  applications_compatibility: "universal"')
+
+    # Relationships
+    depends_on = metadata.get("depends_on", [])
+    extends = metadata.get("extends")
+    lines.append("  relationships:")
+    _fmt_list("depends_on", depends_on, indent="    ")
+    lines.append(f'    extends: {json.dumps(extends) if extends else "null"}')
+    lines.append('    composed_of: []')
+    lines.append('    adapts: null')
+    lines.append('    aliased_to: null')
+
+    # Security
+    lines.append("  security:")
+    lines.append(f'    risk: "{metadata.get("risk", "low")}"')
+    lines.append(f'    side_effects: "{metadata.get("side_effects", "read-only")}"')
+    lines.append(f'    requires_approval: {"true" if metadata.get("risk") in ("high", "critical") else "false"}')
+
+    lines.append("---")
+    return "\n".join(lines)
+
+
 # --- Placement proposal ---
 
 PLACEMENT_PROMPT = """You are placing a new skill into a library taxonomy.
