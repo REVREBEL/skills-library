@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "skills": {
+    "sourdough-bread": {
+      "canonical_path": "uncategorized/sourdough-bread",
+      "category": "uncategorized",
+      "subcategory": "",
+      "role": "workflow",
+      "source": "/Users/garystringham/github-revrebel/skills-library/test-intake/sourdough-bread"
+    },
+    "seo-image-gen-suite": {
+      "canonical_path": "marketing-and-seo/content-and-campaigns/seo-image-gen-suite",
+      "category": "marketing-and-seo",
+      "subcategory": "content-and-campaigns",
+      "role": "capability",
+      "source": "/Users/garystringham/github-revrebel/skills-library/test-intake/seo-image-gen-suite"
+    }
+  }
+}

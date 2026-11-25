@@ -1,0 +1,19 @@
+{
+  "role": "alias",
+  "applications": ["react", "framer"],
+  "keywords": ["seo-image", "image-generation", "og-image", "social-image", "hero-image", "schema-visual", "infographic-generation", "product-visual", "creative-director", "gemini-image"],
+  "tags": ["design", "frontend", "marketing", "seo", "image-generation", "ai"],
+  "depends_on": [],
+  "composed_of": [],
+  "extends": null,
+  "adapts": null,
+  "aliased_to": "seo-image-gen",
+  "execution_provider": {
+    "default": "mcp",
+    "supported": [
+      {"name": "gemini", "provider_type": "mcp", "transport": "mcp"}
+    ]
+  },
+  "risk": "low",
+  "side_effects": "write"
+}

@@ -109,12 +109,34 @@ class Claim:
 
 
 @dataclass
+class ClaimConflict:
+    """A true semantic contradiction between a candidate and existing claim."""
+    candidate: Claim
+    existing: Claim
+    reason: str
+    severity: str = "warning"  # "warning" | "critical"
+
+    def to_dict(self) -> dict:
+        return {
+            "candidate": self.candidate.to_dict(),
+            "existing": self.existing.to_dict(),
+            "reason": self.reason,
+            "severity": self.severity,
+        }
+
+
+@dataclass
 class ClaimDiff:
     """The set difference between two skills' claims."""
     added: List[Claim] = field(default_factory=list)  # claims in skill 2 but not skill 1
     restatement: List[Claim] = field(default_factory=list)  # claims in skill 2 that restate skill 1
-    conflict: List[Claim] = field(default_factory=list)  # claims in skill 2 that contradict skill 1
+    conflict: List[ClaimConflict] = field(default_factory=list)  # true semantic contradictions
     unchanged: int = 0  # claims in both
+
+    @property
+    def conflict_candidates(self) -> List[Claim]:
+        """Candidate claims that must be escalated rather than merged."""
+        return [c.candidate for c in self.conflict]
 
     def to_dict(self) -> dict:
         return {
@@ -172,8 +194,13 @@ class MergeProposal:
 
         if self.escalate_claims:
             lines.append("  ESCALATE:")
+            conflict_reasons = {
+                c.candidate.id: c.reason for c in self.claim_diff.conflict
+            }
             for c in self.escalate_claims:
-                lines.append(f"    ! [{c.id}] {c.text}")
+                reason = conflict_reasons.get(c.id)
+                suffix = f" — {reason}" if reason else ""
+                lines.append(f"    ! [{c.id}] {c.text}{suffix}")
 
         lines.append("")
         lines.append(f"  Net: {len(self.include_claims)} to add, "
@@ -369,6 +396,48 @@ def diff_claims(
     )
 
 
+def apply_semantic_conflicts(
+    claim_diff: ClaimDiff,
+    existing_claims: List[Claim],
+    conflict_records: List[Dict[str, Any]],
+) -> ClaimDiff:
+    """Enrich a lexical ClaimDiff with AI-detected semantic conflicts.
+
+    ``conflict_records`` contains dicts with candidate_id, existing_id,
+    reason, and optional severity. Conflicted candidate claims are removed
+    from ``added`` so they cannot be silently included by the merge step.
+    """
+    if not conflict_records:
+        return claim_diff
+
+    existing_by_id = {c.id: c for c in existing_claims}
+    added_by_id = {c.id: c for c in claim_diff.added}
+    conflicted_ids = set()
+
+    for record in conflict_records:
+        candidate_id = record.get("candidate_id")
+        existing_id = record.get("existing_id")
+        candidate = added_by_id.get(candidate_id)
+        existing = existing_by_id.get(existing_id)
+        if candidate is None or existing is None:
+            continue
+        severity = record.get("severity", "warning")
+        if severity not in ("warning", "critical"):
+            severity = "warning"
+        claim_diff.conflict.append(ClaimConflict(
+            candidate=candidate,
+            existing=existing,
+            reason=record.get("reason", "Semantic contradiction detected"),
+            severity=severity,
+        ))
+        conflicted_ids.add(candidate_id)
+
+    if conflicted_ids:
+        claim_diff.added = [c for c in claim_diff.added if c.id not in conflicted_ids]
+
+    return claim_diff
+
+
 def _normalize_claim(text: str) -> str:
     """Normalize a claim for comparison: lowercase, strip punctuation, collapse whitespace."""
     text = text.lower().strip()
@@ -408,7 +477,7 @@ def decide_merge(
             claim_diff=claim_diff,
             include_claims=claim_diff.added,
             skip_claims=claim_diff.restatement,
-            escalate_claims=claim_diff.conflict,
+            escalate_claims=claim_diff.conflict_candidates,
             reasoning="Default: all non-restatement claims included.",
         )
 
@@ -417,7 +486,15 @@ def decide_merge(
     # Map claim IDs back to Claim objects
     include = _claims_by_id(claim_diff.added, result.get("include_claims", []))
     skip = _claims_by_id(claim_diff.restatement + claim_diff.added, result.get("skip_claims", []))
-    escalate = _claims_by_id(claim_diff.conflict + claim_diff.added, result.get("escalate_claims", []))
+    escalate = _claims_by_id(claim_diff.conflict_candidates + claim_diff.added, result.get("escalate_claims", []))
+
+    # Hard safety rule: a detected semantic conflict can never be included
+    # or skipped, even if the decision model omits it from escalate_claims.
+    for conflicted in claim_diff.conflict_candidates:
+        if conflicted not in escalate:
+            escalate.append(conflicted)
+        include = [c for c in include if c.id != conflicted.id]
+        skip = [c for c in skip if c.id != conflicted.id]
 
     return MergeProposal(
         target=skill1_name,

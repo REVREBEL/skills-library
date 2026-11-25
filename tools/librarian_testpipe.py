@@ -384,6 +384,26 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
             claim_diff = diff_claims(existing_claims, candidate_claims)
             print(f"  Added: {len(claim_diff.added)}, Restatement: {len(claim_diff.restatement)}, Unchanged: {claim_diff.unchanged}")
 
+            # True semantic conflict detection: compare only genuinely new
+            # claims against existing claims. Fail closed to REVIEW if the
+            # detector is unavailable or returns invalid data.
+            from skill_library.librarian import apply_semantic_conflicts
+            from skill_library.librarian_ai import detect_semantic_conflicts_opencode
+            print(f"  Detecting semantic conflicts...", flush=True)
+            conflict_records = detect_semantic_conflicts_opencode(
+                existing_claims, claim_diff.added,
+            )
+            claim_diff = apply_semantic_conflicts(
+                claim_diff, existing_claims, conflict_records,
+            )
+            print(f"  Semantic conflicts: {len(claim_diff.conflict)}")
+            for conflict in claim_diff.conflict:
+                print(
+                    f"    ! [{conflict.candidate.id}] {conflict.candidate.text} "
+                    f"<-> [{conflict.existing.id}] {conflict.existing.text}: "
+                    f"{conflict.reason}"
+                )
+
             print(f"  Deciding merge against {rc.name}...", flush=True)
             proposal = decide_merge(
                 skill1_name=rc.name,

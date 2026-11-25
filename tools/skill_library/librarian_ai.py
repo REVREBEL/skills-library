@@ -299,6 +299,9 @@ For each "added" claim, decide:
 - SKIP: explanatory claim or restatement in different words
 - ESCALATE: contradicts existing skill or you're unsure
 
+Every claim listed under "Conflict" MUST also appear in escalate_claims.
+Never include a conflicting claim.
+
 Return JSON:
 {{
   "verdict": "SUPPLEMENT" | "EXTEND" | "CONFLICT" | "ALIAS" | "REJECT",
@@ -598,7 +601,17 @@ def decide_merge_opencode(
     """
     added = [{"id": c.id, "text": c.text, "type": c.claim_type} for c in claim_diff.added]
     restatement = [{"id": c.id, "text": c.text} for c in claim_diff.restatement]
-    conflict = [{"id": c.id, "text": c.text} for c in claim_diff.conflict]
+    conflict = [
+        {
+            "id": c.candidate.id,
+            "text": c.candidate.text,
+            "existing_id": c.existing.id,
+            "existing_text": c.existing.text,
+            "reason": c.reason,
+            "severity": c.severity,
+        }
+        for c in claim_diff.conflict
+    ]
 
     prompt = build_merge_decision_prompt(
         skill1_name, skill2_name, added, restatement, conflict
@@ -794,6 +807,86 @@ def render_frontmatter(
 
     lines.append("---")
     return "\n".join(lines)
+
+
+# --- Semantic conflict detection ---
+
+SEMANTIC_CONFLICT_PROMPT = """You are detecting TRUE semantic conflicts between instructions in two skills.
+
+Existing skill claims:
+{existing_claims}
+
+Candidate skill's new claims:
+{candidate_claims}
+
+Rules:
+- Flag only claims that cannot both be true in the same operating context.
+- Contradictory values for the same setting (port 5432 vs 5433) ARE conflicts.
+- A candidate claim that reverses or prohibits an existing instruction IS a conflict.
+- Different methods for different environments (apt vs Docker) are NOT conflicts.
+- One claim adding detail to another is NOT a conflict.
+- Similar wording with the same meaning is NOT a conflict.
+- If unsure, do not flag it.
+
+Return ONLY JSON:
+{{"conflicts": [
+  {{"candidate_id": "C7", "existing_id": "E2", "reason": "why they contradict", "severity": "warning|critical"}}
+]}}"""
+
+
+def detect_semantic_conflicts_opencode(
+    existing_claims: List[Any],
+    candidate_claims: List[Any],
+) -> List[Dict[str, Any]]:
+    """Detect true contradictions between existing and candidate claims.
+
+    Returns a list of {candidate_id, existing_id, reason, severity}.
+    Raises on model/parse failure so the caller fails closed to REVIEW
+    instead of silently merging a potentially contradictory claim.
+    """
+    import json as _json
+
+    if not existing_claims or not candidate_claims:
+        return []
+
+    existing_text = "\n".join(f"[{c.id}] {c.text}" for c in existing_claims)
+    candidate_text = "\n".join(f"[{c.id}] {c.text}" for c in candidate_claims)
+
+    prompt = SEMANTIC_CONFLICT_PROMPT.format(
+        existing_claims=existing_text[:6000],
+        candidate_claims=candidate_text[:6000],
+    )
+
+    response = opencode_run(prompt, model=DECISION_MODEL)
+    response = response.strip()
+    if response.startswith("```"):
+        response = re.sub(r"^```(?:json)?\s*", "", response)
+        response = re.sub(r"\s*```$", "", response)
+
+    try:
+        result = _json.loads(response)
+    except _json.JSONDecodeError as e:
+        raise RuntimeError("Semantic conflict detector returned invalid JSON") from e
+
+    if not isinstance(result, dict) or not isinstance(result.get("conflicts", []), list):
+        raise RuntimeError("Semantic conflict detector returned an invalid shape")
+
+    conflicts = []
+    for item in result.get("conflicts", []):
+        if not isinstance(item, dict):
+            continue
+        if not item.get("candidate_id") or not item.get("existing_id"):
+            continue
+        severity = item.get("severity", "warning")
+        if severity not in ("warning", "critical"):
+            severity = "warning"
+        conflicts.append({
+            "candidate_id": item["candidate_id"],
+            "existing_id": item["existing_id"],
+            "reason": item.get("reason", "Semantic contradiction detected"),
+            "severity": severity,
+        })
+    return conflicts
 
 
 # --- Relationship gate ---

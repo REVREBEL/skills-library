@@ -363,5 +363,67 @@ class TestRelationshipGate(unittest.TestCase):
         extract.assert_not_called()
 
 
+class TestSemanticConflicts(unittest.TestCase):
+    """True semantic conflicts are structured and cannot be silently merged."""
+
+    def test_apply_semantic_conflicts_moves_claim_out_of_added(self):
+        from skill_library.librarian import apply_semantic_conflicts
+
+        existing = Claim(id="E2", text="Use port 5432", claim_type="operational", source="old")
+        candidate = Claim(id="C7", text="Use port 5433", claim_type="operational", source="new")
+        diff = ClaimDiff(added=[candidate])
+        apply_semantic_conflicts(diff, [existing], [{
+            "candidate_id": "C7", "existing_id": "E2",
+            "reason": "Different port for the same server", "severity": "critical",
+        }])
+        self.assertEqual(diff.added, [])
+        self.assertEqual(len(diff.conflict), 1)
+        self.assertEqual(diff.conflict[0].candidate.id, "C7")
+        self.assertEqual(diff.conflict[0].existing.id, "E2")
+        self.assertEqual(diff.conflict[0].severity, "critical")
+
+    def test_decide_merge_always_escalates_conflicts(self):
+        from skill_library.librarian import ClaimConflict, decide_merge
+
+        existing = Claim(id="E2", text="Use port 5432", claim_type="operational", source="old")
+        candidate = Claim(id="C7", text="Use port 5433", claim_type="operational", source="new")
+        diff = ClaimDiff(conflict=[ClaimConflict(candidate, existing, "Port mismatch", "critical")])
+
+        def bad_decider(s1, s2, d):
+            # Model tries to include the conflicting claim anyway.
+            return {
+                "verdict": "SUPPLEMENT", "confidence": "high",
+                "include_claims": ["C7"], "skip_claims": [], "escalate_claims": [],
+                "reasoning": "bad model output",
+            }
+
+        proposal = decide_merge("old", "new", diff, decide_fn=bad_decider)
+        self.assertEqual([c.id for c in proposal.include_claims], [])
+        self.assertEqual([c.id for c in proposal.escalate_claims], ["C7"])
+        self.assertIn("Port mismatch", proposal.summary())
+
+    def test_detector_parses_valid_response(self):
+        from unittest.mock import patch
+        from skill_library.librarian_ai import detect_semantic_conflicts_opencode
+
+        existing = Claim(id="E2", text="Use port 5432", claim_type="operational", source="old")
+        candidate = Claim(id="C7", text="Use port 5433", claim_type="operational", source="new")
+        response = '{"conflicts":[{"candidate_id":"C7","existing_id":"E2","reason":"Port mismatch","severity":"critical"}]}'
+        with patch("skill_library.librarian_ai.opencode_run", return_value=response):
+            conflicts = detect_semantic_conflicts_opencode([existing], [candidate])
+        self.assertEqual(len(conflicts), 1)
+        self.assertEqual(conflicts[0]["severity"], "critical")
+
+    def test_detector_rejects_invalid_json(self):
+        from unittest.mock import patch
+        from skill_library.librarian_ai import detect_semantic_conflicts_opencode
+
+        existing = Claim(id="E2", text="Use port 5432", claim_type="operational", source="old")
+        candidate = Claim(id="C7", text="Use port 5433", claim_type="operational", source="new")
+        with patch("skill_library.librarian_ai.opencode_run", return_value="not json"):
+            with self.assertRaises(RuntimeError):
+                detect_semantic_conflicts_opencode([existing], [candidate])
+
+
 if __name__ == "__main__":
     unittest.main()
