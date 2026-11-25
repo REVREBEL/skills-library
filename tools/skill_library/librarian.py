@@ -7,10 +7,13 @@ scanner.py with a pipeline of specialized steps:
 
 1. DETERMINISTIC GATE (scanner.py) — structure, secrets, AST, hashes
 2. SIMILARITY RETRIEVAL (this module) — Dice on name+desc+body → top 50
-4. RERANK (this module) — rerank-class model → top 5
-5. CLAIM DIFF (this module) — read both bodies, extract claims, diff
-6. MERGE DECISION (this module) — decision-class model → include/skip/escalate
-7. HUMAN GATE (intake.py) — approve/edit/reject
+3. RERANK (this module) — rerank-class model → top 5
+4. RELATIONSHIP GATE (this module) — self / duplicate / overlap / unrelated
+5. CLAIM EXTRACTION (this module) — atomic operational claims
+6. CLAIM DIFF + CONFLICT DETECTION (this module) — lexical diff, semantic conflicts
+7. GRANULARITY PROPOSAL (this module) — one incremental, non-destructive split
+8. MERGE DECISION (this module) — include / skip / escalate
+9. HUMAN GATE (intake.py) — approve / edit / reject
 
 The design principle: scripts produce candidates and enforce invariants;
 AI produces meaning and proposes structure. Scripts never guess at
@@ -145,6 +148,145 @@ class ClaimDiff:
             "conflict": [c.to_dict() for c in self.conflict],
             "unchanged": self.unchanged,
         }
+
+
+@dataclass
+class GranularityProposal:
+    """A non-destructive proposal to extract one independently shippable facet.
+
+    The Librarian never applies this automatically. A human approves the
+    proposal before the parent body, relationships, or catalog are changed.
+    """
+    parent: str
+    candidate: str
+    action: str  # EXTRACT_FACET | KEEP_SEPARATE | MERGE | NO_SPLIT
+    new_skill_name: Optional[str] = None
+    new_skill_id: Optional[str] = None
+    role: Optional[str] = None
+    scope: str = ""
+    extracted_claim_ids: List[str] = field(default_factory=list)
+    parent_remove_claim_ids: List[str] = field(default_factory=list)
+    parent_composed_of_add: List[str] = field(default_factory=list)
+    candidate_extends: Optional[str] = None
+    candidate_depends_on: List[str] = field(default_factory=list)
+    reasoning: str = ""
+    confidence: str = "low"
+
+    def to_dict(self) -> dict:
+        return {
+            "parent": self.parent,
+            "candidate": self.candidate,
+            "action": self.action,
+            "new_skill_name": self.new_skill_name,
+            "new_skill_id": self.new_skill_id,
+            "role": self.role,
+            "scope": self.scope,
+            "extracted_claim_ids": self.extracted_claim_ids,
+            "parent_remove_claim_ids": self.parent_remove_claim_ids,
+            "parent_composed_of_add": self.parent_composed_of_add,
+            "candidate_extends": self.candidate_extends,
+            "candidate_depends_on": self.candidate_depends_on,
+            "reasoning": self.reasoning,
+            "confidence": self.confidence,
+            "status": "PROPOSED",
+        }
+
+    def summary(self) -> str:
+        lines = [
+            f"GRANULARITY PROPOSAL: {self.candidate} relative to {self.parent}",
+            f"Action: {self.action} (confidence: {self.confidence})",
+        ]
+        if self.action == "EXTRACT_FACET":
+            lines.extend([
+                f"New skill: {self.new_skill_name} ({self.new_skill_id})",
+                f"Role: {self.role}",
+                f"Scope: {self.scope}",
+                f"Extract candidate claims: {', '.join(self.extracted_claim_ids) or '(none)'}",
+                f"Remove from parent: {', '.join(self.parent_remove_claim_ids) or '(none)'}",
+                f"Parent composed_of += {', '.join(self.parent_composed_of_add) or '(none)'}",
+                f"Candidate extends: {self.candidate_extends or '(none)'}",
+                f"Candidate depends_on: {', '.join(self.candidate_depends_on) or '(none)'}",
+            ])
+        lines.extend([
+            f"Reasoning: {self.reasoning}",
+            "Status: PROPOSED — human approval required",
+        ])
+        return "\n".join(lines)
+
+
+def build_granularity_proposal(
+    data: Dict[str, Any],
+    parent: str,
+    candidate: str,
+    existing_claims: List[Claim],
+    candidate_claims: List[Claim],
+) -> GranularityProposal:
+    """Validate AI output into a safe, non-destructive granularity proposal."""
+    allowed_actions = {"EXTRACT_FACET", "KEEP_SEPARATE", "MERGE", "NO_SPLIT"}
+    action = data.get("action", "NO_SPLIT")
+    if action not in allowed_actions:
+        action = "NO_SPLIT"
+
+    confidence = data.get("confidence", "low")
+    if confidence not in {"high", "medium", "low"}:
+        confidence = "low"
+
+    existing_ids = {c.id for c in existing_claims}
+    candidate_ids = {c.id for c in candidate_claims}
+
+    def _ids(key: str, valid: Set[str]) -> List[str]:
+        values = data.get(key, [])
+        if not isinstance(values, list):
+            return []
+        return [v for v in values if isinstance(v, str) and v in valid]
+
+    new_name = data.get("new_skill_name")
+    new_id = data.get("new_skill_id")
+    role = data.get("role")
+    scope = data.get("scope", "")
+    extracted = _ids("extracted_claim_ids", candidate_ids)
+    parent_remove = _ids("parent_remove_claim_ids", existing_ids)
+    composed_add = data.get("parent_composed_of_add", [])
+    if not isinstance(composed_add, list):
+        composed_add = []
+    composed_add = [v for v in composed_add if isinstance(v, str)]
+
+    candidate_depends_on = data.get("candidate_depends_on", [])
+    if not isinstance(candidate_depends_on, list):
+        candidate_depends_on = []
+    candidate_depends_on = [v for v in candidate_depends_on if isinstance(v, str)]
+
+    reasoning = data.get("reasoning", "")
+    if not isinstance(reasoning, str):
+        reasoning = ""
+
+    # An extraction without a concrete, independently shippable child is not
+    # actionable. Fail safe to NO_SPLIT rather than inventing structure.
+    if action == "EXTRACT_FACET":
+        valid_id = isinstance(new_id, str) and re.fullmatch(r"[a-z0-9_-]+:[a-z0-9_-]+", new_id)
+        if not (isinstance(new_name, str) and new_name.strip() and valid_id
+                and role in {"capability", "workflow", "primitive", "overlay", "adapter", "reference", "alias"}
+                and isinstance(scope, str) and scope.strip() and extracted):
+            action = "NO_SPLIT"
+            confidence = "low"
+            reasoning = "Incomplete extraction proposal; no structural change proposed."
+
+    return GranularityProposal(
+        parent=parent,
+        candidate=candidate,
+        action=action,
+        new_skill_name=new_name if isinstance(new_name, str) else None,
+        new_skill_id=new_id if isinstance(new_id, str) else None,
+        role=role if isinstance(role, str) else None,
+        scope=scope if isinstance(scope, str) else "",
+        extracted_claim_ids=extracted,
+        parent_remove_claim_ids=parent_remove,
+        parent_composed_of_add=composed_add,
+        candidate_extends=data.get("candidate_extends") if isinstance(data.get("candidate_extends"), str) else None,
+        candidate_depends_on=candidate_depends_on,
+        reasoning=reasoning,
+        confidence=confidence,
+    )
 
 
 @dataclass

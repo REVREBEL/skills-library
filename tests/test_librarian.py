@@ -425,5 +425,99 @@ class TestSemanticConflicts(unittest.TestCase):
                 detect_semantic_conflicts_opencode([existing], [candidate])
 
 
+class TestGranularityProposals(unittest.TestCase):
+    """Incremental splits are proposed only for concrete, shippable facets."""
+
+    def test_valid_extraction_proposal(self):
+        from skill_library.librarian import build_granularity_proposal
+
+        parent = Claim(id="E1", text="Install PostgreSQL", claim_type="operational", source="parent")
+        parent2 = Claim(id="E2", text="Run SQL queries", claim_type="operational", source="parent")
+        child = Claim(id="C1", text="Install PostgreSQL 18", claim_type="operational", source="child")
+        proposal = build_granularity_proposal({
+            "action": "EXTRACT_FACET",
+            "new_skill_name": "postgres-install",
+            "new_skill_id": "postgres:install",
+            "role": "primitive",
+            "scope": "Install PostgreSQL 18 only",
+            "extracted_claim_ids": ["C1"],
+            "parent_remove_claim_ids": ["E1"],
+            "parent_composed_of_add": ["postgres:install"],
+            "candidate_extends": None,
+            "candidate_depends_on": [],
+            "reasoning": "Independently shippable install facet",
+            "confidence": "high",
+        }, "postgres-18", "install-postgres-18", [parent, parent2], [child])
+        self.assertEqual(proposal.action, "EXTRACT_FACET")
+        self.assertEqual(proposal.new_skill_id, "postgres:install")
+        self.assertEqual(proposal.to_dict()["status"], "PROPOSED")
+        self.assertIn("human approval required", proposal.summary())
+
+    def test_incomplete_extraction_fails_safe(self):
+        from skill_library.librarian import build_granularity_proposal
+
+        child = Claim(id="C1", text="Install PostgreSQL", claim_type="operational", source="child")
+        proposal = build_granularity_proposal({
+            "action": "EXTRACT_FACET",
+            "new_skill_name": "postgres-install",
+        }, "postgres-18", "install-postgres-18", [], [child])
+        self.assertEqual(proposal.action, "NO_SPLIT")
+        self.assertEqual(proposal.confidence, "low")
+
+    def test_ai_proposal_parser(self):
+        from unittest.mock import patch
+        from skill_library.librarian_ai import propose_granularity_opencode
+
+        parent = Claim(id="E1", text="Install PostgreSQL", claim_type="operational", source="parent")
+        child = Claim(id="C1", text="Install PostgreSQL 18", claim_type="operational", source="child")
+        response = '{"action":"EXTRACT_FACET","new_skill_name":"postgres-install","new_skill_id":"postgres:install","role":"primitive","scope":"Install only","extracted_claim_ids":["C1"],"confidence":"high"}'
+        with patch("skill_library.librarian_ai.opencode_run", return_value=response):
+            result = propose_granularity_opencode("parent", "Parent", [parent], "child", "Child", [child])
+        self.assertEqual(result["action"], "EXTRACT_FACET")
+
+    def test_overlap_can_propose_split_without_merging(self):
+        from unittest.mock import patch
+        import librarian_testpipe as pipe
+        from skill_library.librarian import RetrievedCandidate, RerankedCandidate
+
+        candidate = CandidatePackage(
+            name="install-postgres-18", source_dir="/tmp/test",
+            description="Install PostgreSQL 18", body_sample="Install PostgreSQL 18",
+        )
+        retrieved = RetrievedCandidate(
+            name="postgres-18", canonical_path="library/data/postgres-18",
+            similarity=0.4, description="Install, query, and optimize PostgreSQL",
+            body_sample="Install, query, and optimize PostgreSQL",
+        )
+        ranked = RerankedCandidate(
+            name="postgres-18", canonical_path="library/data/postgres-18",
+            rerank_score=0.2, dice_similarity=0.4,
+            description="Install, query, and optimize PostgreSQL",
+        )
+        child_claim = Claim(id="C1", text="Install PostgreSQL 18", claim_type="operational", source="child")
+        parent_claim = Claim(id="E1", text="Install PostgreSQL", claim_type="operational", source="parent")
+
+        with patch.object(pipe, "retrieve_candidates", return_value=[retrieved]), \
+             patch.object(pipe, "rerank_candidates", return_value=[ranked]), \
+             patch("skill_library.librarian_ai.classify_relationship_opencode",
+                   return_value={"relationship": "overlap", "match": "postgres-18", "reasoning": "Facet"}), \
+             patch.object(pipe, "extract_claims", side_effect=[[child_claim], [parent_claim]]), \
+             patch("skill_library.librarian_ai.detect_semantic_conflicts_opencode", return_value=[]), \
+             patch("skill_library.librarian_ai.propose_granularity_opencode", return_value={
+                 "action": "EXTRACT_FACET", "new_skill_name": "postgres-install",
+                 "new_skill_id": "postgres:install", "role": "primitive",
+                 "scope": "Install only", "extracted_claim_ids": ["C1"],
+                 "parent_remove_claim_ids": ["E1"],
+                 "parent_composed_of_add": ["postgres:install"],
+                 "reasoning": "Independently shippable", "confidence": "high",
+             }), \
+             patch.object(pipe, "decide_merge") as merge:
+            result = pipe.process_candidate(candidate, catalog=[])
+
+        self.assertEqual(result["verdict"], "SPLIT_PROPOSAL")
+        self.assertEqual(result["granularity"][0]["action"], "EXTRACT_FACET")
+        merge.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

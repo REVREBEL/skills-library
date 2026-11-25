@@ -889,6 +889,102 @@ def detect_semantic_conflicts_opencode(
     return conflicts
 
 
+# --- Incremental granularity proposal ---
+
+GRANULARITY_PROMPT = """You are proposing one incremental granularity change for a skill library.
+
+Parent skill: {parent_name}
+Parent description: {parent_description}
+Parent claims:
+{parent_claims}
+
+Candidate skill: {candidate_name}
+Candidate description: {candidate_description}
+Candidate claims:
+{candidate_claims}
+
+This is NOT a quality comparison. Decide whether the candidate is a narrower,
+independently shippable facet that should be extracted from the broader parent.
+
+Rules:
+- Propose EXTRACT_FACET only when the candidate contains real, self-contained
+  instructions for a facet and the parent covers that facet plus broader scope.
+- The parts must exist now. Never invent future sub-skills or a full taxonomy.
+- Propose only ONE extraction for this candidate.
+- Do not split below the point of usefulness. A facet must be independently
+  shippable to a project or plugin.
+- Thin pointers, generic wrappers, and vague umbrellas are NOT extraction targets.
+- If the candidate is related but orthogonal, choose KEEP_SEPARATE.
+- If the candidate simply adds valuable detail to the parent, choose MERGE.
+- If there is no useful structural change, choose NO_SPLIT.
+- Claim IDs must come from the provided lists.
+- For EXTRACT_FACET, identify the candidate claims that form the new skill and
+  the parent claims that should be removed after extraction.
+
+Return ONLY JSON:
+{{
+  "action": "EXTRACT_FACET|KEEP_SEPARATE|MERGE|NO_SPLIT",
+  "new_skill_name": "postgres-install",
+  "new_skill_id": "postgres:install",
+  "role": "primitive|capability|workflow|overlay|adapter|reference|alias",
+  "scope": "Install PostgreSQL 18 only",
+  "extracted_claim_ids": ["C1", "C2"],
+  "parent_remove_claim_ids": ["E1", "E2"],
+  "parent_composed_of_add": ["postgres:install"],
+  "candidate_extends": null,
+  "candidate_depends_on": [],
+  "reasoning": "Why this is or is not an independently shippable facet.",
+  "confidence": "high|medium|low"
+}}"""
+
+
+def propose_granularity_opencode(
+    parent_name: str,
+    parent_description: str,
+    parent_claims: List[Any],
+    candidate_name: str,
+    candidate_description: str,
+    candidate_claims: List[Any],
+) -> Dict[str, Any]:
+    """Propose one incremental split/granularity change.
+
+    Non-destructive: returns a proposal only. On model or parse failure,
+    fails safe to NO_SPLIT with low confidence.
+    """
+    if not parent_claims or not candidate_claims:
+        return {"action": "NO_SPLIT", "confidence": "low", "reasoning": "Insufficient claims"}
+
+    parent_text = "\n".join(f"[{c.id}] {c.text}" for c in parent_claims)
+    candidate_text = "\n".join(f"[{c.id}] {c.text}" for c in candidate_claims)
+
+    prompt = GRANULARITY_PROMPT.format(
+        parent_name=parent_name,
+        parent_description=parent_description[:500],
+        parent_claims=parent_text[:7000],
+        candidate_name=candidate_name,
+        candidate_description=candidate_description[:500],
+        candidate_claims=candidate_text[:7000],
+    )
+
+    try:
+        response = opencode_run(prompt, model=DECISION_MODEL)
+    except Exception:
+        return {"action": "NO_SPLIT", "confidence": "low", "reasoning": "Granularity model unavailable"}
+
+    response = response.strip()
+    if response.startswith("```"):
+        response = re.sub(r"^```(?:json)?\s*", "", response)
+        response = re.sub(r"\s*```$", "", response)
+
+    try:
+        result = json.loads(response)
+        if not isinstance(result, dict):
+            return {"action": "NO_SPLIT", "confidence": "low", "reasoning": "Invalid proposal shape"}
+        return result
+    except json.JSONDecodeError:
+        return {"action": "NO_SPLIT", "confidence": "low", "reasoning": "Failed to parse proposal"}
+
+
 # --- Relationship gate ---
 
 RELATIONSHIP_PROMPT = """You are checking whether a new skill is actually related to existing skills.

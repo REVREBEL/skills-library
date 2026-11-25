@@ -50,6 +50,7 @@ TEST_INTAKE = REPO_ROOT / "test-intake"
 TEST_LIBRARY = REPO_ROOT / "test-library"
 TEST_MANIFEST = TEST_LIBRARY / "runtime-manifest.json"
 TEST_LEDGER = TEST_LIBRARY / "change-ledger.jsonl"
+GRANULARITY_FILE = TEST_LIBRARY / "granularity-proposals.json"
 
 
 def reset_test_library():
@@ -59,7 +60,22 @@ def reset_test_library():
     TEST_LIBRARY.mkdir(parents=True, exist_ok=True)
     TEST_MANIFEST.write_text(json.dumps({"version": "1.0", "skills": {}}, indent=2))
     TEST_LEDGER.write_text("")
+    GRANULARITY_FILE.write_text(json.dumps([], indent=2))
     print(f"Test library reset: {TEST_LIBRARY}")
+
+
+def record_granularity_proposals(proposals):
+    """Record non-destructive proposals for human review."""
+    if not proposals:
+        return
+    existing = []
+    if GRANULARITY_FILE.exists():
+        try:
+            existing = json.loads(GRANULARITY_FILE.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            existing = []
+    existing.extend(proposals)
+    GRANULARITY_FILE.write_text(json.dumps(existing, indent=2), encoding="utf-8")
 
 
 def build_catalog_index():
@@ -251,7 +267,7 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
     print(f"{'='*60}")
 
     # Step 1: Deterministic scan (already done by scan_intake)
-    print(f"[1/7] Deterministic scan: PASSED")
+    print(f"[1/8] Deterministic scan: PASSED")
 
     # Step 2: Dice retrieval
     retrieved = retrieve_candidates(
@@ -260,7 +276,7 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
         candidate_body=candidate.body_sample,
         catalog=catalog,
     )
-    print(f"[2/7] Dice retrieval: {len(retrieved)} candidates")
+    print(f"[2/8] Dice retrieval: {len(retrieved)} candidates")
     for i, rc in enumerate(retrieved[:5]):
         print(f"  [{i+1}] {rc.name} (sim={rc.similarity:.3f})")
 
@@ -269,7 +285,7 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
         return {"verdict": "NEW", "proposals": []}
 
     # Step 3: Rerank
-    print(f"[3/7] Rerank: {len(retrieved)} candidates")
+    print(f"[3/8] Rerank: {len(retrieved)} candidates")
     try:
         reranked = rerank_candidates(
             query=candidate.description,
@@ -324,7 +340,7 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
         }
     else:
         from skill_library.librarian_ai import classify_relationship_opencode
-        print("[4/7] Relationship gate: duplicate, overlap, or unrelated?")
+        print("[4/8] Relationship gate: duplicate, overlap, or unrelated?")
         print(f"  Checking {candidate.name} against top {min(3, len(reranked))} matches...", flush=True)
         relationship = classify_relationship_opencode(
             candidate.name,
@@ -357,7 +373,7 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
     ] or [top]
 
     # Step 5: Claim extraction (only for real duplicates/overlaps)
-    print(f"[5/7] Claim extraction: {CLAIM_MODEL}")
+    print(f"[5/8] Claim extraction: {CLAIM_MODEL}")
     print(f"  Extracting claims from {candidate.name} (candidate)...", flush=True)
     try:
         candidate_claims = extract_claims(
@@ -370,11 +386,11 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
         print(f"  Claim extraction failed: {e}")
         candidate_claims = []
 
-    # Step 6: Claim diff + Step 7: Merge decision
+    # Step 6: Claim diff, Step 7: granularity, Step 8: merge decision
     proposals = []
+    granularity_proposals = []
     for rc in selected[:max_matches]:
-        print(f"[6/7] Claim diff vs {rc.name}")
-        print(f"[7/7] Merge decision: {DECISION_MODEL}")
+        print(f"[6/8] Claim diff vs {rc.name}")
         try:
             existing_claims = extract_claims(
                 skill_name=rc.name,
@@ -404,6 +420,32 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
                     f"{conflict.reason}"
                 )
 
+            # Incremental granularity applies to overlaps, not duplicates.
+            # It is proposal-only: never rewrite the parent here.
+            if relationship["relationship"] == "overlap" and not claim_diff.conflict:
+                from skill_library.librarian import build_granularity_proposal
+                from skill_library.librarian_ai import propose_granularity_opencode
+                print("[7/8] Granularity proposal: independently shippable facet?")
+                print(f"  Comparing scope of {candidate.name} within {rc.name}...", flush=True)
+                raw = propose_granularity_opencode(
+                    parent_name=rc.name,
+                    parent_description=rc.description,
+                    parent_claims=existing_claims,
+                    candidate_name=candidate.name,
+                    candidate_description=candidate.description,
+                    candidate_claims=candidate_claims,
+                )
+                granularity = build_granularity_proposal(
+                    raw, rc.name, candidate.name, existing_claims, candidate_claims,
+                )
+                granularity_proposals.append(granularity)
+                print(f"\n{granularity.summary()}\n")
+                if granularity.action in {"EXTRACT_FACET", "KEEP_SEPARATE"}:
+                    continue
+            else:
+                print("[7/8] Granularity proposal: skipped (duplicate or conflict)")
+
+            print(f"[8/8] Merge decision: {DECISION_MODEL}")
             print(f"  Deciding merge against {rc.name}...", flush=True)
             proposal = decide_merge(
                 skill1_name=rc.name,
@@ -415,6 +457,19 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
             print(f"\n{proposal.summary()}\n")
         except Exception as e:
             print(f"  Merge decision failed: {e}")
+
+    if granularity_proposals:
+        verdict = (
+            "SPLIT_PROPOSAL"
+            if any(g.action == "EXTRACT_FACET" for g in granularity_proposals)
+            else "KEEP_SEPARATE"
+        )
+        return {
+            "verdict": verdict,
+            "proposals": proposals,
+            "granularity": [g.to_dict() for g in granularity_proposals],
+            "relationship": relationship["relationship"],
+        }
 
     return {"verdict": proposals[0].verdict if proposals else "REVIEW", "proposals": proposals, "relationship": relationship["relationship"]}
 
@@ -473,11 +528,14 @@ def main():
         if args.dry_run:
             continue
 
+        record_granularity_proposals(result.get("granularity", []))
+
         verdict = result["verdict"]
         proposals = result.get("proposals", [])
 
-        # Place the skill (NEW, SUPPLEMENT, EXTEND, ALIAS all need placement)
-        if verdict in ("NEW", "SUPPLEMENT", "EXTEND"):
+        # Place genuinely new or separate skills. Split proposals are recorded
+        # only; they are never applied automatically.
+        if verdict in ("NEW", "SUPPLEMENT", "EXTEND", "KEEP_SEPARATE"):
             from skill_library.librarian_ai import propose_placement_opencode
             print(f"  Placing: {candidate.name}")
             try:
@@ -562,6 +620,7 @@ def main():
         print(f"  Skills: {len(list(TEST_LIBRARY.glob('**/**/SKILL.md')))}")
         print(f"  Routers: {len(list(TEST_LIBRARY.glob('*/SKILL.md')))}")
         print(f"  Manifest: {TEST_MANIFEST}")
+        print(f"  Granularity proposals: {GRANULARITY_FILE}")
         print(f"{'='*60}")
 
     # Print summary
@@ -574,6 +633,10 @@ def main():
         if proposals:
             p = proposals[0]
             print(f"  {r['candidate']:30} -> {verdict:12} (target: {p.target}, confidence: {p.confidence})")
+        elif r.get("granularity"):
+            g = r["granularity"][0]
+            detail = g.get("new_skill_name") or g.get("reasoning", "")
+            print(f"  {r['candidate']:30} -> {verdict:12} ({g['action']}: {detail})")
         else:
             print(f"  {r['candidate']:30} -> {verdict}")
 
