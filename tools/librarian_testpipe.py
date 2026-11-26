@@ -11,6 +11,7 @@ Usage:
     python3 tools/librarian_testpipe.py --candidate NAME   # process one
     python3 tools/librarian_testpipe.py --dry-run          # evaluate only, no writes
     python3 tools/librarian_testpipe.py --reset            # wipe test library first
+    python3 tools/librarian_review.py list                  # review pending proposals
 
 The test library is written to test-library/ (gitignored). It is a
 self-contained output: library/<category>/<subcategory>/<skill>/ plus
@@ -51,6 +52,7 @@ TEST_LIBRARY = REPO_ROOT / "test-library"
 TEST_MANIFEST = TEST_LIBRARY / "runtime-manifest.json"
 TEST_LEDGER = TEST_LIBRARY / "change-ledger.jsonl"
 GRANULARITY_FILE = TEST_LIBRARY / "granularity-proposals.json"
+PROPOSALS_FILE = TEST_LIBRARY / "proposals.json"
 
 
 def reset_test_library():
@@ -61,6 +63,7 @@ def reset_test_library():
     TEST_MANIFEST.write_text(json.dumps({"version": "1.0", "skills": {}}, indent=2))
     TEST_LEDGER.write_text("")
     GRANULARITY_FILE.write_text(json.dumps([], indent=2))
+    PROPOSALS_FILE.write_text(json.dumps([], indent=2))
     print(f"Test library reset: {TEST_LIBRARY}")
 
 
@@ -76,6 +79,17 @@ def record_granularity_proposals(proposals):
             existing = []
     existing.extend(proposals)
     GRANULARITY_FILE.write_text(json.dumps(existing, indent=2), encoding="utf-8")
+
+
+def record_review_proposals(result):
+    """Persist merge and granularity proposals in the shared review store."""
+    from skill_library.proposal_review import upsert_proposal
+
+    for proposal in result.get("proposals", []):
+        payload = proposal.to_dict() if hasattr(proposal, "to_dict") else proposal
+        upsert_proposal(PROPOSALS_FILE, "merge", payload)
+    for payload in result.get("granularity", []):
+        upsert_proposal(PROPOSALS_FILE, "granularity", payload)
 
 
 def build_catalog_index():
@@ -529,6 +543,7 @@ def main():
             continue
 
         record_granularity_proposals(result.get("granularity", []))
+        record_review_proposals(result)
 
         verdict = result["verdict"]
         proposals = result.get("proposals", [])
@@ -621,6 +636,7 @@ def main():
         print(f"  Routers: {len(list(TEST_LIBRARY.glob('*/SKILL.md')))}")
         print(f"  Manifest: {TEST_MANIFEST}")
         print(f"  Granularity proposals: {GRANULARITY_FILE}")
+        print(f"  Review store: {PROPOSALS_FILE}")
         print(f"{'='*60}")
 
     # Print summary
