@@ -103,6 +103,25 @@ class TestProposalStore(unittest.TestCase):
             edit_proposal(self.store, proposal["id"], invalid)
         self.assertEqual(get_proposal(self.store, proposal["id"])["status"], "PROPOSED")
 
+    def test_conflicting_claim_cannot_be_included(self):
+        payload = merge_payload()
+        payload["claim_diff"]["conflict"] = [{
+            "candidate": {"id": "C1", "text": "Use port 5433"},
+            "existing": {"id": "E1", "text": "Use port 5432"},
+            "reason": "Port mismatch", "severity": "critical",
+        }]
+        payload["include_claims"] = [{"id": "C1", "text": "Use port 5433"}]
+        with self.assertRaises(ValueError):
+            upsert_proposal(self.store, "merge", payload)
+
+    def test_applied_proposal_cannot_be_edited(self):
+        proposal = upsert_proposal(self.store, "merge", merge_payload())
+        set_status(self.store, proposal["id"], "APPLIED")
+        edited = merge_payload()
+        edited["reasoning"] = "too late"
+        with self.assertRaises(ValueError):
+            edit_proposal(self.store, proposal["id"], edited)
+
 
 class TestReviewCli(unittest.TestCase):
     def setUp(self):

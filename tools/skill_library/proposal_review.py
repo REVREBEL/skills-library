@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-VALID_STATUSES = {"PROPOSED", "APPROVED", "REJECTED"}
+VALID_STATUSES = {"PROPOSED", "APPROVED", "REJECTED", "APPLIED", "ROLLED_BACK"}
 VALID_KINDS = {"merge", "granularity"}
 
 
@@ -59,6 +59,16 @@ def validate_proposal(kind: str, payload: Dict[str, Any]) -> None:
             raise ValueError(f"Invalid merge confidence: {payload['confidence']}")
         if not isinstance(payload["claim_diff"], dict):
             raise ValueError("Merge claim_diff must be an object")
+        conflicts = payload["claim_diff"].get("conflict", [])
+        conflict_ids = {
+            c.get("candidate", {}).get("id") for c in conflicts if isinstance(c, dict)
+        }
+        include_ids = {c.get("id") for c in payload.get("include_claims", []) if isinstance(c, dict)}
+        escalate_ids = {c.get("id") for c in payload.get("escalate_claims", []) if isinstance(c, dict)}
+        if conflict_ids & include_ids:
+            raise ValueError("Conflicting claims cannot be included in a merge")
+        if not conflict_ids <= escalate_ids:
+            raise ValueError("Every semantic conflict must be escalated")
         return
 
     required = {"parent", "candidate", "action", "confidence", "reasoning"}
@@ -130,6 +140,8 @@ def edit_proposal(path: Path, proposal_id_: str, payload: Dict[str, Any], note: 
     for index, proposal in enumerate(proposals):
         if proposal["id"] != proposal_id_:
             continue
+        if proposal["status"] not in {"PROPOSED", "APPROVED"}:
+            raise ValueError(f"Cannot edit a {proposal['status']} proposal")
         validate_proposal(proposal["kind"], payload)
         new_id = proposal_id(proposal["kind"], payload)
         if any(p["id"] == new_id for i, p in enumerate(proposals) if i != index):

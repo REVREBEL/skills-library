@@ -166,6 +166,8 @@ class GranularityProposal:
     scope: str = ""
     extracted_claim_ids: List[str] = field(default_factory=list)
     parent_remove_claim_ids: List[str] = field(default_factory=list)
+    extracted_claims: List[Claim] = field(default_factory=list)
+    parent_remove_claims: List[Claim] = field(default_factory=list)
     parent_composed_of_add: List[str] = field(default_factory=list)
     candidate_extends: Optional[str] = None
     candidate_depends_on: List[str] = field(default_factory=list)
@@ -183,6 +185,8 @@ class GranularityProposal:
             "scope": self.scope,
             "extracted_claim_ids": self.extracted_claim_ids,
             "parent_remove_claim_ids": self.parent_remove_claim_ids,
+            "extracted_claims": [c.to_dict() for c in self.extracted_claims],
+            "parent_remove_claims": [c.to_dict() for c in self.parent_remove_claims],
             "parent_composed_of_add": self.parent_composed_of_add,
             "candidate_extends": self.candidate_extends,
             "candidate_depends_on": self.candidate_depends_on,
@@ -246,6 +250,10 @@ def build_granularity_proposal(
     scope = data.get("scope", "")
     extracted = _ids("extracted_claim_ids", candidate_ids)
     parent_remove = _ids("parent_remove_claim_ids", existing_ids)
+    candidate_by_id = {c.id: c for c in candidate_claims}
+    existing_by_id = {c.id: c for c in existing_claims}
+    extracted_claims = [candidate_by_id[i] for i in extracted]
+    parent_remove_claims = [existing_by_id[i] for i in parent_remove]
     composed_add = data.get("parent_composed_of_add", [])
     if not isinstance(composed_add, list):
         composed_add = []
@@ -281,6 +289,8 @@ def build_granularity_proposal(
         scope=scope if isinstance(scope, str) else "",
         extracted_claim_ids=extracted,
         parent_remove_claim_ids=parent_remove,
+        extracted_claims=extracted_claims,
+        parent_remove_claims=parent_remove_claims,
         parent_composed_of_add=composed_add,
         candidate_extends=data.get("candidate_extends") if isinstance(data.get("candidate_extends"), str) else None,
         candidate_depends_on=candidate_depends_on,

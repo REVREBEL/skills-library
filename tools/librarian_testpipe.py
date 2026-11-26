@@ -92,6 +92,44 @@ def record_review_proposals(result):
         upsert_proposal(PROPOSALS_FILE, "granularity", payload)
 
 
+def enrich_granularity_for_review(result, candidate, taxonomy):
+    """Attach deterministic apply context to split proposals.
+
+    The proposal step decides structure. Placement and metadata are resolved
+    now so a later approved apply never needs to call a model.
+    """
+    from skill_library.librarian_ai import generate_metadata_opencode, propose_placement_opencode
+
+    for payload in result.get("granularity", []):
+        if payload.get("action") != "EXTRACT_FACET":
+            continue
+        name = payload.get("new_skill_name") or candidate.name
+        try:
+            placement = propose_placement_opencode(name, candidate.description, taxonomy)
+        except Exception:
+            placement = {"category": "uncategorized", "subcategory": "", "reasoning": "Placement unavailable"}
+        try:
+            metadata = generate_metadata_opencode(
+                name, candidate.description, placement["category"],
+                placement.get("subcategory", ""), candidate.body_sample,
+            )
+        except Exception:
+            metadata = {
+                "role": payload.get("role", "capability"), "applications": [],
+                "keywords": [], "tags": [], "depends_on": [],
+                "composed_of": [], "extends": payload.get("candidate_extends"),
+                "adapts": None, "aliased_to": None,
+                "execution_provider": {"default": "prompt_template", "supported": []},
+                "risk": "low", "side_effects": "read-only",
+            }
+        metadata["role"] = payload.get("role", metadata.get("role", "capability"))
+        metadata["extends"] = payload.get("candidate_extends")
+        metadata["depends_on"] = payload.get("candidate_depends_on", [])
+        payload["source_path"] = str(candidate.source_dir)
+        payload["placement"] = placement
+        payload["metadata"] = metadata
+
+
 def build_catalog_index():
     """Build a catalog index from the real library for retrieval."""
     from skill_library.intake import tokenize, _extract_body_for_similarity
@@ -210,7 +248,7 @@ def merge_claims_into_skill(target_name, include_claims):
     return target_md
 
 
-def generate_routers():
+def generate_routers(library_root=None):
     """Generate a root -> category -> subcategory -> skill router tree.
 
     Walks up from each real skill (a SKILL.md with a `name:` field), so
@@ -220,7 +258,7 @@ def generate_routers():
     """
     from skill_library.config import CATEGORIES
 
-    test_lib = TEST_LIBRARY.resolve()
+    test_lib = Path(library_root).resolve() if library_root else TEST_LIBRARY.resolve()
 
     def _has_name_frontmatter(skill_md: Path) -> bool:
         try:
@@ -542,6 +580,7 @@ def main():
         if args.dry_run:
             continue
 
+        enrich_granularity_for_review(result, candidate, taxonomy)
         record_granularity_proposals(result.get("granularity", []))
         record_review_proposals(result)
 

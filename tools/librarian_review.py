@@ -98,7 +98,7 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_list = sub.add_parser("list", help="List proposals")
-    p_list.add_argument("--status", choices=["PROPOSED", "APPROVED", "REJECTED"])
+    p_list.add_argument("--status", choices=["PROPOSED", "APPROVED", "REJECTED", "APPLIED", "ROLLED_BACK"])
     p_list.add_argument("--kind", choices=["merge", "granularity"])
     p_list.add_argument("--candidate", help="Filter by candidate, target, or parent name")
     p_list.add_argument("--json", action="store_true")
