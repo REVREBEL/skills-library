@@ -1,0 +1,34 @@
+{
+  "version": "1.0",
+  "groups": {
+    "figma-core": {
+      "name": "Figma Core Tools",
+      "description": "Figma canvas, token, component, and handoff capabilities.",
+      "match": {
+        "applications": ["figma"]
+      }
+    },
+    "design-system-foundations": {
+      "name": "Design System Foundations",
+      "description": "Vendor-neutral design tokens, component primitives, and themes.",
+      "include_paths": [
+        "design-and-experience/design-systems"
+      ]
+    },
+    "figma-project": {
+      "name": "Figma Project Bundle",
+      "description": "Figma plus vendor-neutral design-system foundations.",
+      "groups": [
+        "figma-core",
+        "design-system-foundations"
+      ]
+    },
+    "postgres-core": {
+      "name": "PostgreSQL Core",
+      "description": "PostgreSQL installation, querying, and optimization.",
+      "match": {
+        "applications": ["postgres"]
+      }
+    }
+  }
+}
