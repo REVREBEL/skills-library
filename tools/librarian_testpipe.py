@@ -170,16 +170,41 @@ def build_catalog_index():
     return catalog
 
 
+def copy_candidate_package(source_path, destination, skill_body=None):
+    """Copy a complete candidate package, optionally replacing SKILL.md.
+
+    Source packages are never modified. Symlinks are rejected so a package
+    cannot pull files from outside its own directory into the test library.
+    """
+    source = Path(source_path)
+    if not source.is_dir() or source.is_symlink():
+        raise ValueError(f"Candidate package is not a real directory: {source}")
+    if any(path.is_symlink() for path in source.rglob("*")):
+        raise ValueError(f"Symlinks are not allowed in candidate packages: {source}")
+
+    destination = Path(destination)
+    destination.mkdir(parents=True, exist_ok=True)
+    for item in sorted(source.iterdir()):
+        if item.name == "SKILL.md":
+            continue
+        target = destination / item.name
+        if item.is_dir():
+            shutil.copytree(item, target, dirs_exist_ok=True)
+        else:
+            shutil.copy2(item, target)
+    if skill_body is not None:
+        (destination / "SKILL.md").write_text(skill_body, encoding="utf-8")
+    return destination
+
+
 def write_skill_to_test_library(skill_name, body, description, category, subcategory, role, source_path):
-    """Write a skill to the test library with proper frontmatter."""
+    """Write a complete skill package to the test library with proper frontmatter."""
     if subcategory:
         dest_dir = TEST_LIBRARY / category / subcategory / skill_name
     else:
         dest_dir = TEST_LIBRARY / category / skill_name
-    dest_dir.mkdir(parents=True, exist_ok=True)
 
-    skill_md = dest_dir / "SKILL.md"
-    skill_md.write_text(body, encoding="utf-8")
+    copy_candidate_package(source_path, dest_dir, skill_body=body)
 
     # Record in manifest
     manifest = json.loads(TEST_MANIFEST.read_text())
@@ -355,6 +380,7 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
                 name=c.name, canonical_path=c.canonical_path,
                 rerank_score=c.similarity, dice_similarity=c.similarity,
                 description=c.description,
+                body_sample=c.body_sample,
             )
             for c in retrieved
         ]

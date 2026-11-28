@@ -4,7 +4,9 @@ Verifies the deterministic steps (retrieval, diff) work correctly and the
 pipeline orchestration produces the expected structure.
 """
 
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -139,17 +141,18 @@ class TestRerank(unittest.TestCase):
 
     def test_no_rerank_fn_preserves_order(self):
         candidates = [
-            RetrievedCandidate(name="a", canonical_path="a", similarity=0.9, description="a", body_sample=""),
-            RetrievedCandidate(name="b", canonical_path="b", similarity=0.5, description="b", body_sample=""),
+            RetrievedCandidate(name="a", canonical_path="a", similarity=0.9, description="a", body_sample="Body A"),
+            RetrievedCandidate(name="b", canonical_path="b", similarity=0.5, description="b", body_sample="Body B"),
         ]
         results = rerank_candidates(query="test", candidates=candidates, rerank_fn=None)
         self.assertEqual(results[0].name, "a")
         self.assertEqual(results[1].name, "b")
+        self.assertEqual(results[0].body_sample, "Body A")
 
     def test_rerank_fn_reorders(self):
         candidates = [
-            RetrievedCandidate(name="a", canonical_path="a", similarity=0.9, description="a", body_sample=""),
-            RetrievedCandidate(name="b", canonical_path="b", similarity=0.5, description="b", body_sample=""),
+            RetrievedCandidate(name="a", canonical_path="a", similarity=0.9, description="a", body_sample="Body A"),
+            RetrievedCandidate(name="b", canonical_path="b", similarity=0.5, description="b", body_sample="Body B"),
         ]
         # Mock rerank: b is more relevant
         def mock_rerank(query, passages):
@@ -158,6 +161,7 @@ class TestRerank(unittest.TestCase):
         results = rerank_candidates(query="test", candidates=candidates, rerank_fn=mock_rerank)
         self.assertEqual(results[0].name, "b")
         self.assertEqual(results[1].name, "a")
+        self.assertEqual(results[0].body_sample, "Body B")
 
 
 class TestMergeDecision(unittest.TestCase):
@@ -297,6 +301,71 @@ class TestOpenCodeFallback(unittest.TestCase):
             with self.assertRaises(RuntimeError) as ctx:
                 librarian_ai.opencode_run("test prompt", models=["model-a", "model-b"])
         self.assertIn("All OpenCode models failed", str(ctx.exception))
+
+
+class TestTestLibraryPackageCopy(unittest.TestCase):
+    """Installed candidates retain every bundled resource and the source stays intact."""
+
+    def test_writer_copies_complete_package_and_replaces_only_skill_body(self):
+        from unittest.mock import patch
+        import librarian_testpipe as pipe
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "intake" / "database-design"
+            source.mkdir(parents=True)
+            original_skill = '---\nname: "database-design"\n---\n# Original\n'
+            (source / "SKILL.md").write_text(original_skill, encoding="utf-8")
+            resources = {
+                "references/schema.md": "# Schema\n",
+                "assets/templates/migration.sql": "CREATE TABLE example (id INTEGER);\n",
+                "scripts/validate.py": "print('validate')\n",
+                "README.md": "Package notes\n",
+            }
+            for relative, content in resources.items():
+                path = source / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content, encoding="utf-8")
+
+            library = root / "test-library"
+            library.mkdir()
+            manifest = library / "runtime-manifest.json"
+            ledger = library / "change-ledger.jsonl"
+            manifest.write_text(json.dumps({"version": "1.0", "skills": {}}), encoding="utf-8")
+            ledger.write_text("", encoding="utf-8")
+            replacement = '---\nname: "database-design"\n---\n# Curated\n'
+
+            with patch.object(pipe, "TEST_LIBRARY", library), \
+                 patch.object(pipe, "TEST_MANIFEST", manifest), \
+                 patch.object(pipe, "TEST_LEDGER", ledger):
+                destination = pipe.write_skill_to_test_library(
+                    "database-design", replacement, "Database design",
+                    "data-and-ai", "analytics", "capability", str(source),
+                )
+
+            self.assertEqual((destination / "SKILL.md").read_text(encoding="utf-8"), replacement)
+            for relative, content in resources.items():
+                self.assertEqual((destination / relative).read_text(encoding="utf-8"), content)
+            self.assertEqual((source / "SKILL.md").read_text(encoding="utf-8"), original_skill)
+            self.assertEqual(json.loads(manifest.read_text(encoding="utf-8"))["skills"]["database-design"]["role"], "capability")
+            self.assertIn("INSTALL", ledger.read_text(encoding="utf-8"))
+
+    def test_writer_rejects_symlinked_resources(self):
+        import librarian_testpipe as pipe
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "intake" / "linked"
+            source.mkdir(parents=True)
+            (source / "SKILL.md").write_text("# Linked\n", encoding="utf-8")
+            outside = root / "outside.md"
+            outside.write_text("outside\n", encoding="utf-8")
+            (source / "references").mkdir()
+            (source / "references" / "escape.md").symlink_to(outside)
+
+            with self.assertRaises(ValueError):
+                pipe.copy_candidate_package(source, root / "test-library" / "linked", "# Curated\n")
+            self.assertFalse((root / "test-library").exists())
 
 
 class TestRelationshipGate(unittest.TestCase):

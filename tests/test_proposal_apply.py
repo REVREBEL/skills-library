@@ -138,6 +138,10 @@ class TestControlledApply(unittest.TestCase):
             "# Install\n\n- Install PostgreSQL 18\n- Start the service\n",
             encoding="utf-8",
         )
+        (source / "references").mkdir()
+        (source / "references" / "install.md").write_text("# Install reference\n", encoding="utf-8")
+        (source / "assets").mkdir()
+        (source / "assets" / "service.conf").write_text("enabled=true\n", encoding="utf-8")
         proposal = self.approve("granularity", granularity_payload(source))
         snapshot = apply_proposal(self.library, self.store, self.snapshots, proposal)
 
@@ -150,6 +154,8 @@ class TestControlledApply(unittest.TestCase):
         self.assertIn("composed_of:", parent_text)
         self.assertIn("- postgres:install", parent_text)
         self.assertIn('canonical_id: "postgres:install"', child.read_text(encoding="utf-8"))
+        self.assertEqual((child.parent / "references" / "install.md").read_text(encoding="utf-8"), "# Install reference\n")
+        self.assertEqual((child.parent / "assets" / "service.conf").read_text(encoding="utf-8"), "enabled=true\n")
 
         rollback(self.library, self.store, self.snapshots, snapshot.name)
         self.assertFalse(child.exists())

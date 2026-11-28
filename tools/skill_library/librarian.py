@@ -84,6 +84,7 @@ class RerankedCandidate:
     rerank_score: float
     dice_similarity: float
     description: str
+    body_sample: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -426,6 +427,7 @@ def rerank_candidates(
                 rerank_score=c.similarity,
                 dice_similarity=c.similarity,
                 description=c.description,
+                body_sample=c.body_sample,
             )
             for c in candidates
         ]
@@ -449,6 +451,7 @@ def rerank_candidates(
             rerank_score=round(score, 4),
             dice_similarity=candidates[idx].similarity,
             description=candidates[idx].description,
+            body_sample=candidates[idx].body_sample,
         )
         for idx, score in ranked
     ]

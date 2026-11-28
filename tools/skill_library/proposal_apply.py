@@ -155,7 +155,9 @@ def _preflight_granularity(library: Path, payload: Dict[str, Any]) -> Dict[str, 
     source_dir = Path(source_path)
     source_file = source_dir / "SKILL.md" if source_dir.is_dir() else source_dir
     if not source_file.exists():
-        raise ValueError("Split proposal source SKILL.md does not exist; re-run the test pipe")
+        raise ValueError(f"Split proposal source SKILL.md does not exist; re-run the test pipe")
+    if source_dir.is_symlink() or any(path.is_symlink() for path in source_dir.rglob("*")):
+        raise ValueError(f"Symlinks are not allowed in split source packages: {source_dir}")
     if not isinstance(placement, dict) or not placement.get("category"):
         raise ValueError("Split proposal is missing placement; re-run the test pipe")
     if not isinstance(metadata, dict):
@@ -290,9 +292,10 @@ def _apply_plan(library: Path, plan: Dict[str, Any], proposal_id: str, snapshot:
         payload["new_skill_name"], description, metadata,
         payload["new_skill_id"], license_id=license_id,
     )
-    plan["destination"].mkdir(parents=True, exist_ok=True)
-    child_file = plan["destination"] / "SKILL.md"
-    child_file.write_text(frontmatter + "\n" + source_body.strip() + "\n", encoding="utf-8")
+    from librarian_testpipe import copy_candidate_package
+
+    child_body = frontmatter + "\n" + source_body.strip() + "\n"
+    copy_candidate_package(plan["source_path"].parent, plan["destination"], skill_body=child_body)
     _update_manifest(
         library, payload["new_skill_name"], plan["destination"],
         plan["category"], plan["subcategory"], payload["role"], plan["source_path"],
