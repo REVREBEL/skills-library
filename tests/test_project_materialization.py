@@ -106,6 +106,14 @@ class TestProjectMaterialization(unittest.TestCase):
         self.assertEqual(lock["source_commit"], "abc123")
         self.assertEqual(len(lock["skills"]["development-api-caller"]["content_hash"]), 64)
 
+    def test_ambiguous_leaf_name_reference_is_rejected(self):
+        with self.assertRaises(MaterializationError):
+            materialize_project(
+                self.library, {"name": "ambiguous", "skills": ["api-caller"]},
+                {"groups": {}}, self.target,
+            )
+        self.assertFalse(self.target.exists())
+
     def test_materialization_is_deterministic(self):
         profile = {"name": "demo", "skills": ["dev:app"]}
         materialize_project(self.library, profile, {"groups": {}}, self.target, source_commit="abc123")

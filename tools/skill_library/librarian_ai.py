@@ -428,77 +428,6 @@ def rerank_with_openrouter(
     query: str,
     passages: List[str],
 ) -> List[Tuple[int, float]]:
-    """Rerank passages using the OpenRouter rerank endpoint.
-
-    Uses nvidia/nemotron-3.5-rerank-8b:free via the /api/v1/rerank
-    endpoint. This is a dedicated rerank model with well-calibrated
-    relevance scores — unlike a chat model, it's trained specifically
-    for passage ranking.
-
-    The OpenRouter API key is read from OpenCode's credential store
-    (~/.local/share/opencode/opencode.db), so no separate key management
-    is needed.
-    """
-    if not passages:
-        return []
-
-    import sqlite3
-
-    # Read the OpenRouter API key from OpenCode's credential store
-    db_path = os.path.expanduser("~/.local/share/opencode/opencode.db")
-    try:
-        conn = sqlite3.connect(db_path)
-        row = conn.execute(
-            "SELECT value FROM credential WHERE integration_id='openrouter' AND active=1"
-        ).fetchone()
-        conn.close()
-        if not row:
-            raise RuntimeError("No OpenRouter credential found in OpenCode's credential store")
-        cred = json.loads(row[0])
-        api_key = cred.get("key", "")
-        if not api_key:
-            raise RuntimeError("OpenRouter credential has no key")
-    except sqlite3.Error as e:
-        raise RuntimeError(f"Could not read OpenCode credential store: {e}")
-
-    # Call the rerank endpoint
-    import urllib.request
-    import urllib.error
-
-    payload = json.dumps({
-        "model": "nvidia/nemotron-3.5-rerank-8b:free",
-        "query": query[:500],
-        "documents": [p[:500] for p in passages],
-        "top_n": len(passages),
-    }).encode()
-
-    req = urllib.request.Request(
-        "https://openrouter.ai/api/v1/rerank",
-        data=payload,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read())
-            results = data.get("results", [])
-            # results are sorted by relevance_score descending
-            return [(r["index"], r["relevance_score"]) for r in results]
-    except urllib.error.HTTPError as e:
-        body = e.read().decode()
-        raise RuntimeError(f"OpenRouter rerank failed (HTTP {e.code}): {body[:200]}")
-    except Exception as e:
-        raise RuntimeError(f"OpenRouter rerank failed: {e}")
-
-
-def rerank_with_openrouter(
-    query: str,
-    passages: List[str],
-) -> List[Tuple[int, float]]:
     """Rerank passages using the dedicated OpenRouter rerank endpoint.
 
     Uses nvidia/nemotron-3.5-rerank-8b:free via the /api/v1/rerank
@@ -834,6 +763,20 @@ Return ONLY JSON:
 ]}}"""
 
 
+def _format_claims_for_prompt(claims: List[Any], max_chars: int = 6000) -> str:
+    """Format whole claim lines without severing IDs or claim text."""
+    lines: List[str] = []
+    total = 0
+    for claim in claims:
+        line = f"[{claim.id}] {claim.text}"
+        added = len(line) + (1 if lines else 0)
+        if lines and total + added > max_chars:
+            break
+        lines.append(line)
+        total += added
+    return "\n".join(lines)
+
+
 def detect_semantic_conflicts_opencode(
     existing_claims: List[Any],
     candidate_claims: List[Any],
@@ -849,12 +792,12 @@ def detect_semantic_conflicts_opencode(
     if not existing_claims or not candidate_claims:
         return []
 
-    existing_text = "\n".join(f"[{c.id}] {c.text}" for c in existing_claims)
-    candidate_text = "\n".join(f"[{c.id}] {c.text}" for c in candidate_claims)
+    existing_text = _format_claims_for_prompt(existing_claims)
+    candidate_text = _format_claims_for_prompt(candidate_claims)
 
     prompt = SEMANTIC_CONFLICT_PROMPT.format(
-        existing_claims=existing_text[:6000],
-        candidate_claims=candidate_text[:6000],
+        existing_claims=existing_text,
+        candidate_claims=candidate_text,
     )
 
     response = opencode_run(prompt, model=DECISION_MODEL)

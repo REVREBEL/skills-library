@@ -129,7 +129,6 @@ def load_skills(library: Path) -> Tuple[List[SkillObject], Dict[str, SkillObject
             by_name[skill.name] = skill
         skills.append(skill)
         by_id[skill.canonical_id] = skill
-        by_name[skill.name] = skill
     if not skills:
         raise MaterializationError(f"No skills found in {library}")
     return skills, by_id, by_name

@@ -53,7 +53,7 @@ def validate_proposal(kind: str, payload: Dict[str, Any]) -> None:
         missing = sorted(required - set(payload))
         if missing:
             raise ValueError(f"Merge proposal missing fields: {', '.join(missing)}")
-        if payload["verdict"] not in {"SUPPLEMENT", "EXTEND", "CONFLICT", "ALIAS", "REJECT", "NEW"}:
+        if payload["verdict"] not in {"SUPPLEMENT", "EXTEND", "CONFLICT", "ALIAS", "REJECT"}:
             raise ValueError(f"Invalid merge verdict: {payload['verdict']}")
         if payload["confidence"] not in {"high", "medium", "low"}:
             raise ValueError(f"Invalid merge confidence: {payload['confidence']}")

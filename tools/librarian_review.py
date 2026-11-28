@@ -47,7 +47,7 @@ def cmd_list(args):
     if args.candidate:
         proposals = [
             p for p in proposals
-            if args.candidate in (p["proposal"].get("candidate"), p["proposal"].get("target"), p["proposal"].get("parent"))
+            if args.candidate in {p["proposal"].get("candidate"), p["proposal"].get("target"), p["proposal"].get("parent")}
         ]
     if args.json:
         print(json.dumps(proposals, indent=2))

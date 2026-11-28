@@ -103,6 +103,12 @@ class TestProposalStore(unittest.TestCase):
             edit_proposal(self.store, proposal["id"], invalid)
         self.assertEqual(get_proposal(self.store, proposal["id"])["status"], "PROPOSED")
 
+    def test_new_is_not_a_valid_merge_verdict(self):
+        payload = merge_payload()
+        payload["verdict"] = "NEW"
+        with self.assertRaises(ValueError):
+            upsert_proposal(self.store, "merge", payload)
+
     def test_conflicting_claim_cannot_be_included(self):
         payload = merge_payload()
         payload["claim_diff"]["conflict"] = [{
@@ -146,6 +152,14 @@ class TestReviewCli(unittest.TestCase):
         shown = self.run_cli("show", self.proposal["id"])
         self.assertEqual(shown.returncode, 0)
         self.assertIn("MERGE install-postgres-18 -> postgres-18", shown.stdout)
+
+    def test_candidate_filter_uses_exact_names(self):
+        partial = self.run_cli("list", "--candidate", "postgres")
+        self.assertEqual(partial.returncode, 0)
+        self.assertNotIn(self.proposal["id"], partial.stdout)
+        exact = self.run_cli("list", "--candidate", "postgres-18")
+        self.assertEqual(exact.returncode, 0)
+        self.assertIn(self.proposal["id"], exact.stdout)
 
     def test_approve_and_reject(self):
         approved = self.run_cli("approve", self.proposal["id"], "--note", "ok")

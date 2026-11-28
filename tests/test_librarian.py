@@ -367,6 +367,33 @@ class TestTestLibraryPackageCopy(unittest.TestCase):
                 pipe.copy_candidate_package(source, root / "test-library" / "linked", "# Curated\n")
             self.assertFalse((root / "test-library").exists())
 
+    def test_proposal_persistence_failure_does_not_abort_remaining_candidates(self):
+        import io
+        from unittest.mock import patch
+        import librarian_testpipe as pipe
+
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch.object(pipe, "PROPOSALS_FILE", Path(tmp) / "proposals.json"), \
+             patch("skill_library.proposal_review.upsert_proposal", side_effect=ValueError("malformed proposal")), \
+             patch("sys.stderr", new=io.StringIO()):
+            pipe.record_review_proposals({"proposals": [{}], "granularity": [{}]})
+
+    def test_dry_run_rejects_reset_without_touching_library(self):
+        from unittest.mock import patch
+        import librarian_testpipe as pipe
+
+        with tempfile.TemporaryDirectory() as tmp:
+            library = Path(tmp) / "test-library"
+            library.mkdir()
+            sentinel = library / "keep.txt"
+            sentinel.write_text("keep", encoding="utf-8")
+            with patch("sys.argv", ["librarian_testpipe.py", "--dry-run", "--reset"]), \
+                 patch.object(pipe, "TEST_LIBRARY", library):
+                with self.assertRaises(SystemExit) as error:
+                    pipe.main()
+            self.assertEqual(error.exception.code, 2)
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
+
 
 class TestRelationshipGate(unittest.TestCase):
     """The pipeline must classify before attempting a merge."""
@@ -408,6 +435,99 @@ class TestRelationshipGate(unittest.TestCase):
             result = pipe.process_candidate(self._candidate(), catalog=[])
         self.assertEqual(result["verdict"], "ALIAS")
         extract.assert_not_called()
+
+    def test_claim_extraction_receives_candidate_and_existing_bodies_after_rerank(self):
+        from unittest.mock import patch
+        import librarian_testpipe as pipe
+        from skill_library.librarian import RetrievedCandidate
+
+        candidate = CandidatePackage(
+            name="new-skill", source_dir="/tmp/test",
+            description="A new capability", body_sample="Candidate body",
+        )
+        retrieved = RetrievedCandidate(
+            name="existing-skill", canonical_path="library/x/existing-skill",
+            similarity=0.7, description="Existing capability", body_sample="Existing body",
+        )
+        candidate_claim = Claim(id="C1", text="Candidate instruction", claim_type="operational", source="new-skill")
+        existing_claim = Claim(id="E1", text="Existing instruction", claim_type="operational", source="existing-skill")
+
+        with patch.object(pipe, "retrieve_candidates", return_value=[retrieved]), \
+             patch.object(pipe, "rerank_with_openrouter", return_value=[(0, 0.9)]), \
+             patch.object(pipe, "extract_claims", side_effect=[[candidate_claim], [existing_claim]]) as extract, \
+             patch("skill_library.librarian_ai.detect_semantic_conflicts_opencode", return_value=[]), \
+             patch.object(pipe, "decide_merge_opencode", return_value={
+                 "verdict": "SUPPLEMENT", "confidence": "high",
+                 "include_claims": [], "skip_claims": [], "escalate_claims": [],
+                 "reasoning": "test decision",
+             }):
+            result = pipe.process_candidate(candidate, catalog=[])
+
+        self.assertEqual(result["verdict"], "SUPPLEMENT")
+        self.assertEqual(
+            [call.kwargs["skill_body"] for call in extract.call_args_list],
+            ["Candidate body", "Existing body"],
+        )
+
+    def test_claim_extraction_receives_existing_body_after_rerank_fallback(self):
+        from unittest.mock import patch
+        import librarian_testpipe as pipe
+        from skill_library.librarian import RetrievedCandidate
+
+        candidate = CandidatePackage(
+            name="new-skill", source_dir="/tmp/test",
+            description="A new capability", body_sample="Candidate body",
+        )
+        retrieved = RetrievedCandidate(
+            name="existing-skill", canonical_path="library/x/existing-skill",
+            similarity=0.7, description="Existing capability", body_sample="Existing body",
+        )
+        candidate_claim = Claim(id="C1", text="Candidate instruction", claim_type="operational", source="new-skill")
+        existing_claim = Claim(id="E1", text="Existing instruction", claim_type="operational", source="existing-skill")
+
+        with patch.object(pipe, "retrieve_candidates", return_value=[retrieved]), \
+             patch.object(pipe, "rerank_with_openrouter", side_effect=RuntimeError("quota exhausted")), \
+             patch.object(pipe, "extract_claims", side_effect=[[candidate_claim], [existing_claim]]) as extract, \
+             patch("skill_library.librarian_ai.detect_semantic_conflicts_opencode", return_value=[]), \
+             patch.object(pipe, "decide_merge_opencode", return_value={
+                 "verdict": "SUPPLEMENT", "confidence": "high",
+                 "include_claims": [], "skip_claims": [], "escalate_claims": [],
+                 "reasoning": "test decision",
+             }):
+            result = pipe.process_candidate(candidate, catalog=[])
+
+        self.assertEqual(result["verdict"], "SUPPLEMENT")
+        self.assertEqual(
+            [call.kwargs["skill_body"] for call in extract.call_args_list],
+            ["Candidate body", "Existing body"],
+        )
+
+    def test_semantic_conflict_failure_returns_review_without_merging(self):
+        from unittest.mock import patch
+        import librarian_testpipe as pipe
+        from skill_library.librarian import RetrievedCandidate
+
+        candidate = CandidatePackage(
+            name="new-skill", source_dir="/tmp/test",
+            description="A new capability", body_sample="Candidate body",
+        )
+        retrieved = RetrievedCandidate(
+            name="existing-skill", canonical_path="library/x/existing-skill",
+            similarity=0.7, description="Existing capability", body_sample="Existing body",
+        )
+        candidate_claim = Claim(id="C1", text="Candidate instruction", claim_type="operational", source="new-skill")
+        existing_claim = Claim(id="E1", text="Existing instruction", claim_type="operational", source="existing-skill")
+
+        with patch.object(pipe, "retrieve_candidates", return_value=[retrieved]), \
+             patch.object(pipe, "rerank_with_openrouter", return_value=[(0, 0.9)]), \
+             patch.object(pipe, "extract_claims", side_effect=[[candidate_claim], [existing_claim]]), \
+             patch("skill_library.librarian_ai.detect_semantic_conflicts_opencode", side_effect=RuntimeError("detector unavailable")), \
+             patch.object(pipe, "decide_merge") as merge:
+            result = pipe.process_candidate(candidate, catalog=[])
+
+        self.assertEqual(result["verdict"], "REVIEW")
+        self.assertEqual(result["proposals"], [])
+        merge.assert_not_called()
 
     def test_unrelated_gate_is_new_without_claim_extraction(self):
         from unittest.mock import patch
@@ -470,6 +590,21 @@ class TestSemanticConflicts(unittest.TestCase):
         self.assertEqual([c.id for c in proposal.include_claims], [])
         self.assertEqual([c.id for c in proposal.escalate_claims], ["C7"])
         self.assertIn("Port mismatch", proposal.summary())
+
+    def test_conflict_prompt_truncates_only_on_claim_boundaries(self):
+        from skill_library.librarian_ai import _format_claims_for_prompt
+
+        claims = [
+            Claim(id=f"C{index}", text="x" * 100, claim_type="operational", source="test")
+            for index in range(4)
+        ]
+        formatted = _format_claims_for_prompt(claims, max_chars=250)
+        lines = formatted.splitlines()
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines, [f"[{claim.id}] {claim.text}" for claim in claims[:2]])
+
+        long_claim = Claim(id="LONG", text="x" * 500, claim_type="operational", source="test")
+        self.assertEqual(_format_claims_for_prompt([long_claim], max_chars=10), f"[LONG] {long_claim.text}")
 
     def test_detector_parses_valid_response(self):
         from unittest.mock import patch

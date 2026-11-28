@@ -305,7 +305,7 @@ class MergeProposal:
     """The Librarian's proposal for merging skill 2 into skill 1."""
     target: str  # skill 1 name
     candidate: str  # skill 2 name
-    verdict: str  # "SUPPLEMENT" | "EXTEND" | "CONFLICT" | "ALIAS" | "REJECT" | "NEW"
+    verdict: str  # "SUPPLEMENT" | "EXTEND" | "CONFLICT" | "ALIAS" | "REJECT"
     confidence: str  # "high" | "medium" | "low"
     claim_diff: ClaimDiff = field(default_factory=ClaimDiff)
     include_claims: List[Claim] = field(default_factory=list)

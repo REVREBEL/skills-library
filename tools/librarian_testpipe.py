@@ -85,11 +85,17 @@ def record_review_proposals(result):
     """Persist merge and granularity proposals in the shared review store."""
     from skill_library.proposal_review import upsert_proposal
 
+    def record(kind, payload):
+        try:
+            upsert_proposal(PROPOSALS_FILE, kind, payload)
+        except (ValueError, KeyError, OSError) as e:
+            print(f"  Proposal persistence failed ({kind}): {e}", file=sys.stderr)
+
     for proposal in result.get("proposals", []):
         payload = proposal.to_dict() if hasattr(proposal, "to_dict") else proposal
-        upsert_proposal(PROPOSALS_FILE, "merge", payload)
+        record("merge", payload)
     for payload in result.get("granularity", []):
-        upsert_proposal(PROPOSALS_FILE, "granularity", payload)
+        record("granularity", payload)
 
 
 def enrich_granularity_for_review(result, candidate, taxonomy):
@@ -462,7 +468,12 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
         print(f"  Extracted {len(candidate_claims)} claims from candidate")
     except Exception as e:
         print(f"  Claim extraction failed: {e}")
-        candidate_claims = []
+        return {
+            "verdict": "REVIEW",
+            "proposals": [],
+            "relationship": relationship["relationship"],
+            "review_reason": f"Candidate claim extraction failed: {e}",
+        }
 
     # Step 6: Claim diff, Step 7: granularity, Step 8: merge decision
     proposals = []
@@ -484,9 +495,18 @@ def process_candidate(candidate, catalog, dry_run=False, max_matches=1):
             from skill_library.librarian import apply_semantic_conflicts
             from skill_library.librarian_ai import detect_semantic_conflicts_opencode
             print(f"  Detecting semantic conflicts...", flush=True)
-            conflict_records = detect_semantic_conflicts_opencode(
-                existing_claims, claim_diff.added,
-            )
+            try:
+                conflict_records = detect_semantic_conflicts_opencode(
+                    existing_claims, claim_diff.added,
+                )
+            except Exception as e:
+                print(f"  Semantic conflict detection failed: {e}")
+                return {
+                    "verdict": "REVIEW",
+                    "proposals": [],
+                    "relationship": relationship["relationship"],
+                    "review_reason": f"Semantic conflict detection failed: {e}",
+                }
             claim_diff = apply_semantic_conflicts(
                 claim_diff, existing_claims, conflict_records,
             )
@@ -560,6 +580,9 @@ def main():
     parser.add_argument("--max-matches", type=int, default=1,
                         help="How many deduplicated catalog matches to evaluate (default: 1)")
     args = parser.parse_args()
+
+    if args.dry_run and args.reset:
+        parser.error("--reset cannot be combined with --dry-run because dry-run must not write")
 
     if args.reset:
         reset_test_library()
