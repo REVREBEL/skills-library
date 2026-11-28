@@ -1,0 +1,237 @@
+[
+  {
+    "id": "C1",
+    "text": "Use default browser styling for buttons, inputs, and links",
+    "type": "operational"
+  },
+  {
+    "id": "C2",
+    "text": "Use grid lines, tables with visible borders, and stark boundaries instead of whitespace to separate content",
+    "type": "operational"
+  },
+  {
+    "id": "C3",
+    "text": "Use high contrast colors for links and accents (e.g. #0000FF blue, #FF0000 red)",
+    "type": "operational"
+  },
+  {
+    "id": "C4",
+    "text": "Use system fonts like Courier New, Times New Roman, or Comic Sans; avoid web fonts",
+    "type": "operational"
+  },
+  {
+    "id": "C5",
+    "text": "Set body background-color: #ffffff, color: #000000, font-family: monospace",
+    "type": "operational"
+  },
+  {
+    "id": "C6",
+    "text": "Add border: 1px solid #000 to .brutalist-container",
+    "type": "operational"
+  },
+  {
+    "id": "C7",
+    "text": "Add border-bottom: 2px dashed #000, margin-bottom: 20px, padding-bottom: 20px to .brutalist-section",
+    "type": "operational"
+  },
+  {
+    "id": "C8",
+    "text": "Create .brutalist-btn with specific styles: background-color, border, colors, font, padding, cursor",
+    "type": "operational"
+  },
+  {
+    "id": "C9",
+    "text": "Set .brutalist-btn:active with border-style: inset",
+    "type": "operational"
+  },
+  {
+    "id": "C10",
+    "text": "Set link color: #0000FF with text-decoration: underline",
+    "type": "operational"
+  },
+  {
+    "id": "C11",
+    "text": "Use harsh, high-contrast borders (1px solid black) around everything",
+    "type": "operational"
+  },
+  {
+    "id": "C12",
+    "text": "Avoid border-radius, drop shadows, or smooth transitions; if it animates, it should pop instantly (0s transition)",
+    "type": "operational"
+  },
+  {
+    "id": "C13",
+    "text": "Avoid all native ButtonStyle components in SwiftUI",
+    "type": "operational"
+  },
+  {
+    "id": "C14",
+    "text": "Use .border(Color.black, width: 1) instead of backgrounds or shadows in SwiftUI",
+    "type": "operational"
+  },
+  {
+    "id": "C15",
+    "text": "Force monospace fonts like Courier New or Menlo in SwiftUI",
+    "type": "operational"
+  },
+  {
+    "id": "C16",
+    "text": "Use VStack(alignment: .leading, spacing: 0) in SwiftUI",
+    "type": "operational"
+  },
+  {
+    "id": "C17",
+    "text": "Add Text with .font(.custom(\"Courier New\", size: 32)), .foregroundColor(.black), .padding(10), .border(Color.black, width: 2) in SwiftUI",
+    "type": "operational"
+  },
+  {
+    "id": "C18",
+    "text": "Add Divider().background(Color.black).padding(.vertical, 20) in SwiftUI",
+    "type": "operational"
+  },
+  {
+    "id": "C19",
+    "text": "Add Button with Text(\"CLICK_HERE\") and .font(.custom(\"Courier New\", size: 24)), .foregroundColor(.blue), .underline(), .padding(10) in SwiftUI",
+    "type": "operational"
+  },
+  {
+    "id": "C20",
+    "text": "Avoid all native ButtonStyle components in SwiftUI (repeated directive)",
+    "type": "operational"
+  },
+  {
+    "id": "C21",
+    "text": "Use .border(Color.black, width: 1) instead of backgrounds or shadows in SwiftUI (repeated directive)",
+    "type": "operational"
+  },
+  {
+    "id": "C22",
+    "text": "Force monospace fonts like Courier New or Menlo in SwiftUI (repeated directive)",
+    "type": "operational"
+  },
+  {
+    "id": "C23",
+    "text": "Avoid ElevatedButton, Card, or AppBar in Flutter",
+    "type": "operational"
+  },
+  {
+    "id": "C24",
+    "text": "Build UI out of raw Containers with Border.all(color: Colors.black) and Text widgets in Flutter",
+    "type": "operational"
+  },
+  {
+    "id": "C25",
+    "text": "Use TextDecoration.underline to indicate interactivity in Flutter",
+    "type": "operational"
+  },
+  {
+    "id": "C26",
+    "text": "Use pure hex colors: #FFFFFF, #000000, #0000FF in Flutter",
+    "type": "operational"
+  },
+  {
+    "id": "C27",
+    "text": "Set borderWidth: 2, borderColor: \"#000000\", padding: 10, alignSelf: \"flex-start\" in React Native",
+    "type": "operational"
+  },
+  {
+    "id": "C28",
+    "text": "Set fontFamily: \"monospace\", fontSize: 32, color: \"#000\" in React Native",
+    "type": "operational"
+  },
+  {
+    "id": "C29",
+    "text": "Add View with height: 2, backgroundColor: \"#000\", marginVertical: 20 in React Native",
+    "type": "operational"
+  },
+  {
+    "id": "C30",
+    "text": "Use textDecorationLine: \"underline\" for interactivity in React Native",
+    "type": "operational"
+  },
+  {
+    "id": "C31",
+    "text": "Set activeOpacity={1} on TouchableOpacity so there is no smooth fade (instant click) in React Native",
+    "type": "operational"
+  },
+  {
+    "id": "C32",
+    "text": "Use pure hex colors: #FFFFFF, #000000, #0000FF in React Native",
+    "type": "operational"
+  },
+  {
+    "id": "C33",
+    "text": "Use BasicText instead of Text to bypass Material theme defaults in Jetpack Compose",
+    "type": "operational"
+  },
+  {
+    "id": "C34",
+    "text": "Build structural lines using Box with .background(Color.Black) in Jetpack Compose",
+    "type": "operational"
+  },
+  {
+    "id": "C35",
+    "text": "Do not use Button or Card or any Material composables; use raw layouts only in Jetpack Compose",
+    "type": "operational"
+  },
+  {
+    "id": "C36",
+    "text": "Use modifier .border(2.dp, Color.Black).padding(10.dp) in Jetpack Compose",
+    "type": "operational"
+  },
+  {
+    "id": "C37",
+    "text": "Use Spacer(Modifier.height(20.dp)) for vertical spacing in Jetpack Compose",
+    "type": "operational"
+  },
+  {
+    "id": "C38",
+    "text": "Do NOT use border-radius, drop shadows, or smooth transitions",
+    "type": "operational"
+  },
+  {
+    "id": "C39",
+    "text": "Raw materials exposed. An intentional rejection of polish, gradients, and soft shadows.",
+    "type": "explanatory"
+  },
+  {
+    "id": "C40",
+    "text": "Use this sub-style when the user's request matches the aesthetic described above.",
+    "type": "explanatory"
+  },
+  {
+    "id": "C41",
+    "text": "This is a child reference of the `design-it` skill and is not meant to be triggered directly.",
+    "type": "explanatory"
+  },
+  {
+    "id": "C42",
+    "text": "Industrial Chic palette fits best for the color scheme.",
+    "type": "explanatory"
+  },
+  {
+    "id": "C43",
+    "text": "Dithered images, pixelated graphics, or heavily compressed jpegs for visual style.",
+    "type": "explanatory"
+  },
+  {
+    "id": "C44",
+    "text": "Pure `#0000FF` blue for links, `#FF0000` red for accents, on stark white or `#C0C0C0` grey backgrounds.",
+    "type": "explanatory"
+  },
+  {
+    "id": "C45",
+    "text": "Courier New, Times New Roman, Comic Sans, or default sans-serifs; no web fonts.",
+    "type": "explanatory"
+  },
+  {
+    "id": "C46",
+    "text": "This is a styling reference and does not replace environment-specific validation, accessibility testing, or expert review.",
+    "type": "explanatory"
+  },
+  {
+    "id": "C47",
+    "text": "Ensure appropriate contrast ratios and responsive behaviors are verified separately.",
+    "type": "explanatory"
+  }
+]

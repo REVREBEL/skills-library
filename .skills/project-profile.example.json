@@ -1,0 +1,13 @@
+{
+  "name": "metrics-design-system",
+  "target_path": ".agents/skills",
+  "mode": "curated",
+  "groups": [
+    "figma-project",
+    "postgres-core"
+  ],
+  "skills": [],
+  "exclude": [],
+  "generate_routers": true,
+  "generate_lockfile": true
+}

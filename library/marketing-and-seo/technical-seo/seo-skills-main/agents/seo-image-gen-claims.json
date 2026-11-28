@@ -1,0 +1,20 @@
+[
+  {"id": "C1", "text": "Check that nanobanana-mcp tools are available before including generation recommendations", "type": "operational"},
+  {"id": "C2", "text": "Analyze the site's existing image strategy for SEO impact", "type": "operational"},
+  {"id": "C3", "text": "Output a structured generation plan", "type": "operational"},
+  {"id": "C4", "text": "Evaluate OG image presence: Does og:image meta tag exist? Is it valid?", "type": "operational"},
+  {"id": "C5", "text": "Evaluate OG image quality: Correct dimensions (1200x630 minimum), professional appearance?", "type": "operational"},
+  {"id": "C6", "text": "Evaluate Schema images: Are ImageObject properties populated in structured data?", "type": "operational"},
+  {"id": "C7", "text": "Evaluate Alt text quality: Descriptive, keyword-rich, not stuffed?", "type": "operational"},
+  {"id": "C8", "text": "Evaluate Image format: Using modern formats (WebP, AVIF) vs legacy (PNG, JPEG)?", "type": "operational"},
+  {"id": "C9", "text": "Evaluate Image file size: Under 200KB for hero, under 100KB for thumbnails?", "type": "operational"},
+  {"id": "C10", "text": "Output Image Audit Summary with metrics table", "type": "operational"},
+  {"id": "C11", "text": "Output Image Generation Plan with priority levels", "type": "operational"},
+  {"id": "C12", "text": "Prioritize pages by traffic volume (highest traffic = fix first)", "type": "operational"},
+  {"id": "C13", "text": "Note estimated cost for full generation plan", "type": "operational"},
+  {"id": "C14", "text": "Suggest batch generation for efficiency", "type": "operational"},
+  {"id": "C15", "text": "Recommend WebP conversion pipeline for all generated assets", "type": "operational"},
+  {"id": "C16", "text": "If nanobanana-mcp is not available, still audit existing images but note that generation requires the banana extension", "type": "operational"},
+  {"id": "C17", "text": "Report errors clearly with actionable next steps", "type": "operational"},
+  {"id": "C18", "text": "Note data source as 'Image Audit (static analysis)' to distinguish from live checks", "type": "operational"}
+]

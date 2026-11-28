@@ -1,0 +1,8 @@
+{
+  "verdict": "ALIAS",
+  "confidence": "high",
+  "include_claims": [],
+  "skip_claims": ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10", "C11", "C12", "C13", "C14", "C15", "C16", "C17", "C18", "C19", "C20", "C21", "C22", "C23", "C24", "C25", "C26", "C27", "C28", "C29", "C30", "C31", "C32", "C33", "C34", "C35", "C36", "C37", "C38", "C39", "C40", "C41", "C43", "C44", "C45", "C46", "C47", "C48", "C49", "C50", "C51", "C52", "C53"],
+  "escalate_claims": [],
+  "reasoning": "The seo-image-gen-suite candidate skill is functionally identical to the existing seo-image-gen skill. Every operational claim (C1-C53, excluding C42 which has no entry) in the candidate has a direct equivalent in the existing skill with the same or very similar content, merely reorganized with different claim numbering. Every explanatory claim also corresponds to existing claims. The candidate skill does not add any genuine new capabilities — it is a restatement/renumbering of the existing skill's claims. There are no contradictions between the two skills. Therefore the candidate is best characterized as an ALIAS of the existing skill."
+}
